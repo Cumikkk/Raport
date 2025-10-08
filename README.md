@@ -7,7 +7,23 @@
 - [ ] Sudah ada file `navbar.php` atau `sidebar.php` berisi menu navigasi utama.
 - [ ] Sudah ada file `footer.php` berisi copyright dan script JS.
 - [ ] Semua halaman sudah memakai include header, navbar, dan footer.
-- [ ] Tampilan header dan sidebar seragam di semua halaman.
+- 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ] Tampilan header dan sidebar seragam di semua halaman.
 
 ### 2. Navigasi & Perpindahan Halaman
 - [ ] Menu navigasi sudah bisa diklik dan berpindah ke halaman lain.
