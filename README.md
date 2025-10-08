@@ -9,7 +9,7 @@ test
 - [ ] Sudah ada file `navbar.php` atau `sidebar.php` berisi menu navigasi utama.
 - [ ] Sudah ada file `footer.php` berisi copyright dan script JS.
 - [ ] Semua halaman sudah memakai include header, navbar, dan footer.
-- tegar elek
+- tegar elek znnzzn
 
 
 
