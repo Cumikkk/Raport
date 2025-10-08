@@ -1,5 +1,7 @@
 # Raport
 
+test
+
 ## ToDo List Frontend E-Raport MA — Progress 60% -- Deadline 17 Oktober 2025
 
 ### 1. Struktur Template Dasar
@@ -7,7 +9,7 @@
 - [ ] Sudah ada file `navbar.php` atau `sidebar.php` berisi menu navigasi utama.
 - [ ] Sudah ada file `footer.php` berisi copyright dan script JS.
 - [ ] Semua halaman sudah memakai include header, navbar, dan footer.
-- 
+- tegar
 
 
 
