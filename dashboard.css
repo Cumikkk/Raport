@@ -1,0 +1,175 @@
+/* RESET */
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+html, body { height: 100%; background: #f7f8fb; }
+
+/* ===== TOPBAR ===== */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 64px;
+  background: #fff;
+  border-bottom: 1px solid #e6e6e9;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 18px;
+  z-index: 50;
+}
+.topbar-center { display: flex; align-items: center; gap: 12px; }
+.dashboard-logo { height: 40px; width: auto; }
+
+/* ===== LOGOUT BUTTON ===== */
+.logout-btn {
+  background: #e11d48; color: #fff;
+  padding: 8px 14px; border-radius: 8px;
+  text-decoration: none; display: flex; align-items: center; gap: 8px;
+  font-weight: 600;
+}
+.logout-btn i { font-size: 14px; }
+
+.desktop-only { display: flex; }
+.mobile-only { display: none; }
+
+/* ===== TOGGLE ===== */
+#menu-toggle { display: none; }
+.hamburger {
+  display: none; cursor: pointer; font-size: 20px;
+  color: #111827; position: relative;
+}
+.hamburger .close-icon { display: none; }
+
+#menu-toggle:checked + .topbar .hamburger .fa-bars { display: none; }
+#menu-toggle:checked + .topbar .hamburger .close-icon { display: inline; }
+
+/* ===== SIDEBAR ===== */
+.sidebar {
+  position: fixed;
+  top: 64px; left: 0;
+  width: 260px; height: calc(100vh - 64px);
+  background: #fff;
+  border-right: 1px solid #e9e9ee;
+  padding: 16px;
+  overflow-y: auto;
+  transition: transform .3s ease;
+  z-index: 40;
+}
+
+/* ✅ BERANDA */
+.home-link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #1f2937;
+  font-weight: 600;
+  margin-bottom: 8px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.home-link i {
+  color: #000; /* warna ikon hitam */
+  font-size: 16px;
+}
+
+/* ✨ geser teks sedikit ke kiri saja */
+.home-link span {
+  position: relative;
+  left: -4px;
+}
+
+.home-link:hover {
+  background: #f1f5ff;
+  color: #2563eb;
+}
+.home-link:hover i { color: #2563eb; }
+
+/* ===== MENU ===== */
+.menu details { margin-bottom: 8px; }
+
+.menu summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-radius: 8px;
+  color: #1f2937;
+  font-weight: 600;
+  transition: background .15s;
+}
+.menu summary span {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.menu summary .arrow { color: #6b7280; transition: transform .18s ease; }
+.menu summary:hover { background: #f1f5ff; }
+.menu details[open] > summary { background: #2563eb; color: #fff; }
+.menu details[open] > summary .arrow { transform: rotate(90deg); color: #fff; }
+
+.menu ul {
+  list-style: none;
+  margin-top: 8px;
+  margin-left: 14px;
+  padding-left: 6px;
+}
+.menu ul li a {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 16px;
+  text-decoration: none;
+  color: #374151;
+  border-radius: 6px;
+}
+.menu ul li a:hover { background: #eef2ff; color: #1e40af; }
+
+/* Tambah User */
+.add-user {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px;
+  border-radius: 8px;
+  text-decoration: none; color: #111827; font-weight: 600;
+  margin-top: -4px;
+  margin-bottom: 10px;
+}
+.add-user span { display: flex; align-items: center; gap: 14px; }
+.add-user .plus-icon {
+  background: #e6f0ff; color: #2563eb; padding: 6px; border-radius: 6px;
+}
+
+/* ===== CONTENT ===== */
+.content {
+  margin-top: 84px; margin-left: 280px;
+  padding: 20px;
+  transition: margin-left .3s ease;
+  min-height: calc(100vh - 84px);
+}
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.card { background: #fff; padding: 18px; border-radius: 12px; box-shadow: 0 6px 18px rgba(11, 22, 60, 0.03); }
+.card .title { color: #6b7280; font-size: 13px; }
+.card .value { font-size: 20px; font-weight: 700; margin-top: 8px; }
+.card .sub { color: #16a34a; margin-top: 8px; font-size: 13px; }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 900px) {
+  .hamburger { display: block; }
+  .sidebar { transform: translateX(-110%); }
+
+  #menu-toggle:checked ~ .overlay {
+    display: block;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.3); z-index: 35;
+  }
+  #menu-toggle:checked ~ .sidebar { transform: translateX(0); z-index: 40; }
+
+  .content { margin-left: 0; }
+
+  .desktop-only { display: none; }
+  .mobile-only {
+    display: flex; margin-top: 20px; background: #e11d48; color: #fff;
+    padding: 10px; border-radius: 8px; text-decoration: none;
+    justify-content: center; font-weight: 600;
+  }
+}
