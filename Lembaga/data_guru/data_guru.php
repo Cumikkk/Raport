@@ -24,7 +24,7 @@
         <div class="card-body">
           <div class="table-responsive">
             <table class="table table-bordered table-striped align-middle">
-              <thead class="table-secondary">
+              <thead style="background-color: #14532d">
                 <tr class="text-center">
                   <th>No</th>
                   <th>Nama Guru</th>

@@ -141,11 +141,10 @@ html, body { height: 100%; background: #f7f8fb; }
 
 /* ===== CONTENT ===== */
 .content {
-  margin-top: 0px; margin-left: 280px;
+  margin-top: 84px; margin-left: 280px;
   padding: 20px;
-  background-color: #dbdbdb;
   transition: margin-left .3s ease;
-  min-height: calc(100vh - 0px);
+  min-height: calc(100vh - 84px);
 }
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
 .card { background: #fff; padding: 18px; border-radius: 12px; box-shadow: 0 6px 18px rgba(11, 22, 60, 0.03); }
