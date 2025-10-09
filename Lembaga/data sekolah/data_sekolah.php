@@ -3,37 +3,115 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Data Sekolah - E-Raport</title>
+  <title>Dashboard - Data Sekolah</title>
 
   <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="/../dashboard.css">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
   <style>
+    body {
+      background-color: #f8f9fa;
+    }
+
     .content {
       margin-left: 260px;
-      padding: 25px;
-      background-color: #f9f9fb;
-      min-height: 100vh;
+      padding: 20px;
     }
-    .card {
-      border-radius: 12px;
+
+    .content h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-weight: 700;
+    }
+
+    /* === FLEXBOX UNTUK FORM DAN LOGO === */
+    .container-flex {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-top: 20px;
+      justify-content: space-between;
+    }
+
+    .form-section, .logo-section {
+      background: #fff;
+      border-radius: 10px;
+      padding: 25px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
-    .form-label { font-weight: 500; }
-    .logo-preview {
-      width: 150px;
-      height: 150px;
-      object-fit: contain;
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      background-color: #fff;
-      padding: 10px;
+
+    .form-section {
+      flex: 2;
+      min-width: 320px;
     }
-    .content h4 {
-      font-weight: bold;
-      margin-bottom: 25px;
+
+    .logo-section {
+      flex: 1;
+      min-width: 250px;
+      text-align: center;
+    }
+
+    .logo-section img {
+      width: 160px;
+      height: auto;
+      margin-bottom: 15px;
+    }
+
+    label {
+      font-weight: 500;
+      margin-bottom: 5px;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 15px;
+    }
+
+    .form-check {
+      margin-bottom: 15px;
+    }
+
+    /* === TOMBOL UTAMA (SIMPAN & UPDATE) === */
+    .btn-primary, .btn-success {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      transition: 0.3s ease;
+    }
+
+    .btn-primary {
+      background-color: #007bff;
+    }
+    .btn-primary:hover {
+      background-color: #0069d9;
+    }
+
+    .btn-success {
+      background-color: #28a745;
+      margin-top: 10px;
+    }
+    .btn-success:hover {
+      background-color: #218838;
+    }
+
+    /* Responsif untuk HP */
+    @media (max-width: 768px) {
+      .content {
+        margin-left: 0;
+      }
+      .container-flex {
+        flex-direction: column;
+      }
     }
   </style>
 </head>
@@ -41,7 +119,7 @@
 <body>
   <input type="checkbox" id="menu-toggle" />
 
-  <!-- TOPBAR -->
+  <!-- HEADER -->
   <header class="topbar">
     <label for="menu-toggle" class="hamburger">
       <i class="fas fa-bars"></i>
@@ -100,99 +178,56 @@
     </nav>
   </aside>
 
-  <!-- MAIN CONTENT -->
-  <div class="content">
-    <h4>Data Sekolah</h4>
+  <!-- === KONTEN UTAMA === -->
+  <main class="content">
+    <h2>Data Sekolah</h2>
+    <div class="container-flex">
 
-    <div class="row">
-      <!-- Kolom kiri -->
-      <div class="col-md-8">
-        <div class="card p-4 mb-3">
-          <h5 class="mb-3">Edit Data Sekolah</h5>
-          <form action="update_data_sekolah.php" method="POST">
-            <div class="mb-3">
-              <label class="form-label">Nama Sekolah</label>
-              <input type="text" name="nama_sekolah" class="form-control" value="<?= $data['nama_sekolah'] ?? '' ?>" required>
-            </div>
+      <!-- Form Kiri -->
+      <div class="form-section">
+        <form action="update_sekolah.php" method="POST" enctype="multipart/form-data">
+          <label>Nama Sekolah</label>
+          <input type="text" name="nama">
 
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label class="form-label">NPSN</label>
-                <input type="text" name="npsn" class="form-control" value="<?= $data['npsn'] ?? '' ?>">
-              </div>
-              <div class="col-md-6 mb-3">
-                <label class="form-label">NSS</label>
-                <input type="text" name="nss" class="form-control" value="<?= $data['nss'] ?? '' ?>">
-              </div>
-            </div>
+          <label>NPSN</label>
+          <input type="text" name="npsn">
 
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label class="form-label">Kode POS</label>
-                <input type="text" name="kode_pos" class="form-control" value="<?= $data['kode_pos'] ?? '' ?>">
-              </div>
-              <div class="col-md-6 mb-3">
-                <label class="form-label">Telepon</label>
-                <input type="text" name="telepon" class="form-control" value="<?= $data['telepon'] ?? '' ?>">
-              </div>
-            </div>
+          <label>NSS</label>
+          <input type="text" name="nss">
 
-            <div class="mb-3">
-              <label class="form-label">Alamat</label>
-              <textarea name="alamat" class="form-control" rows="2"><?= $data['alamat'] ?? '' ?></textarea>
-            </div>
+          <label>Kode POS</label>
+          <input type="text" name="kode_pos">
 
-            <div class="mb-3">
-              <label class="form-label">Email</label>
-              <input type="email" name="email" class="form-control" value="<?= $data['email'] ?? '' ?>">
-            </div>
+          <label>Telepon</label>
+          <input type="text" name="telepon">
 
-            <div class="mb-3">
-              <label class="form-label">Website</label>
-              <input type="text" name="website" class="form-control" value="<?= $data['website'] ?? '' ?>">
-            </div>
+          <label>Alamat</label>
+          <textarea name="alamat"></textarea>
 
-            <div class="mb-3">
-              <label class="form-label">Kepala Sekolah</label>
-              <input type="text" name="kepala_sekolah" class="form-control" value="<?= $data['kepala_sekolah'] ?? '' ?>">
-            </div>
+          <label>Email</label>
+          <input type="email" name="email">
 
-            <div class="mb-3">
-              <label class="form-label">NIP Kepala Sekolah</label>
-              <input type="text" name="nip_kepala_sekolah" class="form-control" value="<?= $data['nip_kepala_sekolah'] ?? '' ?>">
-            </div>
+          <label>Website</label>
+          <input type="text" name="website">
 
-            <div class="form-check mb-3">
-              <input class="form-check-input" type="checkbox" value="1" id="confirm" required>
-              <label class="form-check-label" for="confirm">
-                Saya yakin akan mengubah data tersebut
-              </label>
-            </div>
+          <label>Kepala Sekolah</label>
+          <input type="text" name="kepala">
 
-            <button type="submit" class="btn btn-primary w-100">Simpan</button>
-          </form>
-        </div>
+          <label>NIP Kepala Sekolah</label>
+          <input type="text" name="nip">
+
+          <button type="submit" class="btn-primary">Simpan</button>
+        </form>
       </div>
 
-      <!-- Kolom kanan -->
-      <div class="col-md-4">
-        <div class="card p-4 mb-3">
-          <h5 class="mb-3">Edit Logo Sekolah</h5>
-          <div class="text-center mb-3">
-            <img src="uploads/<?= $data['logo'] ?? 'default.png' ?>" class="logo-preview mb-2" alt="Logo Sekolah">
-          </div>
-
-          <form action="update_logo_sekolah.php" method="POST" enctype="multipart/form-data">
-            <div class="mb-3">
-              <label class="form-label">Ganti logo sekolah</label>
-              <input type="file" name="logo" class="form-control" accept="image/*" required>
-            </div>
-            <button type="submit" class="btn btn-success w-100">Update</button>
-          </form>
-        </div>
+      <!-- Logo Kanan -->
+      <div class="logo-section">
+        <h5>Edit Logo Sekolah</h5>
+        <img src="../../Gambar/logo-default.png" alt="Logo Sekolah">
+        <input type="file" name="logo" class="form-control">
+        <button class="btn-success">Update</button>
       </div>
     </div>
-  </div>
-
+  </main>
 </body>
 </html>

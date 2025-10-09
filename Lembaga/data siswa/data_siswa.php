@@ -10,6 +10,10 @@
   <link rel="stylesheet" href="/../dashboard.css">
 
   <style>
+    body {
+      background-color: #f8f9fa;
+    }
+
     .content {
       margin-left: 260px;
       padding: 20px;
@@ -17,87 +21,146 @@
 
     .content h2 {
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 25px;
+      font-weight: 700;
     }
 
-    form.import-form, form.search-form {
-      text-align: center;
-      margin-bottom: 20px;
+    /* ======== BAR ATAS (IMPORT, EXPORT, SEARCH, TAMBAH SISWA) ======== */
+    .top-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      background: #fff;
+      padding: 15px 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin-bottom: 25px;
     }
 
+    /* Bagian kiri: import & export */
+    .import-export {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .import-export input[type="file"] {
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 6px;
+      background: #f8f8f8;
+    }
+
+    .import-export button,
+    .import-export a {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: 0.3s;
+      text-decoration: none;
+    }
+
+    .import-export button:hover,
+    .import-export a:hover {
+      background-color: #0056b3;
+    }
+
+    .import-export a.btn-export {
+      background-color: #28a745;
+    }
+    .import-export a.btn-export:hover {
+      background-color: #1f8c3d;
+    }
+
+    /* Bagian tengah: search */
+    .search-form {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      justify-content: center;
+    }
+
+    .search-form input {
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      width: 220px;
+    }
+
+    .search-form button {
+      background-color: #17a2b8;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .search-form button:hover {
+      background-color: #138496;
+    }
+
+    /* Bagian kanan: tambah siswa */
+    .btn-add {
+      background-color: #ffc107;
+      color: black;
+      padding: 8px 14px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: 0.3s;
+    }
+
+    .btn-add:hover {
+      background-color: #e0a800;
+      color: white;
+    }
+
+    /* ======== TABEL ======== */
     table {
       border-collapse: collapse;
-      width: 90%;
-      margin: 0 auto;
+      width: 100%;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.1);
     }
 
     th, td {
       border: 1px solid #ddd;
-      padding: 8px;
+      padding: 10px;
       text-align: center;
     }
 
     th {
-      background-color: #4CAF50;
+      background-color: #343a40;
       color: white;
     }
 
-    a.btn-export, a.btn-add {
-      background-color: #4CAF50;
-      color: white;
-      padding: 8px 12px;
-      text-decoration: none;
-      border-radius: 5px;
-      margin-left: 10px;
-    }
+    .btn-warning { background-color: #ff9800; color: white; padding: 6px 10px; border-radius: 4px; text-decoration: none; }
+    .btn-danger { background-color: #dc3545; color: white; padding: 6px 10px; border-radius: 4px; text-decoration: none; }
+    .btn-warning:hover { background-color: #e68900; }
+    .btn-danger:hover { background-color: #c82333; }
 
-    a.btn-add {
-      background-color: #2196F3;
-    }
-
-    a.btn-add:hover {
-      background-color: #0b7dda;
-    }
-
-    a.btn-export:hover {
-      background-color: #45a049;
-    }
-
-    button[type="submit"] {
-      background-color: #2196F3;
-      color: white;
-      padding: 8px 12px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    button[type="submit"]:hover {
-      background-color: #0b7dda;
-    }
-
-    input[type="text"] {
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      width: 250px;
-    }
-
-    .btn {
-      padding: 5px 10px;
-      border-radius: 5px;
-      text-decoration: none;
-      color: white;
-    }
-
-    .btn-warning { background-color: #ff9800; }
-    .btn-danger { background-color: #f44336; }
-    .btn-warning:hover { background-color: #e68a00; }
-    .btn-danger:hover { background-color: #da190b; }
-
-    .action-bar {
-      text-align: center;
-      margin-bottom: 15px;
+    @media (max-width: 768px) {
+      .content {
+        margin-left: 0;
+      }
+      .top-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .search-form {
+        justify-content: flex-start;
+      }
     }
   </style>
 </head>
@@ -105,6 +168,7 @@
 <body>
   <input type="checkbox" id="menu-toggle" />
 
+  <!-- HEADER -->
   <header class="topbar">
     <label for="menu-toggle" class="hamburger">
       <i class="fas fa-bars"></i>
@@ -112,7 +176,6 @@
     </label>
 
     <div class="topbar-center">
-      <!-- Ganti path gambar sesuai lokasi file kamu -->
       <img src="../../Gambar/Tanpa judul (300 x 138 piksel).png" alt="Logo" class="dashboard-logo">
     </div>
 
@@ -123,6 +186,7 @@
 
   <label for="menu-toggle" class="overlay"></label>
 
+  <!-- SIDEBAR -->
   <aside class="sidebar">
     <nav class="menu">
       <a href="../../dashboard.php" class="home-link">
@@ -163,31 +227,32 @@
     </nav>
   </aside>
 
+  <!-- MAIN -->
   <main class="content">
-    <h2>📚 Data Siswa</h2>
+    <h2>Data Siswa</h2>
 
-    <!-- Form Import & Export -->
-    <form class="import-form" action="import.php" method="post" enctype="multipart/form-data">
-      <input type="file" name="file_excel" required>
-      <button type="submit"><i class="fas fa-file-import"></i> Import Excel</button>
-      <a href="export.php" class="btn-export"><i class="fas fa-file-export"></i> Export Excel</a>
-    </form>
+    <div class="top-actions">
+      <!-- Kiri: Import & Export -->
+      <form class="import-export" action="import.php" method="post" enctype="multipart/form-data">
+        <input type="file" name="file_excel" required>
+        <button type="submit"><i class="fas fa-file-import"></i> Import</button>
+        <a href="export.php" class="btn-export"><i class="fas fa-file-export"></i> Export</a>
+      </form>
 
-    <!-- 🔍 Form Pencarian -->
-    <form class="search-form" method="GET" action="">
-      <input type="text" name="search" placeholder="Cari nama siswa..." value="">
-      <button type="submit"><i class="fas fa-search"></i> Cari</button>
-    </form>
+      <!-- Tengah: Search -->
+      <form class="search-form" method="GET" action="">
+        <input type="text" name="search" placeholder="Cari nama siswa...">
+        <button type="submit"><i class="fas fa-search"></i> Cari</button>
+      </form>
 
-    <!-- ➕ Tombol Tambah Siswa -->
-    <div class="action-bar">
+      <!-- Kanan: Tambah Siswa -->
       <a href="tambah_siswa.php" class="btn-add"><i class="fas fa-user-plus"></i> Tambah Siswa</a>
     </div>
 
     <!-- Tabel Data -->
     <table>
       <thead>
-        <tr style="background-color: #000000ff; color: white; text-align: center;">
+        <tr>
           <th>Absen</th>
           <th>NIS</th>
           <th>Nama</th>
@@ -196,6 +261,7 @@
         </tr>
       </thead>
       <tbody>
+        <!-- Data siswa di sini -->
       </tbody>
     </table>
   </main>
