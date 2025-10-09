@@ -116,7 +116,7 @@
       <img src="../../Gambar/Tanpa judul (300 x 138 piksel).png" alt="Logo" class="dashboard-logo">
     </div>
 
-    <a href="logout.php" class="logout-btn desktop-only">
+    <a href="../../logout.php" class="logout-btn desktop-only">
       <i class="fas fa-right-from-bracket"></i> Logout
     </a>
   </header>
@@ -125,7 +125,7 @@
 
   <aside class="sidebar">
     <nav class="menu">
-      <a href="index.php" class="home-link">
+      <a href="../../dashboard.php" class="home-link">
         <i class="fas fa-home"></i>
         <span>Beranda</span>
       </a>
@@ -133,8 +133,8 @@
       <details open>
         <summary><span><i class="fas fa-building"></i> Lembaga</span> <i class="fas fa-angle-right arrow"></i></summary>
         <ul>
-          <li><a href="#">Data Sekolah</a></li>
-          <li><a href="data-siswa.php" class="active">Data Siswa</a></li>
+          <li><a href="../data sekolah/data_sekolah.php">Data Sekolah</a></li>
+          <li><a href="data_siswa.php" class="active">Data Siswa</a></li>
           <li><a href="#">Kelas</a></li>
           <li><a href="#">Semester Ganjil/Genap</a></li>
           <li><a href="#">Mata Pelajaran</a></li>
@@ -175,11 +175,8 @@
 
     <!-- 🔍 Form Pencarian -->
     <form class="search-form" method="GET" action="">
-      <input type="text" name="search" placeholder="Cari nama siswa..." value="<?= htmlspecialchars($keyword); ?>">
+      <input type="text" name="search" placeholder="Cari nama siswa..." value="">
       <button type="submit"><i class="fas fa-search"></i> Cari</button>
-      <?php if ($keyword != ""): ?>
-        <a href="data-siswa.php" class="btn-export" style="background:#888;">Reset</a>
-      <?php endif; ?>
     </form>
 
     <!-- ➕ Tombol Tambah Siswa -->
@@ -190,7 +187,7 @@
     <!-- Tabel Data -->
     <table>
       <thead>
-        <tr style="background-color: #28a745; color: white; text-align: center;">
+        <tr style="background-color: #000000ff; color: white; text-align: center;">
           <th>Absen</th>
           <th>NIS</th>
           <th>Nama</th>
@@ -199,22 +196,6 @@
         </tr>
       </thead>
       <tbody>
-        <?php if (mysqli_num_rows($result) > 0): ?>
-          <?php while ($row = mysqli_fetch_assoc($result)) { ?>
-            <tr>
-              <td><?= $row['absen']; ?></td>
-              <td><?= $row['nis']; ?></td>
-              <td><?= $row['nama']; ?></td>
-              <td><?= $row['wali_kelas']; ?></td>
-              <td>
-                <a href="edit_siswa.php?nis=<?= $row['nis']; ?>" class="btn btn-warning btn-sm">✏️ Edit</a>
-                <a href="hapus_siswa.php?nis=<?= $row['nis']; ?>" class="btn btn-danger btn-sm">🗑️ Hapus</a>
-              </td>
-            </tr>
-          <?php } ?>
-        <?php else: ?>
-          <tr><td colspan="5">Tidak ada data ditemukan.</td></tr>
-        <?php endif; ?>
       </tbody>
     </table>
   </main>
