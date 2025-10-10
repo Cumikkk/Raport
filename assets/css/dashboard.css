@@ -103,7 +103,7 @@ html, body { height: 100%; background: #f7f8fb; }
   align-items: center;
   gap: 14px;
 }
-.menu summary .arrow { color: #6b7280; transition: transform .18s ease; }
+.menu summary .arrow { color: #3e6bc6; transition: transform .18s ease; }
 .menu summary:hover { background: #f1f5ff; }
 .menu details[open] > summary { background: #2563eb; color: #fff; }
 .menu details[open] > summary .arrow { transform: rotate(90deg); color: #fff; }

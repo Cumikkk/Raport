@@ -1,16 +1,17 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Dashboard | Data Siswa</title>
+<?php
+include '../../includes/header.php';
+?>
 
+<body>
+
+<?php
+include '../../includes/navbar.php';
+?>
   <!-- Font Awesome -->
   <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
   <!-- CSS dashboard utama -->
-  <link rel="stylesheet" href="../../assets/css/dashboard.css">
 
   <style>
     body {
@@ -54,7 +55,7 @@
     }
 
     .btn-main, .btn-export, .btn-add, .search-form button, .btn-delete-selected {
-      background: #004080;
+      background: #1d52a2;
       color: #fff;
       border: none;
       border-radius: 8px;
@@ -69,9 +70,18 @@
       text-decoration: none;
     }
 
-    .btn-export { background: #007bff; }
-    .btn-add { background: #28a745; }
-    .btn-delete-selected { background: #dc3545; margin-top: 15px; }
+    .btn-export {
+      background: #007bff;
+    }
+
+    .btn-add {
+      background: #28a745;
+    }
+
+    .btn-delete-selected {
+      background: #dc3545;
+      margin-top: 15px;
+    }
 
     .btn-main:hover, .btn-export:hover, .btn-add:hover, .btn-delete-selected:hover {
       opacity: 0.9;
@@ -207,7 +217,6 @@
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
   </style>
-</head>
 <body>
 
   <input type="checkbox" id="menu-toggle" />
@@ -238,11 +247,11 @@
         <span>Beranda</span>
       </a>
 
-      <details open>
+      details>
         <summary><span><i class="fas fa-building"></i> Lembaga</span> <i class="fas fa-angle-right arrow"></i></summary>
         <ul>
           <li><a href="../data_sekolah/data_sekolah.php">Data Sekolah</a></li>
-          <li><a href="../data_siswa/data_siswa.php" class="active">Data Siswa</a></li>
+          <li><a href="../data_siswa/data_siswa.php">Data Siswa</a></li>
           <li><a href="#">Kelas</a></li>
           <li><a href="#">Semester Ganjil/Genap</a></li>
           <li><a href="#">Mata Pelajaran</a></li>
@@ -271,9 +280,9 @@
     </nav>
   </aside>
 
-<!-- MAIN CONTENT -->
-<main class="content">
-  <h2>Data Siswa</h2>
+  <!-- MAIN -->
+  <main class="content">
+    <h2>Data Siswa</h2>
 
   <div class="top-actions">
     <!-- Form Import / Export -->
@@ -283,11 +292,11 @@
       <a href="export.php" class="btn-export"><i class="fas fa-file-export"></i> Export</a>
     </form>
 
-    <!-- Form Pencarian -->
-    <form class="search-form" method="GET" action="">
-      <input type="text" name="search" placeholder="Cari nama siswa...">
-      <button type="submit"><i class="fas fa-search"></i> Cari</button>
-    </form>
+      <!-- Search -->
+      <form class="search-form" method="GET" action="">
+        <input type="text" name="search" placeholder="Cari nama siswa...">
+        <button type="submit"><i class="fas fa-search"></i> Cari</button>
+      </form>
 
     <!-- Tombol Tambah Siswa -->
     <a href="tambah_siswa.php" class="btn-add"><i class="fas fa-user-plus"></i> Tambah Siswa</a>
@@ -382,76 +391,5 @@
   });
 </script>
 
-<style>
-  table th,
-  table td {
-    text-align: center;
-  }
-
-  .bottom-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 20px;
-    position: relative;
-  }
-
-  /* Tombol hapus di kiri */
-  .bottom-bar .left {
-    flex: 1;
-    display: flex;
-    justify-content: flex-start;
-  }
-
-  /* Pagination di tengah */
-  .bottom-bar .center {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-  }
-
-  .bottom-bar .right {
-    flex: 1;
-  }
-
-  .btn-delete-selected {
-    background-color: #dc3545;
-    color: white;
-    padding: 10px 18px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 500;
-  }
-
-  .btn-delete-selected:hover {
-    background-color: #c82333;
-  }
-
-  .pagination {
-    display: flex;
-    gap: 6px;
-  }
-
-  .pagination a {
-    padding: 8px 14px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    text-decoration: none;
-    color: #004080;
-    font-weight: 600;
-    background: #fff;
-  }
-
-  .pagination a.active {
-    background-color: #004080;
-    color: #fff;
-    border-color: #004080;
-  }
-
-  .pagination a:hover {
-    background-color: #e6f0ff;
-  }
-</style>
 </body>
 </html>
