@@ -7,13 +7,8 @@ include '../../includes/header.php';
 <?php
 include '../../includes/navbar.php';
 ?>
-  <!-- Font Awesome -->
-  <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-  <!-- CSS dashboard utama -->
-
-  <style>
+<style>
     body {
       font-family: "Poppins", sans-serif;
       background-color: #f5f6fa;
@@ -217,68 +212,6 @@ include '../../includes/navbar.php';
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
   </style>
-<body>
-
-  <input type="checkbox" id="menu-toggle" />
-
-  <!-- TOPBAR -->
-  <header class="topbar">
-    <label for="menu-toggle" class="hamburger">
-      <i class="fas fa-bars"></i>
-      <i class="fas fa-times close-icon"></i>
-    </label>
-
-    <div class="topbar-center">
-      <img src="../../Gambar/Tanpa judul (300 x 138 piksel).png" alt="Logo" class="dashboard-logo">
-    </div>
-
-    <a href="../../logout.php" class="logout-btn desktop-only">
-      <i class="fas fa-right-from-bracket"></i> Logout
-    </a>
-  </header>
-
-  <label for="menu-toggle" class="overlay"></label>
-
-  <!-- SIDEBAR -->
-  <aside class="sidebar">
-    <nav class="menu">
-      <a href="../../index.php" class="home-link">
-        <i class="fas fa-home"></i>
-        <span>Beranda</span>
-      </a>
-
-      details>
-        <summary><span><i class="fas fa-building"></i> Lembaga</span> <i class="fas fa-angle-right arrow"></i></summary>
-        <ul>
-          <li><a href="../data_sekolah/data_sekolah.php">Data Sekolah</a></li>
-          <li><a href="../data_siswa/data_siswa.php">Data Siswa</a></li>
-          <li><a href="#">Kelas</a></li>
-          <li><a href="#">Semester Ganjil/Genap</a></li>
-          <li><a href="#">Mata Pelajaran</a></li>
-        </ul>
-      </details>
-
-      <details>
-        <summary><span><i class="fas fa-book"></i> Rapor</span> <i class="fas fa-angle-right arrow"></i></summary>
-        <ul>
-          <li><a href="#">Peraturan Cetak</a></li>
-          <li><a href="#">Ekstrakurikuler</a></li>
-          <li><a href="#">Nilai Mapel</a></li>
-          <li><a href="#">Absensi</a></li>
-          <li><a href="#">Cetak Rapor</a></li>
-        </ul>
-      </details>
-
-      <a href="tambah-user.php" class="add-user">
-        <span><i class="fas fa-user"></i> Tambah User</span>
-        <i class="fas fa-plus plus-icon"></i>
-      </a>
-
-      <a href="logout.php" class="logout-btn mobile-only">
-        <i class="fas fa-right-from-bracket"></i> Logout
-      </a>
-    </nav>
-  </aside>
 
   <!-- MAIN -->
   <main class="content">
@@ -391,5 +324,4 @@ include '../../includes/navbar.php';
   });
 </script>
 
-</body>
-</html>
+<?php include '../../includes/footer.php'; ?>
