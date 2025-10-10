@@ -1,0 +1,112 @@
+/* ===================== datakelas.css ===================== */
+
+.dk-page {
+  --dk-sidebar-width: 250px;
+  background-color: #f3f4f6;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 100vh;
+}
+
+.dk-main {
+  margin-left: var(--dk-sidebar-width);
+  padding: 20px;
+  width: calc(100% - var(--dk-sidebar-width));
+  transition: all 0.3s ease;
+}
+
+/* kotak putih pembatas */
+.dk-content-box {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  padding: 25px;
+}
+
+/* tombol */
+.dk-btn {
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.dk-btn-primary {
+  background-color: #0d6efd;
+  border: none;
+}
+
+.dk-btn-primary:hover {
+  background-color: #0b5ed7;
+}
+
+.dk-btn-success {
+  background-color: #198754;
+  border: none;
+}
+
+.dk-btn-success:hover {
+  background-color: #157347;
+}
+
+/* select */
+.dk-select {
+  border-radius: 6px;
+}
+
+/* tabel */
+.dk-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.dk-table th,
+.dk-table td {
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+  padding: 10px;
+}
+
+.dk-table thead th {
+  background-color: #1d52a2;
+  font-weight: 600;
+}
+
+.dk-table tbody tr:hover {
+  background-color: #f2f4f7;
+}
+
+/* RESPONSIVE */
+@media (max-width: 992px) {
+  .dk-main {
+    margin-left: 200px;
+    width: calc(100% - 200px);
+  }
+}
+
+@media (max-width: 768px) {
+  .dk-main {
+    margin-left: 0;
+    width: 100%;
+    padding: 15px;
+  }
+
+  .dk-content-box {
+    padding: 15px;
+    border-radius: 10px;
+  }
+
+  .dk-table th,
+  .dk-table td {
+    font-size: 12px;
+    padding: 8px;
+    white-space: normal; /* agar isi tabel bisa turun ke baris baru */
+  }
+}
+
+@media (max-width: 480px) {
+  .dk-table th,
+  .dk-table td {
+    font-size: 11px;
+    padding: 6px;
+  }
+}
