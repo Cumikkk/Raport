@@ -271,25 +271,30 @@
     </nav>
   </aside>
 
-  <!-- MAIN CONTENT -->
-  <main class="content">
-    <h2>Data Siswa</h2>
+<!-- MAIN CONTENT -->
+<main class="content">
+  <h2>Data Siswa</h2>
 
-    <div class="top-actions">
-      <form class="import-export" action="import.php" method="post" enctype="multipart/form-data">
-        <input type="file" name="file_excel" required>
-        <button type="submit" class="btn-main"><i class="fas fa-file-import"></i> Import</button>
-        <a href="export.php" class="btn-export"><i class="fas fa-file-export"></i> Export</a>
-      </form>
+  <div class="top-actions">
+    <!-- Form Import / Export -->
+    <form class="import-export" action="import.php" method="post" enctype="multipart/form-data">
+      <input type="file" name="file_excel" required>
+      <button type="submit" class="btn-main"><i class="fas fa-file-import"></i> Import</button>
+      <a href="export.php" class="btn-export"><i class="fas fa-file-export"></i> Export</a>
+    </form>
 
-      <form class="search-form" method="GET" action="">
-        <input type="text" name="search" placeholder="Cari nama siswa...">
-        <button type="submit"><i class="fas fa-search"></i> Cari</button>
-      </form>
+    <!-- Form Pencarian -->
+    <form class="search-form" method="GET" action="">
+      <input type="text" name="search" placeholder="Cari nama siswa...">
+      <button type="submit"><i class="fas fa-search"></i> Cari</button>
+    </form>
 
-      <a href="tambah_siswa.php" class="btn-add"><i class="fas fa-user-plus"></i> Tambah Siswa</a>
-    </div>
+    <!-- Tombol Tambah Siswa -->
+    <a href="tambah_siswa.php" class="btn-add"><i class="fas fa-user-plus"></i> Tambah Siswa</a>
+  </div>
 
+  <!-- Form Data Siswa untuk checkbox & hapus -->
+  <form action="hapus_pilihan.php" method="POST" onsubmit="return confirm('Yakin ingin menghapus data yang dipilih?')">
     <table>
       <thead>
         <tr>
@@ -309,61 +314,144 @@
           <td>Ahmad Fauzi</td>
           <td>Ust. Rudi</td>
           <td class="action-btns">
-            <button class="btn-detail" onclick="openModal('Ahmad Fauzi','20250101','Ust. Rudi','Laki-laki','8A')">Detail</button>
+            <button type="button" class="btn-detail"
+              onclick="openModal('1', 'Ahmad Fauzi', '20250101', 'Ust. Rudi')">Detail</button>
             <a href="edit_siswa.php?id=1" class="btn-edit">Edit</a>
-            <a href="hapus_siswa.php?id=1" class="btn-delete" onclick="return confirm('Yakin ingin menghapus data ini?')">Hapus</a>
+            <a href="hapus_siswa.php?id=1" class="btn-delete"
+              onclick="return confirm('Yakin ingin menghapus data ini?')">Hapus</a>
           </td>
         </tr>
       </tbody>
     </table>
 
-    <div class="pagination">
-      <a href="#">&lt;</a>
-      <a href="#" class="active">1</a>
-      <a href="#">2</a>
-      <a href="#">3</a>
-      <a href="#">&gt;</a>
+    <!-- Pagination + Tombol Hapus di bawah -->
+    <div class="bottom-bar">
+      <div class="left">
+        <button type="submit" class="btn-delete-selected">
+          <i class="fas fa-trash"></i> Hapus Pilihan
+        </button>
+      </div>
+      <div class="center pagination">
+        <a href="#">&lt;</a>
+        <a href="#" class="active">1</a>
+        <a href="#">2</a>
+        <a href="#">3</a>
+        <a href="#">&gt;</a>
+      </div>
+      <div class="right"></div>
     </div>
+  </form>
+</main>
 
-    <button type="submit" class="btn-delete-selected" onclick="return confirm('Yakin ingin menghapus data yang dipilih?')">
-        <i class="fas fa-trash"></i> Hapus Pilihan
-      </button>
-  </main>
-
-  <!-- ===== MODAL DETAIL SISWA ===== -->
-  <div class="modal" id="detailModal">
-    <div class="modal-content">
-      <button class="close-modal" onclick="closeModal()">&times;</button>
-      <h3>Detail Siswa</h3>
-      <p><strong>Nama:</strong> <span id="detailNama"></span></p>
-      <p><strong>NIS:</strong> <span id="detailNIS"></span></p>
-      <p><strong>Wali Kelas:</strong> <span id="detailWali"></span></p>
-    </div>
+<!-- ===== MODAL DETAIL SISWA ===== -->
+<div class="modal" id="detailModal">
+  <div class="modal-content">
+    <button class="close-modal" onclick="closeModal()">&times;</button>
+    <h3>Detail Siswa</h3>
+    <p><strong>Absen:</strong> <span id="detailAbsen"></span></p>
+    <p><strong>Nama:</strong> <span id="detailNama"></span></p>
+    <p><strong>NIS:</strong> <span id="detailNIS"></span></p>
+    <p><strong>Wali Kelas:</strong> <span id="detailWali"></span></p>
   </div>
+</div>
 
-  <script>
-    function openModal(nama, nis, wali, jk, kelas) {
-      document.getElementById('detailNama').innerText = nama;
-      document.getElementById('detailNIS').innerText = nis;
-      document.getElementById('detailWali').innerText = wali;
-      document.getElementById('detailModal').style.display = 'flex';
-    }
+<script>
+  // === MODAL DETAIL ===
+  function openModal(absen, nama, nis, wali) {
+    document.getElementById('detailAbsen').innerText = absen;
+    document.getElementById('detailNama').innerText = nama;
+    document.getElementById('detailNIS').innerText = nis;
+    document.getElementById('detailWali').innerText = wali;
+    document.getElementById('detailModal').style.display = 'flex';
+  }
 
-    function closeModal() {
-      document.getElementById('detailModal').style.display = 'none';
-    }
+  function closeModal() {
+    document.getElementById('detailModal').style.display = 'none';
+  }
 
-    window.onclick = function(e) {
-      const modal = document.getElementById('detailModal');
-      if (e.target === modal) modal.style.display = 'none';
-    };
+  window.onclick = function (e) {
+    const modal = document.getElementById('detailModal');
+    if (e.target === modal) modal.style.display = 'none';
+  };
 
-    // === SELECT ALL CHECKBOX ===
-    const selectAll = document.getElementById("selectAll");
+  // === SELECT ALL CHECKBOX ===
+  const selectAll = document.getElementById("selectAll");
+  selectAll.addEventListener("change", function () {
     const checkboxes = document.querySelectorAll('input[name="selected[]"]');
-    selectAll.addEventListener("change", function() {
-      checkboxes.forEach(cb => cb.checked = selectAll.checked);
-    });
-  </script>
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+  });
+</script>
+
+<style>
+  table th,
+  table td {
+    text-align: center;
+  }
+
+  .bottom-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    position: relative;
+  }
+
+  /* Tombol hapus di kiri */
+  .bottom-bar .left {
+    flex: 1;
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  /* Pagination di tengah */
+  .bottom-bar .center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+  }
+
+  .bottom-bar .right {
+    flex: 1;
+  }
+
+  .btn-delete-selected {
+    background-color: #dc3545;
+    color: white;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .btn-delete-selected:hover {
+    background-color: #c82333;
+  }
+
+  .pagination {
+    display: flex;
+    gap: 6px;
+  }
+
+  .pagination a {
+    padding: 8px 14px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    text-decoration: none;
+    color: #004080;
+    font-weight: 600;
+    background: #fff;
+  }
+
+  .pagination a.active {
+    background-color: #004080;
+    color: #fff;
+    border-color: #004080;
+  }
+
+  .pagination a:hover {
+    background-color: #e6f0ff;
+  }
+</style>
 </body>
 </html>
