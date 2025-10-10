@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -7,10 +8,12 @@
 
   <!-- Font Awesome -->
   <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="../../assets/css/dashboard.css">
+  <link rel="stylesheet" href="../../assets/css/bootstrap.min.css">
 </head>
+
 <body>
 
   <!-- checkbox hack -->
@@ -24,7 +27,7 @@
     </label>
 
     <div class="topbar-center">
-      <img src="Gambar/Tanpa judul (300 x 138 piksel).png" alt="Logo" class="dashboard-logo">
+      <img src="../../Gambar/Tanpa judul (300 x 138 piksel).png" alt="Logo" class="dashboard-logo">
     </div>
 
     <a href="logout.php" class="logout-btn desktop-only">
@@ -77,34 +80,61 @@
     </nav>
   </aside>
 
-<!-- MAIN CONTENT -->
-<main class="content py-4">
-<section class="cards">  
-<div class="row g-3">
-    <!-- Card kiri -->
-    <div class="col-md-6">
-      <div class="card shadow-sm h-100">
-        <div class="card-body">
-          <h5 class="card-title">Data Guru</h5>
-          <h3 class="card-text fw-bold">32 Guru</h3>
-          <p class="text-muted mb-0">+2 guru baru bulan ini</p>
-        </div>
-      </div>
-    </div>
+  <!-- MAIN CONTENT -->
+  <main class="content py-4">
+    <section class="cards">
+      <div class="row g-3">
+        <!-- Card kiri -->
+        <div class="col-md-6">
+          <div class="card shadow-sm h-100">
+            <div class="card-body">
+              <h5 class="card-title mb-4">Tambah Data Guru</h5>
+              <form>
+                <!-- Nama Guru -->
+                <div class="mb-3">
+                  <label for="namaGuru" class="form-label">Nama Guru</label>
+                  <input type="text" class="form-control" id="namaGuru" placeholder="Masukkan nama guru">
+                </div>
 
-    <!-- Card kanan -->
-    <div class="col-md-6">
-      <div class="card shadow-sm h-100">
-        <div class="card-body">
-          <h5 class="card-title">Data Siswa</h5>
-          <h3 class="card-text fw-bold">486 Siswa</h3>
-          <p class="text-muted mb-0">+15 siswa baru bulan ini</p>
+                <!-- Jabatan -->
+                <div class="mb-3">
+                  <label for="jabatan" class="form-label">Jabatan</label>
+                  <select class="form-select" id="jabatan">
+                    <option selected>Pilih Jabatan Guru</option>
+                    <option value="1">Kepala Sekolah</option>
+                    <option value="2">Guru Reguler</option>
+                  </select>
+                </div>
+
+                <!-- No. Telp -->
+                <div class="mb-3">
+                  <label for="noTelp" class="form-label">No Telpon</label>
+                  <input type="Number" class="form-control" id="noTlp" placeholder="Masukkan No Telp">
+                </div>
+
+                <!-- Tombol Simpan -->
+                <div class="text-end">
+                  <button type="submit" class="btn btn-primary rounded-3">Simpan</button>
+                </div>
+              </form>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Card kanan -->
+        <div class="col-md-6">
+          <div class="card shadow-sm h-100">
+            <div class="card-body">
+              <h5 class="card-title">Data Siswa</h5>
+              <h3 class="card-text fw-bold">486 Siswa</h3>
+              <p class="text-muted mb-0">+15 siswa baru bulan ini</p>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-</section>
-</main>
+    </section>
+  </main>
 
 
 </body>
