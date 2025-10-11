@@ -34,7 +34,7 @@ include '../includes/navbar.php';
   h2 {
     text-align: center;
     margin-bottom: 25px;
-    color: #1e3a8a;
+    color:rgb(6, 6, 6);
   }
 
   label {
@@ -85,7 +85,7 @@ include '../includes/navbar.php';
 
 <div class="form-wrapper">
   <div class="form-container">
-    <h2>Form Tambah User</h2>
+    <h2>Tambah User</h2>
 
     <form action="proses_tambah_user.php" method="POST">
       <label for="nama_lengkap">Nama Lengkap:</label>

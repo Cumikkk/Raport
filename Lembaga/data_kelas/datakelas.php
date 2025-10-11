@@ -3,7 +3,6 @@ include '../../includes/header.php';
 ?>
 
 <body>
-
 <?php
 include '../../includes/navbar.php';
 ?>
@@ -13,29 +12,35 @@ include '../../includes/navbar.php';
     <div class="dk-content-box">
       <div class="container-fluid py-3">
 
-        <!-- HEADER + TOMBOL -->
-        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-          <h4 class="fw-bold mb-0">Data Kelas</h4>
+        <!-- HEADER + CARI + TOMBOL -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+          <!-- Judul -->
+          <h4 class="fw-bold mb-2 mb-sm-0">Data Kelas</h4>
 
-          <div class="d-flex flex-wrap align-items-center justify-content-end gap-2">
+          <!-- Kolom Pencarian + Tombol -->
+          <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 search-group w-100 w-sm-auto">
+
             <!-- Form Cari -->
-            <form class="d-flex flex-sm-nowrap flex-wrap" role="search">
-              <input class="form-control form-control-sm me-2 mb-2 mb-sm-0" type="search"
-                     placeholder="Cari kelas..." aria-label="Search" style="max-width:160px;">
-              <button class="btn btn-outline-secondary btn-sm mb-2 mb-sm-0" type="submit">
+            <form class="d-flex flex-nowrap flex-grow-1 flex-sm-grow-0" role="search">
+              <input class="form-control me-2" type="search"
+                     placeholder="Cari kelas..." aria-label="Search" style="max-width:180px; flex-grow:1;">
+              <button class="btn btn-outline-secondary btn-md px-4" type="submit">
                 <i class="fa fa-search"></i>
               </button>
             </form>
 
-            <!-- Tombol Tambah -->
-            <a href="tambah_data.php" class="btn btn-primary btn-sm mb-2 mb-sm-0">
-              <i class="fa fa-plus"></i> Tambah
-            </a>
+            <!-- Tombol Tambah & Import -->
+            <div class="d-flex flex-wrap gap-2 mt-2 mt-sm-0 button-group">
+              <a href="tambah_data.php" class="btn btn-primary btn-md px-4 py-2 d-flex align-items-center gap-2">
+                <i class="fa fa-plus fa-lg"></i>
+                <span>Tambah</span>
+              </a>
 
-            <!-- Tombol Import -->
-            <a href="import.php" class="btn btn-success btn-sm mb-2 mb-sm-0">
-              <i class="fa fa-upload"></i> Import
-            </a>
+              <a href="import.php" class="btn btn-success btn-md px-4 py-2 d-flex align-items-center gap-2">
+                <i class="fa-solid fa-file-arrow-down fa-lg"></i>
+                <span>Import</span>
+              </a>
+            </div>
           </div>
         </div>
 
@@ -109,7 +114,7 @@ include '../../includes/navbar.php';
              class="d-flex flex-wrap justify-content-start align-items-center gap-2 mt-3 mb-3"
              style="display: none; margin-top: 10px; margin-bottom: 15px;">
           <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="selectAll">
+            <input class="form-check-input" type="checkbox" id="selectAll" style="box-shadow:none">
             <label class="form-check-label fw-semibold" for="selectAll">Pilih Semua</label>
           </div>
           <button id="deleteSelected" class="btn btn-danger btn-sm">
@@ -127,6 +132,26 @@ include '../../includes/navbar.php';
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+
+<!-- Tambahan CSS agar tombol sejajar di bawah search ketika responsive -->
+<style>
+@media (max-width: 576px) {
+  .search-group {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+  .search-group form {
+    width: 100%;
+  }
+  .button-group {
+    width: 100%;
+    justify-content: start !important;
+  }
+  .button-group a {
+    flex: 1 1 auto;
+  }
+}
+</style>
 
 <script>
 $(document).ready(function() {
@@ -147,49 +172,30 @@ $(document).ready(function() {
     }
   });
 
-  // Pindahkan tombol ke bawah fitur tampilkan
   $('#dataKelas_length').after($('#selectArea'));
   $('#selectArea').show();
 
-  // PILIH SEMUA termasuk checkbox responsive child
-  $('#selectAll').on('click', function() {
-      const isChecked = this.checked;
-
-      table.rows().every(function() {
-          const $row = $(this.node());
-          // checkbox row utama
-          $row.find('input.row-checkbox').prop('checked', isChecked);
-
-          // checkbox child row (jika responsive menampilkan child)
-          if(this.child.isShown()){
-              $(this.child()).find('input.row-checkbox').prop('checked', isChecked);
-          }
-      });
+  // Pilih Semua
+  $('#selectAll').on('change', function() {
+    const checked = this.checked;
+    table.$('.row-checkbox').prop('checked', checked);
   });
 
- 
+  $('#dataKelas').on('change', '.row-checkbox', function() {
+    const total = table.$('.row-checkbox').length;
+    const checkedCount = table.$('.row-checkbox:checked').length;
+    $('#selectAll').prop('checked', total === checkedCount);
+  });
 
-  // Hapus terpilih (simulasi)
   $('#deleteSelected').on('click', function() {
-      let selected = 0;
-
-      table.rows().every(function() {
-          const $row = $(this.node());
-          if($row.find('input.row-checkbox').prop('checked')){
-              selected++;
-          }
-      });
-
-      if(selected === 0){
-          alert('Tidak ada data yang dipilih.');
-      } else {
-          if(confirm(`Yakin ingin menghapus ${selected} data terpilih?`)){
-              alert(`${selected} data telah dihapus (simulasi).`);
-          }
+    const selected = table.$('.row-checkbox:checked').length;
+    if (selected === 0) {
+      alert('Tidak ada data yang dipilih.');
+    } else {
+      if (confirm(`Yakin ingin menghapus ${selected} data terpilih?`)) {
+        alert(`${selected} data telah dihapus (simulasi).`);
       }
+    }
   });
-
 });
 </script>
-
-<?php include '../../includes/footer.php'; ?>

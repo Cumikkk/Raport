@@ -3,9 +3,7 @@ include '../../includes/header.php';
 ?>
 
 <body>
-  <?php
-  include '../../includes/navbar.php';
-  ?>
+  <?php include '../../includes/navbar.php'; ?>
 
   <main class="content">
     <div class="cards row" style="margin-top: -50px;">
@@ -22,6 +20,13 @@ include '../../includes/header.php';
                   <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4" />
                 </svg>
                 Tambah
+              </a>
+
+              <a href="data_mapel_import.php" class="btn btn-primary btn-sm d-flex align-items-center gap-1 p-2 pe-3 fw-semibold" style="border-radius: 5px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus" viewBox="0 0 16 16">
+                  <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4" />
+                </svg>
+                Import
               </a>
 
               <button id="exportBtn" class="btn btn-success btn-sm d-flex align-items-center rounded-2 p-2 gap-1">
@@ -73,11 +78,18 @@ include '../../includes/header.php';
                     <td>Bahasa Inggris</td>
                     <td>Wajib</td>
                     <td class="text-center">
-                      <a href="data_mapel_edit.php?id=1" class="btn btn-warning btn-sm">
-                        <i class="bi bi-pencil-square">Edit</i>
+                      <a href="data_mapel_edit.php?id=1"
+                        class="btn btn-warning btn-sm me-1 d-inline-flex align-items-center justify-content-center gap-1 px-2 py-1 me-1"
+                        style="font-size: 15px;">
+                        <i class="bi bi-pencil-square" style="font-size: 15px;"></i>
+                        <span>Edit</span>
                       </a>
-                      <a href="hapus_mapel.php?id=1" class="btn btn-danger btn-sm" onclick="return confirm('Yakin ingin menghapus data ini?');">
-                        <i class="bi bi-trash">Del</i>
+                      <a href="hapus_mapel.php?id=1"
+                        class="btn btn-danger btn-sm me-1 d-inline-flex align-items-center justify-content-center gap-1 px-2 py-1"
+                        style="font-size: 15px;"
+                        onclick="return confirm('Yakin ingin menghapus data ini?');">
+                        <i class="bi bi-trash" style="font-size: 15px;"></i>
+                        <span>Del</span>
                       </a>
                     </td>
                   </tr>
@@ -92,3 +104,4 @@ include '../../includes/header.php';
   </main>
 
   <?php include '../../includes/footer.php'; ?>
+</body>
