@@ -74,7 +74,6 @@ include '../../includes/navbar.php';
     }
 
     
-    }
 
     .btn-success {
       background-color: #28a745;
