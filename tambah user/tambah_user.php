@@ -95,6 +95,8 @@ include '../includes/navbar.php';
       <input type="password" id="password" name="password" required>
 
       <button type="submit">Simpan</button>
+      
+      
     </form>
   </div>
 </div>

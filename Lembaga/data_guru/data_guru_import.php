@@ -75,3 +75,94 @@ include '../../includes/navbar.php';
 <?php
 include '../../includes/footer.php';
 ?>
+
+<!-- Tambahkan library XLSX untuk membaca file Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const fileInput = document.getElementById("excelFile");
+  const uploadBtn = document.getElementById("uploadBtn");
+  const sheetContainer = document.getElementById("sheetContainer");
+  const sheetSelect = document.getElementById("sheetSelect");
+  const previewContainer = document.getElementById("previewContainer");
+  const previewTableHead = previewContainer.querySelector("thead tr");
+  const previewTableBody = previewContainer.querySelector("tbody");
+
+  let workbookData = null;
+
+  // Tombol Upload diklik
+  uploadBtn.addEventListener("click", () => {
+    const file = fileInput.files[0];
+    if (!file) {
+      alert("Pilih file Excel terlebih dahulu!");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const data = new Uint8Array(e.target.result);
+      workbookData = XLSX.read(data, { type: "array" });
+
+      // Tampilkan daftar sheet
+      sheetSelect.innerHTML = "";
+      workbookData.SheetNames.forEach((name) => {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        sheetSelect.appendChild(option);
+      });
+      sheetContainer.style.display = "block";
+
+      // Tampilkan sheet pertama otomatis
+      displaySheetData(workbookData.SheetNames[0]);
+    };
+    reader.readAsArrayBuffer(file);
+  });
+
+  // Saat user ganti sheet
+  sheetSelect.addEventListener("change", (e) => {
+    const sheetName = e.target.value;
+    displaySheetData(sheetName);
+  });
+
+  // Fungsi tampilkan data sheet ke tabel preview
+  function displaySheetData(sheetName) {
+    const worksheet = workbookData.Sheets[sheetName];
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+    if (jsonData.length === 0) {
+      alert("Sheet kosong atau tidak bisa dibaca!");
+      return;
+    }
+
+    // Bersihkan tabel sebelumnya
+    previewTableHead.innerHTML = "";
+    previewTableBody.innerHTML = "";
+
+    // Buat header tabel
+    const headers = jsonData[0];
+    headers.forEach(header => {
+      const th = document.createElement("th");
+      th.textContent = header || "(kosong)";
+      previewTableHead.appendChild(th);
+    });
+
+    // Tampilkan 5 baris pertama
+    const previewRows = jsonData.slice(1, 6);
+    previewRows.forEach(row => {
+      const tr = document.createElement("tr");
+      headers.forEach((_, i) => {
+        const td = document.createElement("td");
+        td.textContent = row[i] ?? "";
+        tr.appendChild(td);
+      });
+      previewTableBody.appendChild(tr);
+    });
+
+    previewContainer.style.display = "block";
+    document.getElementById("importContainer").style.display = "flex";
+  }
+});
+</script>
+

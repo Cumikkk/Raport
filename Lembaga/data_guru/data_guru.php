@@ -11,7 +11,7 @@ include '../../includes/header.php';
         <div class="card shadow-sm" style="border-radius: 15px;">
           <div class="mt-0 d-flex align-items-center flex-wrap mb-0 p-3 top-bar">
             <!-- Judul di kiri -->
-            <h5 class="mb-1 fw-semibold fs-4">Data Guru</h5>
+            <h5 class="mb-1 fw-semibold fs-4" style=" text-align: center">Data Guru</h5>
 
             <!-- Tombol di kanan -->
             <div class="ms-auto d-flex gap-2 action-buttons">
@@ -99,14 +99,18 @@ include '../../includes/header.php';
     @media (max-width: 768px) {
       .top-bar {
         flex-direction: column !important;
-        align-items: flex-start !important;
+        align-items: flex-center !important;
       }
 
       .action-buttons {
         margin-top: 10px;
         width: 100%;
-        justify-content: flex-start !important;
+        justify-content: center !important;
         flex-wrap: wrap;
+      }
+
+      .h5 {
+        justify-content:center;
       }
 
       .action-buttons a,
