@@ -1,34 +1,32 @@
 # Raport
 
-test
-
 ## ToDo List Frontend E-Raport MA — Progress 60% -- Deadline 17 Oktober 2025
 
 ### 1. Struktur Template Dasar
-- [ ] Sudah ada file `header.php` berisi judul, CSS Bootstrap, favicon, dll.
-- [ ] Sudah ada file `navbar.php` atau `sidebar.php` berisi menu navigasi utama.
-- [ ] Sudah ada file `footer.php` berisi copyright dan script JS.
-- [ ] Semua halaman sudah memakai include header, navbar, dan footer.
-- [ ] Tampilan header dan sidebar seragam di semua halaman.
+- [x] Sudah ada file `header.php` berisi judul, CSS Bootstrap, favicon, dll.
+- [x] Sudah ada file `navbar.php` atau `sidebar.php` berisi menu navigasi utama.
+- [x] Sudah ada file `footer.php` berisi copyright dan script JS.
+- [x] Semua halaman sudah memakai include header, navbar, dan footer.
+- [x] Tampilan header dan sidebar seragam di semua halaman.
 
 ### 2. Navigasi & Perpindahan Halaman
-- [ ] Menu navigasi sudah bisa diklik dan berpindah ke halaman lain.
-- [ ] Tidak ada error saat berpindah halaman.
+- [x] Menu navigasi sudah bisa diklik dan berpindah ke halaman lain.
+- [x] Tidak ada error saat berpindah halaman.
 - [ ] Halaman aktif diberi tanda (warna aktif atau highlight).
 - [ ] Navigasi mudah dipahami pengguna (user-friendly).
 
 ### 3. Halaman Dashboard (Beranda)
-- [ ] Sudah menampilkan judul halaman “Dashboard E-Raport SMA”.
-- [ ] Ada ringkasan (total siswa, guru, mata pelajaran, dll) meski masih dummy.
-- [ ] Tampilan rapi dan responsif.
-- [ ] Sudah memakai card atau panel Bootstrap.
+- [x] Sudah menampilkan judul halaman “Dashboard E-Raport SMA”.
+- [x] Ada ringkasan (total siswa, guru, mata pelajaran, dll) meski masih dummy.
+- [x] Tampilan rapi dan responsif.
+- [x] Sudah memakai card atau panel Bootstrap.
 - [ ] Warna dan ikon sudah konsisten dengan tema sekolah.
 
 ### 4. Halaman Data Siswa / Guru / Mapel / Kelas
-- [ ] Tabel data sudah tampil dengan rapi (pakai Bootstrap Table).
-- [ ] Ada kolom: nomor, nama, NIS/NIP, kelas/mapel, dan aksi.
-- [ ] Sudah ada tombol Tambah, Edit, dan Hapus (belum perlu berfungsi).
-- [ ] Tampilan modal (popup form) tambah/edit sudah dibuat.
+- [x] Tabel data sudah tampil dengan rapi (pakai Bootstrap Table).
+- [sudah semua kecuali (kelas)] Ada kolom: nomor, nama, NIS/NIP, kelas/mapel, dan aksi.
+- [x] Sudah ada tombol Tambah, Edit, dan Hapus (belum perlu berfungsi).
+- [x] Tampilan modal (popup form) tambah/edit sudah dibuat.
 - [ ] Data dummy sudah ditampilkan untuk contoh.
 
 ### 5. Halaman Input Nilai
@@ -36,7 +34,7 @@ test
 - [ ] Tabel input nilai (harian, PTS, PAS) sudah muncul.
 - [ ] Tombol Simpan sudah ada meskipun belum berfungsi.
 - [ ] Layout sudah rapi dan mudah digunakan.
-- [ ] Elemen form (input, select, button) sudah disusun dengan Bootstrap.
+- [x] Elemen form (input, select, button) sudah disusun dengan Bootstrap.
 
 ### 6. Halaman Raport (Preview Nilai)
 - [ ] Sudah ada tampilan identitas siswa (nama, NIS, kelas, semester).
