@@ -16,26 +16,19 @@ include '../../includes/header.php';
             <h5 class="mb-1 fw-semibold fs-4 judul-ekstra">Data Ekstrakulikuler</h5>
 
             <!-- Tombol di kanan (pindah ke bawah di mobile) -->
-            <div class="d-flex gap-2 tombol-aksi">
-              <a href="data_ekstra_tambah.php"
-                 class="btn btn-primary btn-sm d-flex align-items-center gap-1 p-2 pe-3 fw-semibold"
-                 style="border-radius: 5px;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                     fill="currentColor" class="bi bi-plus" viewBox="0 0 16 16">
-                  <path
-                    d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4" />
-                </svg>
+            <div class="ms-auto d-flex gap-2 action-buttons">
+              <a href="data_ekstra_tambah.php" class="btn btn-primary btn-sm d-flex align-items-center gap-1 p-2 pe-3 fw-semibold" style="border-radius: 5px;">
+                <i class="fa-solid fa-plus fa-lg"></i>
                 Tambah
               </a>
 
-              <button id="exportBtn"
-                      class="btn btn-success btn-sm d-flex align-items-center rounded-2 p-2 gap-1">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                     fill="currentColor" class="bi bi-cloud-arrow-down-fill"
-                     viewBox="0 0 16 16">
-                  <path
-                    d="M8 2a5.53 5.53 0 0 0-3.594 1.342c-.766.66-1.321 1.52-1.464 2.383C1.266 6.095 0 7.555 0 9.318 0 11.366 1.708 13 3.781 13h8.906C14.502 13 16 11.57 16 9.773c0-1.636-1.242-2.969-2.834-3.194C12.923 3.999 10.69 2 8 2m2.354 6.854-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 1 1 .708-.708L7.5 9.293V5.5a.5.5 0 0 1 1 0v3.793l1.146-1.147a.5.5 0 0 1 .708.708" />
-                </svg>
+              <a href="data_ekstra_import.php" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
+                <i class="fa-solid fa-file-arrow-down fa-lg"></i>
+                <span>Import</span>
+              </a>
+
+              <button id="exportBtn" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
+                 <i class="fa-solid fa-file-arrow-up fa-lg"></i>
                 Export
               </button>
             </div>

@@ -24,22 +24,27 @@ include '../../includes/navbar.php';
             <form class="d-flex flex-nowrap flex-grow-1 flex-sm-grow-0" role="search">
               <input class="form-control me-2" type="search"
                      placeholder="Cari kelas..." aria-label="Search" style="max-width:180px; flex-grow:1;">
-              <button class="btn btn-outline-secondary btn-md px-4" type="submit">
+              <button class="btn btn-outline-secondary btn-md px-" type="submit">
                 <i class="fa fa-search"></i>
               </button>
             </form>
 
             <!-- Tombol Tambah & Import -->
             <div class="d-flex flex-wrap gap-2 mt-2 mt-sm-0 button-group">
-              <a href="tambah_data.php" class="btn btn-primary btn-md px-4 py-2 d-flex align-items-center gap-2">
-                <i class="fa fa-plus fa-lg"></i>
-                <span>Tambah</span>
+              <a href="tambah_data.php" class="btn btn-primary btn-sm d-flex align-items-center gap-1 p-2 pe-3 fw-semibold" style="border-radius: 5px;">
+                <i class="fa-solid fa-plus fa-lg" style="justify-conten-center"></i>
+                Tambah
               </a>
 
-              <a href="import.php" class="btn btn-success btn-md px-4 py-2 d-flex align-items-center gap-2">
+              <a href="import.php" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
                 <i class="fa-solid fa-file-arrow-down fa-lg"></i>
                 <span>Import</span>
               </a>
+
+              <button id="exportBtn" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
+                 <i class="fa-solid fa-file-arrow-up fa-lg"></i>
+                Export
+              </button>
             </div>
           </div>
         </div>

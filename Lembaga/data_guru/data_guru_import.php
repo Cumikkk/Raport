@@ -7,61 +7,75 @@ include '../../includes/header.php';
 include '../../includes/navbar.php';
 ?>
 
-<!-- Wrapper utama biar card-nya di tengah dan tidak tertutup navbar -->
-<div class="d-flex justify-content-center align-items-start" style="min-height: 100vh; padding-top: 100px; background-color: #f8f9fa;">
-  <div class="col-md-6">
-    <div class="card shadow-sm h-100">
-      <div class="card-body">
-        <h5 class="card-title fw-semibold mb-4">Import</h5>
+<div class="dk-page" style="margin-top: 50px;">
+  <div class="dk-main">
+    <div class="dk-content-box">
+      <div class="container py-4">
+        <h4 class="fw-bold mb-4">Import Data Guru</h4>
 
-        <!-- Step 1: Pilih file -->
         <div class="mb-3">
           <label for="excelFile" class="form-label">Pilih File Excel (.xlsx)</label>
-          <input type="file" class="form-control" id="excelFile" accept=".xlsx, .xls">
+          
+          <div class="position-relative" style="display: flex; align-items: center;">
+            <!-- Input file -->
+            <input 
+              type="file" 
+              class="form-control" 
+              id="excelFile" 
+              accept=".xlsx, .xls" 
+              onchange="toggleClearButton()" 
+              style="padding-right: 35px;"
+            >
+
+            <!-- Tombol X tanpa border, sejajar -->
+            <button 
+              type="button" 
+              id="clearFileBtn" 
+              onclick="clearFile()" 
+              title="Hapus file"
+              style="
+                position: absolute;
+                right: 10px;
+                background: none;
+                border: none;
+                color: #6c757d;
+                font-size: 20px;
+                line-height: 1;
+                display: none;
+                cursor: pointer;
+              ">
+              &times;
+            </button>
+          </div>
         </div>
 
-        <!-- Step 2: Upload / proses file -->
-        <div class="mb-3 d-flex justify-content-end">
-           <a href="" class="btn btn-warning rounded-3">
+        <div class="d-flex justify-content-between mt-4">
+          <a href="data_guru.php" class="btn btn-danger">
+            <i class="fa fa-times"></i> Batal
+          </a>
+          <a href="" class="btn btn-warning">
             <i class="fas fa-upload"></i> Upload
           </a>
-        </div>
-
-        <!-- Step 3: Pilih Sheet -->
-        <div class="mb-3" id="sheetContainer" style="display:none;">
-          <label for="sheetSelect" class="form-label">Pilih Sheet</label>
-          <select id="sheetSelect" class="form-select"></select>
-        </div>
-
-        <!-- Step 4: Pilih Kolom -->
-        <div class="mb-3" id="columnsContainer" style="display:none;" hidden>
-          <label class="form-label">Check Kolom yang akan diimport</label>
-          <div class="d-flex flex-wrap gap-2"></div>
-        </div>
-
-        <!-- Step 5: Preview Data -->
-        <div class="table-responsive" id="previewContainer" style="display:none;">
-          <table class="table table-bordered mt-3">
-            <thead class="table-primary">
-              <tr></tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-
-        <!-- Step 6: Tombol Import & Batal -->
-        <div class="d-flex justify-content-between align-items-center mt-3" id="importContainer" style="display:none;">
-          <a href="data_guru.php" class="btn btn-danger rounded-3">
-            <i class="fas fa-times"></i> Batal
-          </a>
-
-          
         </div>
 
       </div>
     </div>
   </div>
 </div>
+
+<script>
+  const fileInput = document.getElementById("excelFile");
+  const clearBtn = document.getElementById("clearFileBtn");
+
+  function toggleClearButton() {
+    clearBtn.style.display = fileInput.files.length > 0 ? "block" : "none";
+  }
+
+  function clearFile() {
+    fileInput.value = "";
+    clearBtn.style.display = "none";
+  }
+</script>
 
 <?php
 include '../../includes/footer.php';

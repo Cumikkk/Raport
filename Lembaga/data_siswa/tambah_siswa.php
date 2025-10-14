@@ -4,153 +4,60 @@ include '../../includes/header.php';
 
 <body>
 
-  <!-- Style tambahan halaman -->
-  <style>
-    body {
-      font-family: "Poppins", sans-serif;
-      background-color: #f5f6fa;
-    }
-
-    .content {
-      padding: 40px;
-    }
-
-    h2 {
-      color: #004080;
-      font-weight: 700;
-      margin-bottom: 25px;
-    }
-
-    /* === CARD FORM === */
-    .form-card {
-      background: #fff;
-      padding: 30px 35px;
-      border-radius: 16px;
-      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-      max-width: 700px;
-      margin: 0 auto;
-    }
-
-    .form-card label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: 600;
-      color: #333;
-    }
-
-    .form-card input {
-      width: 100%;
-      padding: 12px 14px;
-      margin-bottom: 20px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      font-size: 15px;
-      transition: 0.2s;
-    }
-
-    .form-card input:focus {
-      border-color: #004080;
-      box-shadow: 0 0 4px rgba(0, 64, 128, 0.3);
-      outline: none;
-    }
-
-    .form-buttons {
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
-      margin-top: 10px;
-    }
-
-    .btn-simpan, .btn-batal {
-      padding: 10px 18px;
-      border: none;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 15px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
-      text-decoration: none;
-      transition: 0.2s;
-    }
-
-    .btn-simpan {
-      background-color: green;
-      color: white;
-    }
-
-    .btn-batal {
-      background-color: #dc3545;
-      color: white;
-    }
-
-    .btn-simpan:hover {
-      background-color: #003366;
-      transform: translateY(-1px);
-    }
-
-    .btn-batal:hover {
-      background-color: #c82333;
-      transform: translateY(-1px);
-    }
-
-    @media (max-width: 768px) {
-      .content {
-        padding: 20px;
-      }
-
-      .form-card {
-        padding: 20px;
-      }
-
-      .form-buttons {
-        flex-direction: column;
-      }
-
-      .btn-simpan, .btn-batal {
-        width: 100%;
-        justify-content: center;
-      }
-    }
-  </style>
-</head>
-<body>
-
 <?php
 include '../../includes/navbar.php';
 ?>
-  
 
-  <!-- MAIN CONTENT -->
-  <main class="content">
-    <h2 style="text-align: center;">Tambah Data Siswa</h2>
+<div class="dk-page" style="margin-top: 50px;">
+  <div class="dk-main">
+    <div class="dk-content-box">
+      <div class="container py-4">
+        <h4 class="fw-bold mb-4">Tambah Data Siswa</h4>
 
-    <div class="form-card">
-      <form method="post">
-        <label>Absen</label>
-        <input type="number" name="absen" required>
+        <form>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nama Siswa</label>
+            <input type="text" class="form-control" placeholder="Nama Guru" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">NIS</label>
+            <input type="text" class="form-control" placeholder="Nis" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Absen</label>
+            <input type="text" class="form-control" placeholder="Absen" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Wali Kelas</label>
+            <input type="text" class="form-control" placeholder="Kelas" required>
+          </div>
 
-        <label>NIS</label>
-        <input type="text" name="nis" required>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Jabatan</label>
+            <select class="form-select" required>
+              <option value="" selected disabled>Pilih Jabatan</option>
+              <option value="Kepala Sekolah">Kepala Sekolah</option>
+              <option value="Wakil Kepala Sekolah">Wakil Kepala Sekolah</option>
+              <option value="Guru Mata Pelajaran">Guru Mata Pelajaran</option>
+              <option value="Guru BK">Guru BK</option>
+              <option value="Staff TU">Staff TU</option>
+              <option value="Operator Sekolah">Operator Sekolah</option>
+            </select>
+          </div>
 
-        <label>Nama</label>
-        <input type="text" name="nama" required>
-
-        <label>Wali Kelas</label>
-        <input type="text" name="wali_kelas" required>
-
-        <div class="form-buttons">
-          <button type="submit" name="simpan" class="btn-simpan">
-            <i class="fas fa-save"></i> Simpan
-          </button>
-          <a href="data_siswa.php" class="btn-batal">
-            <i class="fas fa-times"></i> Batal
-          </a>
-        </div>
-      </form>
+          <div class="d-flex flex-wrap gap-2 justify-content-between">
+            <button type="submit" class="btn btn-success">
+              <i class="fa fa-save"></i> Simpan
+            </button>
+            <a href="data_siswa.php" class="btn btn-danger">
+              <i class="fas fa-times"></i> Batal
+            </a>
+          </div>
+        </form>
+      </div>
     </div>
-  </main>
+  </div>
+</div>
 
 <?php
 include '../../includes/footer.php';
