@@ -164,7 +164,7 @@ include '../../includes/header.php';
         reader.readAsArrayBuffer(file);
       });
 
-      // Step 3 & 4: Pilih sheet -> tampilkan kolom (auto deteksi tabel fleksibel)
+      // Step 3 & 4: Pilih sheet -> tampilkan kolom (auto deteksi header + gabung 3 baris header merge)
       sheetSelect.addEventListener('change', () => {
         const sheetName = sheetSelect.value;
         const worksheet = workbook.Sheets[sheetName];
@@ -174,13 +174,14 @@ include '../../includes/header.php';
         selectedSheetData = jsonData;
 
         // keywords untuk flexible match
-        const headerKeywords = ["NO", "NAMA"];
-
+        const headerKeywords = ["NO", "MATA"];
         let headerRowIndex = -1;
+
+        // cari baris header utama
         for (let i = 0; i < jsonData.length; i++) {
           const row = jsonData[i].map(c => (c || '').toString().trim().toUpperCase());
           const matchCount = headerKeywords.filter(k => row.some(cell => cell.includes(k))).length;
-          if (matchCount >= 2) { // minimal 2 keyword cocok dianggap header
+          if (matchCount >= 2) {
             headerRowIndex = i;
             break;
           }
@@ -191,8 +192,57 @@ include '../../includes/header.php';
           return;
         }
 
-        const headers = jsonData[headerRowIndex];
-        const rows = jsonData.slice(headerRowIndex + 1).filter(r => r.some(c => c !== null && c !== ''));
+        // ambil maksimal 3 baris header
+        let header1 = jsonData[headerRowIndex] || [];
+        let header2 = jsonData[headerRowIndex + 1] || [];
+        let header3 = jsonData[headerRowIndex + 2] || [];
+
+        // --- 🆕 Fungsi bantu: isi cell kosong ke kanan (atasi efek merge Excel) ---
+        function fillMergedCells(row) {
+          let lastVal = '';
+          return row.map(cell => {
+            if (cell && cell.toString().trim() !== '') {
+              lastVal = cell.toString().trim();
+              return lastVal;
+            }
+            return lastVal; // isi ulang dengan nilai sebelumnya (efek merge horizontal)
+          });
+        }
+
+        // --- 🆕 Terapkan perbaikan merge ke semua baris header ---
+        header1 = fillMergedCells(header1);
+        header2 = fillMergedCells(header2);
+        header3 = fillMergedCells(header3);
+
+        // deteksi berapa banyak baris header aktif
+        const headerRows = [header1, header2, header3].filter(row =>
+          row && row.some(c => c && c.toString().trim() !== '')
+        );
+
+        let headers = [];
+        const dataStartIndex = headerRowIndex + headerRows.length;
+
+        // --- 🆕 Gabungkan header multi-baris jadi satu nama kolom ---
+        const maxLength = Math.max(header1.length, header2.length, header3.length);
+        for (let i = 0; i < maxLength; i++) {
+          const part1 = (header1[i] || '').trim();
+          const part2 = (header2[i] || '').trim();
+          const part3 = (header3[i] || '').trim();
+          const full = [part1, part2, part3].filter(Boolean).join(' ');
+          headers.push(full);
+        }
+
+        // ambil data setelah header
+        const rows = jsonData
+          .slice(dataStartIndex)
+          .filter(r => r.some(c => c !== null && c !== ''));
+
+        // --- 🔢 Filter hanya baris dengan NO >= 1 ---
+        const headerIndexNo = headers.findIndex(h => h && h.toString().toUpperCase().includes('NO'));
+        const filteredRows = rows.filter(r => {
+          const noVal = parseInt(r[headerIndexNo]);
+          return !isNaN(noVal) && noVal >= 1;
+        });
 
         // tampilkan checkbox kolom
         columnsContainer.innerHTML = '';
@@ -202,10 +252,18 @@ include '../../includes/header.php';
           label.innerHTML = `<input type="checkbox" value="${header}" checked> ${header}`;
           columnsContainer.appendChild(label);
         });
-
         columnsContainer.parentElement.style.display = 'block';
-        showPreview(headers, rows); // tampil preview tabel aja
+
+        // tampilkan preview tabel
+        showPreview(headers, filteredRows);
+
+        // simpan data buat backend
+        selectedSheetData = {
+          headers,
+          rows: filteredRows
+        };
       });
+
 
       // Step 5: Preview Data
       function showPreview(headers, rows) {

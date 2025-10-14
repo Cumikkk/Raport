@@ -5,11 +5,11 @@ test
 ## ToDo List Frontend E-Raport MA — Progress 60% -- Deadline 17 Oktober 2025
 
 ### 1. Struktur Template Dasar
-- [ ] Sudah ada file `header.php` berisi judul, CSS Bootstrap, favicon, dll.
-- [ ] Sudah ada file `navbar.php` atau `sidebar.php` berisi menu navigasi utama.
-- [ ] Sudah ada file `footer.php` berisi copyright dan script JS.
-- [ ] Semua halaman sudah memakai include header, navbar, dan footer.
-- [ ] Tampilan header dan sidebar seragam di semua halaman.
+- [x] Sudah ada file `header.php` berisi judul, CSS Bootstrap, favicon, dll.
+- [x] Sudah ada file `navbar.php` atau `sidebar.php` berisi menu navigasi utama.
+- [x] Sudah ada file `footer.php` berisi copyright dan script JS.
+- [x] Semua halaman sudah memakai include header, navbar, dan footer.
+- [x] Tampilan header dan sidebar seragam di semua halaman.
 
 ### 2. Navigasi & Perpindahan Halaman
 - [ ] Menu navigasi sudah bisa diklik dan berpindah ke halaman lain.
@@ -18,13 +18,13 @@ test
 - [ ] Navigasi mudah dipahami pengguna (user-friendly).
 
 ### 3. Halaman Dashboard (Beranda)
-- [ ] Sudah menampilkan judul halaman “Dashboard E-Raport SMA”.
+- [x] Sudah menampilkan judul halaman “Dashboard E-Raport SMA”.
 - [ ] Ada ringkasan (total siswa, guru, mata pelajaran, dll) meski masih dummy.
-- [ ] Tampilan rapi dan responsif.
-- [ ] Sudah memakai card atau panel Bootstrap.
-- [ ] Warna dan ikon sudah konsisten dengan tema sekolah.
+- [x] Tampilan rapi dan responsif.
+- [x] Sudah memakai card atau panel Bootstrap.
+- [x] Warna dan ikon sudah konsisten dengan tema sekolah.
 
-### 4. Halaman Data Siswa / Guru / Mapel / Kelas
+### 4. Halaman Data Siswa / Guru / Mapel / Kelas / semester / ekstra
 - [ ] Tabel data sudah tampil dengan rapi (pakai Bootstrap Table).
 - [ ] Ada kolom: nomor, nama, NIS/NIP, kelas/mapel, dan aksi.
 - [ ] Sudah ada tombol Tambah, Edit, dan Hapus (belum perlu berfungsi).
