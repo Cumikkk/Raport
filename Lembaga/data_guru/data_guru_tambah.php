@@ -23,7 +23,6 @@ include '../../includes/header.php';
             <label class="form-label fw-semibold">Jabatan</label>
             <input type="text" class="form-control" placeholder="Jabatan Guru" required>
           </div>
-
           <button type="submit" class="btn btn-success">
             <i class="fa fa-save"></i> Simpan
           </button>
@@ -36,5 +35,11 @@ include '../../includes/header.php';
   </div>
 </div>
 
+<<<<<<< HEAD
 <?include '../../includes/footer.php';
 ?>
+=======
+<?php
+include '../../includes/footer.php';
+?>
+>>>>>>> 5d5b36997803180c99c1d28c4ee550ef1b9828bb
