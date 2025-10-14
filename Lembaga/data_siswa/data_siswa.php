@@ -47,6 +47,14 @@ include '../../includes/navbar.php';
       border-radius: 6px;
       background: white;
       font-size: 14px;
+      display: block;
+    }
+
+    .import-buttons {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
     }
 
     .btn-main, .btn-export, .btn-add, .search-form button, .btn-delete-selected {
@@ -221,8 +229,10 @@ include '../../includes/navbar.php';
     <!-- Form Import / Export -->
     <form class="import-export" action="import.php" method="post" enctype="multipart/form-data">
       <input type="file" name="file_excel" required>
-      <button type="submit" class="btn-main"><i class="fas fa-file-import"></i> Import</button>
-      <a href="export.php" class="btn-export"><i class="fas fa-file-export"></i> Export</a>
+      <div class="import-buttons">
+        <a href="export.php" class="btn-export"><i class="fas fa-file-export"></i> Export</a>
+        <button type="submit" class="btn-main"><i class="fa-solid fa-file-arrow-down fa-lg"></i> Import</button>
+      </div>
     </form>
 
       <!-- Search -->

@@ -34,9 +34,10 @@
         <li><a href="/RAPORT/Lembaga/data_siswa/data_siswa.php">Data Siswa</a></li>
         <li><a href="/RAPORT/Lembaga/data_guru/data_guru.php">Data Guru</a></li>
         <li><a href="/RAPORT/Lembaga/data_kelas/datakelas.php">Data Kelas</a></li>
-        <li><a href="/RAPORT/Lembaga/data_kelas/datakelas.php">Semester Ganjil/Genap</a></li>
+        <li><a href="/RAPORT/Lembaga/data_semester/data_semester.php">Semester Ganjil/Genap</a></li>
         <li><a href="/RAPORT/Lembaga/data_mapel/data_mapel.php">Mata Pelajaran</a></li>
         <li><a href="/RAPORT/Lembaga/data_ekstra/data_ekstra.php">Ekstrakurikuler</a></li>
+        
       </ul>
     </details>
 
@@ -44,9 +45,9 @@
       <summary><span><i class="fas fa-book"></i> Rapor</span><i class="fas fa-angle-right arrow"></i></summary>
       <ul>
         <li><a href="/RAPORT/Lembaga/data_sekolah/data_sekolah.php">Peraturan Cetak</a></li>
-        <li><a href="/RAPORT/Lembaga/data_siswa/data_siswa.php">Nilai Mapel</a></li>
+        <li><a href="/RAPORT/rapor/nilai_mapel/mapel.php">Nilai Mapel</a></li>
         <li><a href="/RAPORT/Lembaga/data_guru/data_guru.php">Absensi</a></li>
-        <li><a href="/RAPORT/Lembaga/data_kelas/datakelas.php">Nilai Ekstrakurikuler</a></li>
+        <li><a href="/RAPORT/rapor/nilai_ekstra/nilai_ekstra.php">Nilai Ekstrakurikuler</a></li>
         <li><a href="/RAPORT/Lembaga/data_kelas/datakelas.php">Cetak Rapor</a></li>
       </ul>
     </details>

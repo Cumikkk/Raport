@@ -11,19 +11,21 @@ include '../../includes/navbar.php';
 
         <form>
           <div class="mb-3">
-            <label class="form-label fw-semibold">Nama Kelas</label>
-            <input type="text" class="form-control" value="XII IPA 1" required>
+            <label class="form-label fw-semibold">Nama Guru</label>
+            <input type="text" class="form-control" placeholder="Nama Guru" required>
           </div>
 
           <div class="mb-3">
-            <label class="form-label fw-semibold">Wali Kelas</label>
-            <input type="text" class="form-control" value="Irsyal Velani, S.Si." required>
+            <label class="form-label fw-semibold">Jabatan</label>
+            <input type="text" class="form-control" placeholder="Jabatan Guru" required>
           </div>
 
           <button type="submit" class="btn btn-success">
-            <i class="fa fa-save"></i> Update
+            <i class="fa fa-save"></i> Simpan
           </button>
-          <a href="index.php" class="btn btn-secondary">Kembali</a>
+          <a href="datakelas.php" class="btn btn-danger">
+            <i class="fas fa-times" style="justify-content-end"></i> Batal
+          </a>
         </form>
       </div>
     </div>
