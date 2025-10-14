@@ -46,9 +46,9 @@
       <ul>
         <li><a href="/RAPORT/Lembaga/data_sekolah/data_sekolah.php">Peraturan Cetak</a></li>
         <li><a href="/RAPORT/rapor/nilai_mapel/mapel.php">Nilai Mapel</a></li>
-        <li><a href="/RAPORT/Lembaga/data_guru/data_guru.php">Absensi</a></li>
+        <li><a href="/RAPORT/rapor/absensi/data_absensi.php">Absensi</a></li>
         <li><a href="/RAPORT/rapor/nilai_ekstra/nilai_ekstra.php">Nilai Ekstrakurikuler</a></li>
-        <li><a href="/RAPORT/Lembaga/data_kelas/datakelas.php">Cetak Rapor</a></li>
+        <li><a href="/RAPORT/rapor/cetak_rapor/data_rapor.php">Cetak Rapor</a></li>
       </ul>
     </details>
 
