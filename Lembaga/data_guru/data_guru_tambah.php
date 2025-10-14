@@ -1,9 +1,13 @@
 <?php
 include '../../includes/header.php';
-include '../../includes/navbar.php';
 ?>
 
-<div class="dk-page">
+<body>
+
+<?include '../../includes/navbar.php';
+?>
+
+<div class="dk-page" style="margin-top: 50px;">
   <div class="dk-main">
     <div class="dk-content-box">
       <div class="container py-4">
@@ -23,7 +27,7 @@ include '../../includes/navbar.php';
           <button type="submit" class="btn btn-success">
             <i class="fa fa-save"></i> Simpan
           </button>
-          <a href="data_guru.php" class="btn btn-danger">
+          <a href="datakelas.php" class="btn btn-danger">
             <i class="fas fa-times" style="justify-content-end"></i> Batal
           </a>
         </form>
@@ -31,3 +35,6 @@ include '../../includes/navbar.php';
     </div>
   </div>
 </div>
+
+<?include '../../includes/footer.php';
+?>

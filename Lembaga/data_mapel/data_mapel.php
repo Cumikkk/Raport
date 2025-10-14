@@ -16,36 +16,20 @@ include '../../includes/header.php';
 
               <!-- Tombol group -->
               <div class="d-flex flex-wrap gap-2 tombol-aksi">
-                <a href="data_mapel_tambah.php"
-                  class="btn btn-primary btn-sm d-flex align-items-center gap-1 fw-semibold p-2 px-3"
-                  style="border-radius:5px;">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                    class="bi bi-plus" viewBox="0 0 16 16">
-                    <path
-                      d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4" />
-                  </svg>
-                  Tambah
-                </a>
+               <a href="data_mapel_tambah.php" class="btn btn-primary btn-md d-flex align-items-center gap-1 p-2 pe-3 " style="border-radius: 5px;">
+                <i class="fa-solid fa-plus fa-lg"></i>
+                Tambah
+              </a>
 
-                <button id="importBtn"
-                  class="btn btn-warning btn-sm d-flex align-items-center rounded-2 p-2 gap-1 px-3 fw-semibold">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
-                    class="bi bi-cloud-arrow-up-fill" viewBox="0 0 16 16">
-                    <path
-                      d="M8 2a5.53 5.53 0 0 0-3.594 1.342C3.64 3.999 3.085 4.86 2.942 5.723 1.266 6.095 0 7.555 0 9.318 0 11.366 1.708 13 3.781 13h8.906C14.502 13 16 11.57 16 9.773c0-1.636-1.242-2.969-2.834-3.194C12.923 3.999 10.69 2 8 2m.354 8.854.001-3.708a.5.5 0 0 0-1 0v3.708L6.208 9.707a.5.5 0 0 0-.708.707l2 2a.5.5 0 0 0 .708 0l2-2a.5.5 0 1 0-.708-.707z" />
-                  </svg>
-                  Import
-                </button>
+               <a href="data_mapel_import.php" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
+                <i class="fa-solid fa-file-arrow-down fa-lg"></i>
+                <span>Import</span>
+              </a>
 
-                <button id="exportBtn"
-                  class="btn btn-success btn-sm d-flex align-items-center rounded-2 p-2 gap-1 px-3 fw-semibold">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
-                    class="bi bi-cloud-arrow-down-fill" viewBox="0 0 16 16">
-                    <path
-                      d="M8 2a5.53 5.53 0 0 0-3.594 1.342C3.64 3.999 3.085 4.86 2.942 5.723 1.266 6.095 0 7.555 0 9.318 0 11.366 1.708 13 3.781 13h8.906C14.502 13 16 11.57 16 9.773c0-1.636-1.242-2.969-2.834-3.194C12.923 3.999 10.69 2 8 2m2.354 6.854-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 1 1 .708-.708L7.5 9.293V5.5a.5.5 0 0 1 1 0v3.793l1.146-1.147a.5.5 0 0 1 .708.708" />
-                  </svg>
-                  Export
-                </button>
+                <a href="" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
+                <i class="fa-solid fa-file-arrow-up fa-lg"></i>
+                <span>Export</span>
+              </a>
               </div>
             </div>
           </div>

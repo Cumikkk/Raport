@@ -4,27 +4,27 @@ include '../../includes/navbar.php';
 ?>
 
 <div class="dk-page">
-  <div class="dk-main">
-    <div class="dk-content-box">
+  <div class="dk-main d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="dk-content-box shadow-sm rounded" style="width: 100%; max-width: 550px; background: #fff;">
       <div class="container py-4">
-        <h4 class="fw-bold mb-4">Tambah Data Kelas</h4>
+        <h4 class="fw-bold mb-4 text-center">Tambah Data Kelas</h4>
 
         <form>
           <div class="mb-3">
-            <label class="form-label fw-semibold">Nama Kelas</label>
-            <input type="text" class="form-control" placeholder="Misal: XII IPA 1" required>
+            <label class="form-label fw-semibold">Nama Guru</label>
+            <input type="text" class="form-control" placeholder="Nama Guru" required>
           </div>
 
           <div class="mb-3">
-            <label class="form-label fw-semibold">Wali Kelas</label>
-            <input type="text" class="form-control" placeholder="Nama Wali Kelas" required>
+            <label class="form-label fw-semibold">Jabatan</label>
+            <input type="text" class="form-control" placeholder="Jabatan Guru" required>
           </div>
 
           <button type="submit" class="btn btn-success">
             <i class="fa fa-save"></i> Simpan
           </button>
           <a href="datakelas.php" class="btn btn-danger">
-            <i class="fas fa-times"></i> Batal
+            <i class="fas fa-times" style="justify-content-end"></i> Batal
           </a>
         </form>
       </div>
