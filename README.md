@@ -37,11 +37,11 @@
 - [x] Elemen form (input, select, button) sudah disusun dengan Bootstrap.
 
 ### 6. Halaman Raport (Preview Nilai)
-- [ ] Sudah ada tampilan identitas siswa (nama, NIS, kelas, semester).
+- [x] Sudah ada tampilan identitas siswa (nama, NIS, kelas, semester).
 - [ ] Sudah ada tabel nilai tiap mata pelajaran.
 - [ ] Kolom rata-rata atau keterangan sudah tampil (dummy dulu).
 - [ ] Desain raport mirip raport sekolah (simple dan rapi).
-- [ ] Sudah disiapkan tombol “Cetak” (meskipun belum berfungsi).
+- [x] Sudah disiapkan tombol “Cetak” (meskipun belum berfungsi).
 
 ### 7. Halaman Login
 - [x] Sudah ada form login (username & password).
