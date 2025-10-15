@@ -1,68 +1,71 @@
 /*==============================================================*/
 /* DBMS name:      MySQL 5.0                                    */
-/* Created on:     12/10/2025 20.56.16                          */
+/* Created on:     15/10/2025 13.33.18                          */
 /*==============================================================*/
 
 
 alter table absensi 
    drop foreign key fk_absensi_relations_siswa;
 
-alter table cetak_raport 
+alter table absensi 
+   drop foreign key fk_absensi_relations_kelas;
+
+alter table absensi 
+   drop foreign key fk_absensi_relations_semester;
+
+alter table cetak_rapor 
    drop foreign key fk_cetak_ra_relations_pengatur;
 
-alter table cetak_raport 
-   drop foreign key fk_cetak_ra_relations_nilai_ek;
-
-alter table cetak_raport 
-   drop foreign key fk_cetak_ra_relations_absensi;
-
-alter table cetak_raport 
-   drop foreign key fk_cetak_ra_relations_semester;
-
-alter table cetak_raport 
-   drop foreign key fk_cetak_ra_relations_mata_pel;
-
-alter table cetak_raport 
+alter table cetak_rapor 
    drop foreign key fk_cetak_ra_relations_ekstraku;
 
-alter table cetak_raport 
+alter table cetak_rapor 
+   drop foreign key fk_cetak_ra_relations_semester;
+
+alter table cetak_rapor 
    drop foreign key fk_cetak_ra_relations_kelas;
 
-alter table cetak_raport 
+alter table cetak_rapor 
    drop foreign key fk_cetak_ra_relations_siswa;
 
-alter table cetak_raport 
+alter table cetak_rapor 
+   drop foreign key fk_cetak_ra_relations_absensi;
+
+alter table cetak_rapor 
+   drop foreign key fk_cetak_ra_relations_guru;
+
+alter table cetak_rapor 
+   drop foreign key fk_cetak_ra_relations_mata_pel;
+
+alter table cetak_rapor 
    drop foreign key fk_cetak_ra_relations_sekolah;
 
-alter table cetak_raport 
+alter table cetak_rapor 
    drop foreign key fk_cetak_ra_relations_nilai_ma;
 
-alter table kelas 
-   drop foreign key fk_kelas_relations_nilai_ma;
+alter table cetak_rapor 
+   drop foreign key fk_cetak_ra_relations_nilai_ek;
 
-alter table kelas 
-   drop foreign key fk_kelas_relations_mata_pel;
+alter table guru 
+   drop foreign key fk_guru_relations_kelas;
 
 alter table kelas 
    drop foreign key fk_kelas_relations_guru;
 
 alter table nilai_ekstrakurikuler 
-   drop foreign key fk_nilai_ek_relations_ekstraku;
-
-alter table nilai_ekstrakurikuler 
-   drop foreign key fk_nilai_ek_relations_siswa;
-
-alter table nilai_mata_pelajaran 
-   drop foreign key fk_nilai_ma_relations_mata_pel;
-
-alter table nilai_mata_pelajaran 
-   drop foreign key fk_nilai_ma_relations_siswa;
+   drop foreign key fk_nilai_ek_relations_semester;
 
 alter table nilai_mata_pelajaran 
    drop foreign key fk_nilai_ma_relations_semester;
 
 alter table nilai_mata_pelajaran 
    drop foreign key fk_nilai_ma_relations_kelas;
+
+alter table nilai_mata_pelajaran 
+   drop foreign key fk_nilai_ma_relations_siswa;
+
+alter table nilai_mata_pelajaran 
+   drop foreign key fk_nilai_ma_relations_mata_pel;
 
 alter table siswa 
    drop foreign key fk_siswa_relations_kelas;
@@ -71,51 +74,58 @@ alter table siswa
 alter table absensi 
    drop foreign key fk_absensi_relations_siswa;
 
+alter table absensi 
+   drop foreign key fk_absensi_relations_kelas;
+
+alter table absensi 
+   drop foreign key fk_absensi_relations_semester;
+
 drop table if exists absensi;
 
 
-alter table cetak_raport 
-   drop foreign key fk_cetak_ra_relations_sekolah;
-
-alter table cetak_raport 
-   drop foreign key fk_cetak_ra_relations_semester;
-
-alter table cetak_raport 
-   drop foreign key fk_cetak_ra_relations_mata_pel;
-
-alter table cetak_raport 
-   drop foreign key fk_cetak_ra_relations_ekstraku;
-
-alter table cetak_raport 
-   drop foreign key fk_cetak_ra_relations_kelas;
-
-alter table cetak_raport 
-   drop foreign key fk_cetak_ra_relations_siswa;
-
-alter table cetak_raport 
-   drop foreign key fk_cetak_ra_relations_nilai_ma;
-
-alter table cetak_raport 
+alter table cetak_rapor 
    drop foreign key fk_cetak_ra_relations_pengatur;
 
-alter table cetak_raport 
-   drop foreign key fk_cetak_ra_relations_nilai_ek;
+alter table cetak_rapor 
+   drop foreign key fk_cetak_ra_relations_kelas;
 
-alter table cetak_raport 
+alter table cetak_rapor 
+   drop foreign key fk_cetak_ra_relations_siswa;
+
+alter table cetak_rapor 
    drop foreign key fk_cetak_ra_relations_absensi;
 
-drop table if exists cetak_raport;
+alter table cetak_rapor 
+   drop foreign key fk_cetak_ra_relations_guru;
+
+alter table cetak_rapor 
+   drop foreign key fk_cetak_ra_relations_mata_pel;
+
+alter table cetak_rapor 
+   drop foreign key fk_cetak_ra_relations_sekolah;
+
+alter table cetak_rapor 
+   drop foreign key fk_cetak_ra_relations_nilai_ma;
+
+alter table cetak_rapor 
+   drop foreign key fk_cetak_ra_relations_nilai_ek;
+
+alter table cetak_rapor 
+   drop foreign key fk_cetak_ra_relations_ekstraku;
+
+alter table cetak_rapor 
+   drop foreign key fk_cetak_ra_relations_semester;
+
+drop table if exists cetak_rapor;
 
 drop table if exists ekstrakurikuler;
 
+
+alter table guru 
+   drop foreign key fk_guru_relations_kelas;
+
 drop table if exists guru;
 
-
-alter table kelas 
-   drop foreign key fk_kelas_relations_mata_pel;
-
-alter table kelas 
-   drop foreign key fk_kelas_relations_nilai_ma;
 
 alter table kelas 
    drop foreign key fk_kelas_relations_guru;
@@ -126,25 +136,22 @@ drop table if exists mata_pelajaran;
 
 
 alter table nilai_ekstrakurikuler 
-   drop foreign key fk_nilai_ek_relations_ekstraku;
-
-alter table nilai_ekstrakurikuler 
-   drop foreign key fk_nilai_ek_relations_siswa;
+   drop foreign key fk_nilai_ek_relations_semester;
 
 drop table if exists nilai_ekstrakurikuler;
 
-
-alter table nilai_mata_pelajaran 
-   drop foreign key fk_nilai_ma_relations_mata_pel;
-
-alter table nilai_mata_pelajaran 
-   drop foreign key fk_nilai_ma_relations_siswa;
 
 alter table nilai_mata_pelajaran 
    drop foreign key fk_nilai_ma_relations_semester;
 
 alter table nilai_mata_pelajaran 
    drop foreign key fk_nilai_ma_relations_kelas;
+
+alter table nilai_mata_pelajaran 
+   drop foreign key fk_nilai_ma_relations_siswa;
+
+alter table nilai_mata_pelajaran 
+   drop foreign key fk_nilai_ma_relations_mata_pel;
 
 drop table if exists nilai_mata_pelajaran;
 
@@ -168,7 +175,9 @@ drop table if exists user;
 create table absensi
 (
    id_absensi           int not null  comment '',
+   id_kelas             int  comment '',
    id_siswa             int  comment '',
+   id_semester          int  comment '',
    sakit                varchar(10)  comment '',
    izin                 varchar(10)  comment '',
    alpha                varchar(10)  comment '',
@@ -176,21 +185,22 @@ create table absensi
 );
 
 /*==============================================================*/
-/* Table: cetak_raport                                          */
+/* Table: cetak_rapor                                           */
 /*==============================================================*/
-create table cetak_raport
+create table cetak_rapor
 (
    id_cetak_raport      int not null  comment '',
-   id_sekolah           int  comment '',
-   id_nilai_mata_pelajaran int  comment '',
-   id_absensi           int  comment '',
-   id_siswa             int  comment '',
-   id_kelas             int  comment '',
-   id_semester          int  comment '',
    id_pengaturan_cetak  int  comment '',
+   id_absensi           int  comment '',
+   id_mata_pelajaran    int  comment '',
+   id_semester          int  comment '',
+   id_siswa             int  comment '',
    id_ekstrakurikuler   int  comment '',
    id_nilai_ekstrakurikuler int  comment '',
-   id_mata_pelajaran    int  comment '',
+   id_kelas             int  comment '',
+   id_nilai_mata_pelajaran int  comment '',
+   id_guru              int  comment '',
+   id_sekolah           int  comment '',
    primary key (id_cetak_raport)
 );
 
@@ -210,6 +220,7 @@ create table ekstrakurikuler
 create table guru
 (
    id_guru              int not null  comment '',
+   id_kelas             int  comment '',
    nama_guru            varchar(150)  comment '',
    jabatan_guru         enum('Kepala Sekolah', 'Guru')  comment '',
    nip_guru             varchar(50)  comment '',
@@ -223,8 +234,6 @@ create table kelas
 (
    id_kelas             int not null  comment '',
    id_guru              int  comment '',
-   id_mata_pelajaran    int  comment '',
-   id_nilai_mata_pelajaran int  comment '',
    nama_kelas           varchar(50)  comment '',
    primary key (id_kelas)
 );
@@ -247,8 +256,7 @@ create table mata_pelajaran
 create table nilai_ekstrakurikuler
 (
    id_nilai_ekstrakurikuler int not null  comment '',
-   id_siswa             int  comment '',
-   id_ekstrakurikuler   int  comment '',
+   id_semester          int  comment '',
    nilai_ekstrakurikuler enum('A', 'B', 'C', 'D')  comment '',
    primary key (id_nilai_ekstrakurikuler)
 );
@@ -259,10 +267,10 @@ create table nilai_ekstrakurikuler
 create table nilai_mata_pelajaran
 (
    id_nilai_mata_pelajaran int not null  comment '',
-   id_kelas             int  comment '',
-   id_mata_pelajaran    int  comment '',
-   id_semester          int  comment '',
    id_siswa             int  comment '',
+   id_kelas             int  comment '',
+   id_semester          int  comment '',
+   id_mata_pelajaran    int  comment '',
    tp1_lm1              int  comment '',
    tp2_lm1              int  comment '',
    tp3_lm1              int  comment '',
@@ -322,7 +330,7 @@ create table sekolah
 create table semester
 (
    id_semester          int not null  comment '',
-   nama_semester        varchar(50)  comment '',
+   nama_semester        enum('Ganjil', 'Genap')  comment '',
    tahun_ajaran         varchar(50)  comment '',
    primary key (id_semester)
 );
@@ -358,62 +366,65 @@ create table user
 alter table absensi add constraint fk_absensi_relations_siswa foreign key (id_siswa)
       references siswa (id_siswa) on delete restrict on update restrict;
 
-alter table cetak_raport add constraint fk_cetak_ra_relations_pengatur foreign key (id_pengaturan_cetak)
-      references pengaturan_cetak (id_pengaturan_cetak) on delete restrict on update restrict;
-
-alter table cetak_raport add constraint fk_cetak_ra_relations_nilai_ek foreign key (id_nilai_ekstrakurikuler)
-      references nilai_ekstrakurikuler (id_nilai_ekstrakurikuler) on delete restrict on update restrict;
-
-alter table cetak_raport add constraint fk_cetak_ra_relations_absensi foreign key (id_absensi)
-      references absensi (id_absensi) on delete restrict on update restrict;
-
-alter table cetak_raport add constraint fk_cetak_ra_relations_semester foreign key (id_semester)
-      references semester (id_semester) on delete restrict on update restrict;
-
-alter table cetak_raport add constraint fk_cetak_ra_relations_mata_pel foreign key (id_mata_pelajaran)
-      references mata_pelajaran (id_mata_pelajaran) on delete restrict on update restrict;
-
-alter table cetak_raport add constraint fk_cetak_ra_relations_ekstraku foreign key (id_ekstrakurikuler)
-      references ekstrakurikuler (id_ekstrakurikuler) on delete restrict on update restrict;
-
-alter table cetak_raport add constraint fk_cetak_ra_relations_kelas foreign key (id_kelas)
+alter table absensi add constraint fk_absensi_relations_kelas foreign key (id_kelas)
       references kelas (id_kelas) on delete restrict on update restrict;
 
-alter table cetak_raport add constraint fk_cetak_ra_relations_siswa foreign key (id_siswa)
+alter table absensi add constraint fk_absensi_relations_semester foreign key (id_semester)
+      references semester (id_semester) on delete restrict on update restrict;
+
+alter table cetak_rapor add constraint fk_cetak_ra_relations_pengatur foreign key (id_pengaturan_cetak)
+      references pengaturan_cetak (id_pengaturan_cetak) on delete restrict on update restrict;
+
+alter table cetak_rapor add constraint fk_cetak_ra_relations_ekstraku foreign key (id_ekstrakurikuler)
+      references ekstrakurikuler (id_ekstrakurikuler) on delete restrict on update restrict;
+
+alter table cetak_rapor add constraint fk_cetak_ra_relations_semester foreign key (id_semester)
+      references semester (id_semester) on delete restrict on update restrict;
+
+alter table cetak_rapor add constraint fk_cetak_ra_relations_kelas foreign key (id_kelas)
+      references kelas (id_kelas) on delete restrict on update restrict;
+
+alter table cetak_rapor add constraint fk_cetak_ra_relations_siswa foreign key (id_siswa)
       references siswa (id_siswa) on delete restrict on update restrict;
 
-alter table cetak_raport add constraint fk_cetak_ra_relations_sekolah foreign key (id_sekolah)
+alter table cetak_rapor add constraint fk_cetak_ra_relations_absensi foreign key (id_absensi)
+      references absensi (id_absensi) on delete restrict on update restrict;
+
+alter table cetak_rapor add constraint fk_cetak_ra_relations_guru foreign key (id_guru)
+      references guru (id_guru) on delete restrict on update restrict;
+
+alter table cetak_rapor add constraint fk_cetak_ra_relations_mata_pel foreign key (id_mata_pelajaran)
+      references mata_pelajaran (id_mata_pelajaran) on delete restrict on update restrict;
+
+alter table cetak_rapor add constraint fk_cetak_ra_relations_sekolah foreign key (id_sekolah)
       references sekolah (id_sekolah) on delete restrict on update restrict;
 
-alter table cetak_raport add constraint fk_cetak_ra_relations_nilai_ma foreign key (id_nilai_mata_pelajaran)
+alter table cetak_rapor add constraint fk_cetak_ra_relations_nilai_ma foreign key (id_nilai_mata_pelajaran)
       references nilai_mata_pelajaran (id_nilai_mata_pelajaran) on delete restrict on update restrict;
 
-alter table kelas add constraint fk_kelas_relations_nilai_ma foreign key (id_nilai_mata_pelajaran)
-      references nilai_mata_pelajaran (id_nilai_mata_pelajaran) on delete restrict on update restrict;
+alter table cetak_rapor add constraint fk_cetak_ra_relations_nilai_ek foreign key (id_nilai_ekstrakurikuler)
+      references nilai_ekstrakurikuler (id_nilai_ekstrakurikuler) on delete restrict on update restrict;
 
-alter table kelas add constraint fk_kelas_relations_mata_pel foreign key (id_mata_pelajaran)
-      references mata_pelajaran (id_mata_pelajaran) on delete restrict on update restrict;
+alter table guru add constraint fk_guru_relations_kelas foreign key (id_kelas)
+      references kelas (id_kelas) on delete restrict on update restrict;
 
 alter table kelas add constraint fk_kelas_relations_guru foreign key (id_guru)
       references guru (id_guru) on delete restrict on update restrict;
 
-alter table nilai_ekstrakurikuler add constraint fk_nilai_ek_relations_ekstraku foreign key (id_ekstrakurikuler)
-      references ekstrakurikuler (id_ekstrakurikuler) on delete restrict on update restrict;
-
-alter table nilai_ekstrakurikuler add constraint fk_nilai_ek_relations_siswa foreign key (id_siswa)
-      references siswa (id_siswa) on delete restrict on update restrict;
-
-alter table nilai_mata_pelajaran add constraint fk_nilai_ma_relations_mata_pel foreign key (id_mata_pelajaran)
-      references mata_pelajaran (id_mata_pelajaran) on delete restrict on update restrict;
-
-alter table nilai_mata_pelajaran add constraint fk_nilai_ma_relations_siswa foreign key (id_siswa)
-      references siswa (id_siswa) on delete restrict on update restrict;
+alter table nilai_ekstrakurikuler add constraint fk_nilai_ek_relations_semester foreign key (id_semester)
+      references semester (id_semester) on delete restrict on update restrict;
 
 alter table nilai_mata_pelajaran add constraint fk_nilai_ma_relations_semester foreign key (id_semester)
       references semester (id_semester) on delete restrict on update restrict;
 
 alter table nilai_mata_pelajaran add constraint fk_nilai_ma_relations_kelas foreign key (id_kelas)
       references kelas (id_kelas) on delete restrict on update restrict;
+
+alter table nilai_mata_pelajaran add constraint fk_nilai_ma_relations_siswa foreign key (id_siswa)
+      references siswa (id_siswa) on delete restrict on update restrict;
+
+alter table nilai_mata_pelajaran add constraint fk_nilai_ma_relations_mata_pel foreign key (id_mata_pelajaran)
+      references mata_pelajaran (id_mata_pelajaran) on delete restrict on update restrict;
 
 alter table siswa add constraint fk_siswa_relations_kelas foreign key (id_kelas)
       references kelas (id_kelas) on delete restrict on update restrict;
