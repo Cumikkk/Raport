@@ -31,8 +31,8 @@ include '../../includes/navbar.php';
 
             <!-- Tombol Tambah & Import -->
             <div class="d-flex flex-wrap gap-2 mt-2 mt-sm-0 button-group">
-              <a href="tambah_data.php" class="btn btn-primary btn-sm d-flex align-items-center gap-1 p-2 pe-3 fw-semibold" style="border-radius: 5px;">
-                <i class="fa-solid fa-plus fa-lg" style="justify-conten-center"></i>
+              <a href="tambah_data.php" class="btn btn-primary btn-md px-3 py-2 d-flex align-items-center gap-2" style="border-radius: 5px; text-align: center;">
+                <i class="fa-solid fa-plus fa-lg"></i>
                 Tambah
               </a>
 
