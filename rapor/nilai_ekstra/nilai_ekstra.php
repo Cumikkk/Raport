@@ -20,7 +20,7 @@ include '../../includes/header.php';
                                 Tambah
                             </a>
 
-                            <a href="nilai_mapel_import.php" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
+                            <a href="nilai_ekstra_import.php" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
                                 <i class="fa-solid fa-file-arrow-down fa-lg"></i>
                                 <span>Import</span>
                             </a>

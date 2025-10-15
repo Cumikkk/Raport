@@ -7,13 +7,13 @@ include '../../includes/navbar.php';
     <div class="dk-main">
         <div class="dk-content-box">
             <div class="container py-4">
-                <h4 class="fw-bold mb-4">Tambah Data Nilai Ekstrakurikuler</h4>
+                <h4 class="fw-bold mb-4">Tambah Data Nilai Mapel</h4>
 
                 <form id="formEkstra">
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Nama Siswa</label>
+                        <label class="form-label fw-semibold">Nama Mapel</label>
                         <select class="form-select" id="namaSiswa" required>
-                            <option value="">-- Pilih Siswa --</option>
+                            <option value="">-- Pilih Mapel --</option>
                             <option value="1">Ayu Lestari</option>
                             <option value="2">Budi Santoso</option>
                             <option value="3">Citra Dewi</option>
@@ -21,14 +21,13 @@ include '../../includes/navbar.php';
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Nama Ekstrakurikuler</label>
+                        <label class="form-label fw-bold">Jenis</label>
                         <select class="form-select" id="namaEkstra" required>
-                            <option value="">-- Pilih Ekstrakurikuler --</option>
-                            <option value="Pramuka">Pramuka</option>
-                            <option value="PMR">PMR</option>
-                            <option value="Paskibra">Paskibra</option>
-                            <option value="Tari">Tari</option>
-                            <option value="Futsal">Futsal</option>
+                            <option value="">-- Pilih Jenis --</option>
+                            <option value="Pramuka">Wajib</option>
+                            <option value="PMR">Paket</option>
+                            <option value="PMR">Paket</option>
+                           
                         </select>
                     </div>
 
@@ -47,7 +46,7 @@ include '../../includes/navbar.php';
                         <button type="submit" class="btn btn-success">
               <i class="fa fa-save"></i> Simpan
             </button>
-            <a href="nilai_ekstra.php" class="btn btn-danger">
+            <a href="mapel.php" class="btn btn-danger">
               <i class="fas fa-times"></i> Batal
             </a>
                     </div>

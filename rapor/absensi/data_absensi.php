@@ -19,7 +19,7 @@ include '../../includes/header.php';
         }
 
         h2 {
-            color: #004080;
+            color:rgb(13, 14, 14);
             font-weight: 700;
             margin-bottom: 25px;
         }
@@ -63,7 +63,22 @@ include '../../includes/header.php';
         .btn-add,
         .search-form button,
         .btn-delete-selected {
-            background: #1d52a2;
+            background: green;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 18px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.2s;
+            text-decoration: none;
+        }
+
+        .search-form button {
             color: #fff;
             border: none;
             border-radius: 8px;
@@ -79,11 +94,11 @@ include '../../includes/header.php';
         }
 
         .btn-export {
-            background: #007bff;
+            background:green;
         }
 
         .btn-add {
-            background: #28a745;
+            background: #007bff;
         }
 
         .btn-delete-selected {
@@ -314,21 +329,21 @@ include '../../includes/header.php';
 
             <!-- Form Import / Export -->
             <form class="import-export" action="import.php" method="post" enctype="multipart/form-data">
-                <input type="file" name="file_excel" required>
+
                 <div class="import-buttons">
-                    <a href="export.php" class="btn-export"><i class="fas fa-file-export"></i> Export</a>
-                    <button type="submit" class="btn-main"><i class="fa-solid fa-file-arrow-down fa-lg"></i> Import</button>
+                    <a href="data_absensi_import.php" class="btn-export"><i class="fa-solid fa-file-arrow-up"></i> import</a>
+                    <button type="submit" class="btn-main"><i class="fa-solid fa-file-arrow-down fa-lg"></i> Export</button>
                 </div>
             </form>
 
             <!-- Search -->
             <form class="search-form" method="GET" action="">
                 <input type="text" name="search" placeholder="Cari nama siswa...">
-                <button type="submit"><i class="fas fa-search"></i> Cari</button>
+                <button type="submit"><i class="fas fa-search"></i></button>
             </form>
 
             <!-- Tombol Tambah Siswa -->
-            <a href="tambah_siswa.php" class="btn-add"><i class="fas fa-user-plus"></i> Tambah Siswa</a>
+            <a href="data_absensi_tambah.php" class="btn-add"><i class="fas fa-plus"></i> Tambah Absensi Siswa</a>
         </div>
 
         <!-- Form Data Siswa untuk checkbox & hapus -->
@@ -359,7 +374,7 @@ include '../../includes/header.php';
                         <td class="action-btns">
                             <button type="button" class="btn-detail"
                                 onclick="openModal('1', 'Ahmad Fauzi', '20250101', 'Ust. Rudi')">Detail</button>
-                            <a href="edit_siswa.php?id=1" class="btn-edit">Edit</a>
+                            <a href="data_absensi_edit.php?id=1" class="btn-edit">Edit</a>
                             <a href="hapus_siswa.php?id=1" class="btn-delete"
                                 onclick="return confirm('Yakin ingin menghapus data ini?')">Hapus</a>
                         </td>

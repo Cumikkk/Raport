@@ -19,7 +19,7 @@ include '../../includes/navbar.php';
     }
 
     h2 {
-      color: #004080;
+      color:rgb(5, 5, 5);
       font-weight: 700;
       margin-bottom: 25px;
     }
@@ -58,7 +58,7 @@ include '../../includes/navbar.php';
     }
 
     .btn-main, .btn-export, .btn-add, .search-form button, .btn-delete-selected {
-      background: #1d52a2;
+      background: green;
       color: #fff;
       border: none;
       border-radius: 8px;
@@ -74,11 +74,11 @@ include '../../includes/navbar.php';
     }
 
     .btn-export {
-      background: #007bff;
+      background: green;
     }
 
     .btn-add {
-      background: #28a745;
+      background: #007bff;
     }
 
     .btn-delete-selected {
@@ -228,21 +228,20 @@ include '../../includes/navbar.php';
   <div class="top-actions">
     <!-- Form Import / Export -->
     <form class="import-export" action="import.php" method="post" enctype="multipart/form-data">
-      <input type="file" name="file_excel" required>
       <div class="import-buttons">
-        <a href="export.php" class="btn-export"><i class="fas fa-file-export"></i> Export</a>
-        <button type="submit" class="btn-main"><i class="fa-solid fa-file-arrow-down fa-lg"></i> Import</button>
+        <a href="data_siswa_import.php" class="btn-export"><i class="fas fa-file-export"></i> Import</a>
+        <button type="submit" class="btn-main"><i class="fa-solid fa-file-arrow-down fa-lg"></i> Export</button>
       </div>
     </form>
 
       <!-- Search -->
       <form class="search-form" method="GET" action="">
         <input type="text" name="search" placeholder="Cari nama siswa...">
-        <button type="submit"><i class="fas fa-search"></i> Cari</button>
+        <button type="submit"><i class="fas fa-search"></i></button>
       </form>
 
     <!-- Tombol Tambah Siswa -->
-    <a href="tambah_siswa.php" class="btn-add"><i class="fas fa-user-plus"></i> Tambah Siswa</a>
+    <a href="tambah_siswa.php" class="btn-add"><i class="fas fa-plus"></i> Tambah Siswa</a>
   </div>
 
   <!-- Form Data Siswa untuk checkbox & hapus -->
