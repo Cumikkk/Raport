@@ -29,9 +29,9 @@ include '../../includes/navbar.php';
               </button>
             </form>
 
-            <!-- Tombol Tambah & Import -->
+            <!-- Tombol Tambah & Import & Export -->
             <div class="d-flex flex-wrap gap-2 mt-2 mt-sm-0 button-group">
-              <a href="tambah_data.php" class="btn btn-primary btn-md px-3 py-2 d-flex align-items-center gap-2" style="border-radius: 5px; text-align: center;">
+              <a href="tambah_data.php" class="btn btn-primary btn-md px-3 py-2 d-flex align-items-center gap-2">
                 <i class="fa-solid fa-plus fa-lg"></i>
                 Tambah
               </a>
@@ -42,7 +42,7 @@ include '../../includes/navbar.php';
               </a>
 
               <button id="exportBtn" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
-                 <i class="fa-solid fa-file-arrow-up fa-lg"></i>
+                <i class="fa-solid fa-file-arrow-up fa-lg"></i>
                 Export
               </button>
             </div>
@@ -138,22 +138,46 @@ include '../../includes/navbar.php';
 <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
 
-<!-- Tambahan CSS agar tombol sejajar di bawah search ketika responsive -->
+<!-- CSS RESPONSIVE -->
 <style>
 @media (max-width: 576px) {
+  /* Judul di tengah */
+  h4.fw-bold {
+    text-align: center;
+    width: 100%;
+    margin-bottom: 12px !important;
+  }
+
+  /* Grup pencarian jadi vertikal */
   .search-group {
     flex-direction: column;
-    align-items: stretch !important;
+    align-items: center !important;
+    width: 100%;
+    gap: 12px;
   }
+
+  /* Form pencarian lebar penuh */
   .search-group form {
     width: 100%;
+    justify-content: center;
   }
+
+  /* Tombol sejajar di tengah */
   .button-group {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
     width: 100%;
-    justify-content: start !important;
   }
-  .button-group a {
-    flex: 1 1 auto;
+
+  /* Ukuran tombol proporsional */
+  .button-group a,
+  .button-group button {
+    width: auto;
+    min-width: 110px;
+    justify-content: center;
   }
 }
 </style>

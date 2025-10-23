@@ -3,334 +3,172 @@ include '../../includes/header.php';
 ?>
 
 <body>
+  <?php include '../../includes/navbar.php'; ?>
 
-<?php
-include '../../includes/navbar.php';
-?>
+  <main class="content">
+    <div class="cards row" style="margin-top: -50px;">
+      <div class="col-12">
+        <div class="card shadow-sm" style="border-radius: 15px;">
+          <div class="mt-0 d-flex align-items-center flex-wrap mb-0 p-3 top-bar">
+            <!-- Judul di kiri -->
+            <h5 class="mb-1 fw-semibold fs-4" style=" text-align: center">Data Siswa</h5>
 
-<style>
-    body {
-      font-family: "Poppins", sans-serif;
-      background-color: #f5f6fa;
+            <!-- Tombol di kanan -->
+            <div class="ms-auto d-flex gap-2 action-buttons">
+              <a href="tambah_siswa.php" class="btn btn-primary btn-sm d-flex align-items-center gap-1 p-2 pe-3 fw-semibold" style="border-radius: 5px;">
+                <i class="fa-solid fa-plus fa-lg"></i>
+                Tambah
+              </a>
+
+              <a href="data_siswa_import.php" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
+                <i class="fa-solid fa-file-arrow-down fa-lg"></i>
+                <span>Import</span>
+              </a>
+
+              <button id="exportBtn" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
+                <i class="fa-solid fa-file-arrow-up fa-lg"></i>
+                Export
+              </button>
+            </div>
+          </div>
+
+          <!-- Search & Sort -->
+          <div class="ms-3 me-3 bg-white d-flex justify-content-center align-items-center flex-wrap p-2 gap-2">
+            <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search" style="width: 200px;">
+            <button id="searchBtn" class="btn btn-outline-secondary btn-sm p-2 rounded-3 d-flex align-items-center justify-content-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+                <path d="M11 6a5 5 0 1 0-2.9 4.7l3.85 3.85a1 1 0 0 0 1.414-1.414l-3.85-3.85A4.978 4.978 0 0 0 11 6zM6 10a4 4 0 1 1 0-8 4 4 0 0 1 0 8z" />
+              </svg>
+            </button>
+
+            <button id="sortBtn" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 rounded-3">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-sort-alpha-down" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M10.082 5.629 9.664 7H8.598l1.789-5.332h1.234L13.402 7h-1.12l-.419-1.371zm1.57-.785L11 2.687h-.047l-.652 2.157z" />
+                <path d="M12.96 14H9.028v-.691l2.579-3.72v-.054H9.098v-.867h3.785v.691l-2.567 3.72v.054h2.645zM4.5 2.5a.5.5 0 0 0-1 0v9.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 1.999.007.007a.497.497 0 0 0 .7-.006l2-2a.5.5 0 0 0-.707-.708L4.5 12.293z" />
+              </svg>
+              Sort
+            </button>
+          </div>
+
+          <!-- Tabel Data Siswa -->
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-bordered table-striped align-middle">
+                <thead style="background-color:#1d52a2" class="text-center text-white">
+                  <tr>
+                    <th><input type="checkbox" id="selectAll"></th>
+                    <th>Absen</th>
+                    <th>Nama</th>
+                    <th>NIS</th>
+                    <th>Wali Kelas</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="text-center"><input type="checkbox" class="row-check"></td>
+                    <td>1</td>
+                    <td>Fahrul</td>
+                    <td>123456</td>
+                    <td>Bu Sutrisna</td>
+                    <td class="text-center">
+                      <a href="edit_siswa.php?id=1" class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1" style="font-size: 15px;">
+                        <i class="bi bi-pencil-square"></i><span>Edit</span>
+                      </a>
+                      <a href="hapus_mapel.php?id=1" class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 px-2 py-1"
+                        onclick="return confirm('Yakin ingin menghapus data ini?');" style="font-size: 15px;">
+                        <i class="bi bi-trash"></i><span>Del</span>
+                      </a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="text-center"><input type="checkbox" class="row-check"></td>
+                    <td>2</td>
+                    <td>Ahmad</td>
+                    <td>654321</td>
+                    <td>Pak Budi</td>
+                    <td class="text-center">
+                      <a href="edit_siswa.php?id=2" class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1" style="font-size: 15px;">
+                        <i class="bi bi-pencil-square"></i><span>Edit</span>
+                      </a>
+                      <a href="hapus_mapel.php?id=2" class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 px-2 py-1"
+                        onclick="return confirm('Yakin ingin menghapus data ini?');" style="font-size: 15px;">
+                        <i class="bi bi-trash"></i><span>Del</span>
+                      </a>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Tombol hapus terpilih -->
+            <div class="mt-2">
+              <button id="deleteSelected" class="btn btn-danger btn-sm">
+                <i class="bi bi-trash"></i> Hapus Terpilih
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <style>
+    @media (max-width: 768px) {
+      .top-bar {
+        flex-direction: column !important;
+        align-items: flex-center !important;
+      }
+
+      .action-buttons {
+        margin-top: 10px;
+        width: 100%;
+        justify-content: center !important;
+        flex-wrap: wrap;
+      }
+
+      .h5 {
+        justify-content: center;
+      }
+
+      .action-buttons a,
+      .action-buttons button {
+        width: auto;
+      }
     }
-
-    .content {
-      padding: 30px;
-    }
-
-    h2 {
-      color:rgb(5, 5, 5);
-      font-weight: 700;
-      margin-bottom: 25px;
-    }
-
-    /* === BAGIAN ATAS (Import, Export, Cari, Tambah) === */
-    .top-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 15px;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 25px;
-    }
-
-    .import-export, .search-form {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .import-export input[type="file"] {
-      border: 1px solid #ccc;
-      padding: 6px;
-      border-radius: 6px;
-      background: white;
-      font-size: 14px;
-      display: block;
-    }
-
-    .import-buttons {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 8px;
-    }
-
-    .btn-main, .btn-export, .btn-add, .search-form button, .btn-delete-selected {
-      background: green;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 10px 18px;
-      font-weight: 600;
-      font-size: 15px;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: 0.2s;
-      text-decoration: none;
-    }
-
-    .btn-export {
-      background: green;
-    }
-
-    .btn-add {
-      background: #007bff;
-    }
-
-    .btn-delete-selected {
-      background: #dc3545;
-      margin-top: 15px;
-    }
-
-    .btn-main:hover, .btn-export:hover, .btn-add:hover, .btn-delete-selected:hover {
-      opacity: 0.9;
-      transform: translateY(-1px);
-    }
-
-    .search-form input {
-      padding: 10px 12px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 14px;
-    }
-
-    /* === TABEL DATA SISWA === */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: #fff;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    thead { background: #004080; color: #fff; }
-    th, td { padding: 12px 15px; text-align: left; border: 1px solid #ccc; }
-
-    tbody tr:nth-child(even) { background: #f9f9f9; }
-    tbody tr:hover { background: #eef3ff; }
-
-    /* Tombol Aksi */
-    .btn-detail, .btn-edit, .btn-delete {
-      padding: 6px 12px;
-      border: none;
-      border-radius: 6px;
-      color: #fff;
-      font-weight: 600;
-      font-size: 13px;
-      cursor: pointer;
-      text-decoration: none;
-      transition: 0.2s;
-    }
-
-    .btn-detail { background: #17a2b8; }
-    .btn-edit { background: #ffc107; color: #000; }
-    .btn-delete { background: #dc3545; }
-
-    .btn-detail:hover { background: #138496; }
-    .btn-edit:hover { background: #e0a800; }
-    .btn-delete:hover { background: #c82333; }
-
-    .action-btns { display: flex; gap: 8px; flex-wrap: wrap; }
-
-    /* === PAGINATION === */
-    .pagination {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin-top: 25px;
-      gap: 8px;
-    }
-
-    .pagination a, .pagination span {
-      display: inline-block;
-      padding: 8px 14px;
-      background: #fff;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      color: #004080;
-      font-weight: 600;
-      text-decoration: none;
-      transition: 0.2s;
-    }
-
-    .pagination a:hover {
-      background: #004080;
-      color: #fff;
-    }
-
-    .pagination .active {
-      background: #004080;
-      color: #fff;
-      border-color: #004080;
-    }
-
-    /* === MODAL POPUP === */
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 999;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.5);
-      justify-content: center;
-      align-items: center;
-      animation: fadeIn 0.3s ease;
-    }
-
-    .modal-content {
-      background: #fff;
-      border-radius: 12px;
-      padding: 25px;
-      width: 90%;
-      max-width: 500px;
-      position: relative;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      animation: slideDown 0.3s ease;
-    }
-
-    .modal-content h3 {
-      margin-bottom: 20px;
-      color: #004080;
-      text-align: center;
-    }
-
-    .modal-content p {
-      margin: 8px 0;
-      font-size: 15px;
-    }
-
-    .close-modal {
-      position: absolute;
-      top: 12px;
-      right: 15px;
-      background: none;
-      border: none;
-      font-size: 22px;
-      color: #333;
-      cursor: pointer;
-    }
-
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
   </style>
 
-  <!-- MAIN -->
-  <main class="content">
-    <h2>Data Siswa</h2>
+  <script>
+    // Fungsi pilih semua
+    const selectAll = document.getElementById('selectAll');
+    const rowChecks = document.querySelectorAll('.row-check');
 
-  <div class="top-actions">
-    <!-- Form Import / Export -->
-    <form class="import-export" action="import.php" method="post" enctype="multipart/form-data">
-      <div class="import-buttons">
-        <a href="data_siswa_import.php" class="btn-export"><i class="fas fa-file-export"></i> Import</a>
-        <button type="submit" class="btn-main"><i class="fa-solid fa-file-arrow-down fa-lg"></i> Export</button>
-      </div>
-    </form>
+    selectAll.addEventListener('change', function() {
+      rowChecks.forEach(cb => cb.checked = this.checked);
+    });
 
-      <!-- Search -->
-      <form class="search-form" method="GET" action="">
-        <input type="text" name="search" placeholder="Cari nama siswa...">
-        <button type="submit"><i class="fas fa-search"></i></button>
-      </form>
+    rowChecks.forEach(cb => {
+      cb.addEventListener('change', () => {
+        const allChecked = [...rowChecks].every(c => c.checked);
+        selectAll.checked = allChecked;
+      });
+    });
 
-    <!-- Tombol Tambah Siswa -->
-    <a href="tambah_siswa.php" class="btn-add"><i class="fas fa-plus"></i> Tambah Siswa</a>
-  </div>
+    // Fungsi hapus terpilih
+    document.getElementById('deleteSelected').addEventListener('click', function() {
+      const selected = document.querySelectorAll('.row-check:checked');
+      if (selected.length === 0) {
+        alert('Tidak ada data yang dipilih!');
+        return;
+      }
 
-  <!-- Form Data Siswa untuk checkbox & hapus -->
-  <form action="hapus_pilihan.php" method="POST" onsubmit="return confirm('Yakin ingin menghapus data yang dipilih?')">
-    <table>
-      <thead>
-        <tr>
-          <th><input type="checkbox" id="selectAll"></th>
-          <th>Absen</th>
-          <th>NIS</th>
-          <th>Nama</th>
-          <th>Wali Kelas</th>
-          <th>Aksi</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><input type="checkbox" name="selected[]" value="1"></td>
-          <td>1</td>
-          <td>20250101</td>
-          <td>Ahmad Fauzi</td>
-          <td>Ust. Rudi</td>
-          <td class="action-btns">
-            <button type="button" class="btn-detail"
-              onclick="openModal('1', 'Ahmad Fauzi', '20250101', 'Ust. Rudi')">Detail</button>
-            <a href="edit_siswa.php?id=1" class="btn-edit">Edit</a>
-            <a href="hapus_siswa.php?id=1" class="btn-delete"
-              onclick="return confirm('Yakin ingin menghapus data ini?')">Hapus</a>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+      if (confirm(`Yakin ingin menghapus ${selected.length} data terpilih?`)) {
+        selected.forEach(cb => {
+          cb.closest('tr').remove();
+        });
+      }
+    });
+  </script>
 
-    <!-- Pagination + Tombol Hapus di bawah -->
-    <div class="bottom-bar">
-      <div class="left">
-        <button type="submit" class="btn-delete-selected">
-          <i class="fas fa-trash"></i> Hapus Pilihan
-        </button>
-      </div>
-      <div class="center pagination">
-        <a href="#">&lt;</a>
-        <a href="#" class="active">1</a>
-        <a href="#">2</a>
-        <a href="#">3</a>
-        <a href="#">&gt;</a>
-      </div>
-      <div class="right"></div>
-    </div>
-  </form>
-</main>
+  <?php include '../../includes/footer.php'; ?>
 
-<!-- ===== MODAL DETAIL SISWA ===== -->
-<div class="modal" id="detailModal">
-  <div class="modal-content">
-    <button class="close-modal" onclick="closeModal()">&times;</button>
-    <h3>Detail Siswa</h3>
-    <p><strong>Absen:</strong> <span id="detailAbsen"></span></p>
-    <p><strong>Nama:</strong> <span id="detailNama"></span></p>
-    <p><strong>NIS:</strong> <span id="detailNIS"></span></p>
-    <p><strong>Wali Kelas:</strong> <span id="detailWali"></span></p>
-  </div>
-</div>
-
-<script>
-  // === MODAL DETAIL ===
-  function openModal(absen, nama, nis, wali) {
-    document.getElementById('detailAbsen').innerText = absen;
-    document.getElementById('detailNama').innerText = nama;
-    document.getElementById('detailNIS').innerText = nis;
-    document.getElementById('detailWali').innerText = wali;
-    document.getElementById('detailModal').style.display = 'flex';
-  }
-
-  function closeModal() {
-    document.getElementById('detailModal').style.display = 'none';
-  }
-
-  window.onclick = function (e) {
-    const modal = document.getElementById('detailModal');
-    if (e.target === modal) modal.style.display = 'none';
-  };
-
-  // === SELECT ALL CHECKBOX ===
-  const selectAll = document.getElementById("selectAll");
-  selectAll.addEventListener("change", function () {
-    const checkboxes = document.querySelectorAll('input[name="selected[]"]');
-    checkboxes.forEach(cb => cb.checked = selectAll.checked);
-  });
-</script>
-
-<?php include '../../includes/footer.php'; ?>

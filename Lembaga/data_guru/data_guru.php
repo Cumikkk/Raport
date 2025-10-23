@@ -66,9 +66,9 @@ include '../../includes/header.php';
                 <tbody>
                   <tr>
                     <td>1</td>
-                    <td>Bahasa Inggris</td>
+                    <td>Siti Nur Jannah S.Pd.</td>
                     <td>Honorer</td>
-                    <td>0896262728</td>
+                    <td>XII IPA 2</td>
                     <td class="text-center">
                       <a href="data_guru_edit.php?id=1"
                         class="btn btn-warning btn-sm me-1 d-inline-flex align-items-center justify-content-center gap-1 px-2 py-1 me-1"
@@ -121,4 +121,4 @@ include '../../includes/header.php';
   </style>
 
   <?php include '../../includes/footer.php'; ?>
-</body>
+
