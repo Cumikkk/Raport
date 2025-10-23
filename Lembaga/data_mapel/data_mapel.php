@@ -1,5 +1,6 @@
 <?php
 include '../../includes/header.php';
+include '../../koneksi.php';
 ?>
 
 <body>
@@ -66,24 +67,42 @@ include '../../includes/header.php';
                 <thead style="background-color:#1d52a2" class="text-center text-white">
                   <tr>
                     <th>No</th>
+                    <th>Kode Mapel</th>
                     <th>Nama Mata Pelajaran</th>
+                    <th>Jenis</th>
                     <th>Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td>1</td>
-                    <td>Matematika</td>
-                    <td class="text-center">
-                      <a href="data_mapel_edit.php?id=1" class="btn btn-warning btn-sm">
-                        <i class="bi bi-pencil-square">Edit</i>
-                      </a>
-                      <a href="hapus_mapel.php?id=1" class="btn btn-danger btn-sm"
-                        onclick="return confirm('Yakin ingin menghapus data ini?');">
-                        <i class="bi bi-trash">Del</i>
-                      </a>
-                    </td>
-                  </tr>
+                  <?php
+                  $no = 1;
+                  $query = "SELECT * FROM mata_pelajaran ORDER BY id_mata_pelajaran ASC";
+                  $result = mysqli_query($koneksi, $query);
+
+                  if (mysqli_num_rows($result) > 0) {
+                    while ($row = mysqli_fetch_assoc($result)) {
+                      echo "
+                      <tr>
+                        <td class='text-center'>{$no}</td>
+                        <td class='text-center'>{$row['kode_mata_pelajaran']}</td>
+                        <td>{$row['nama_mata_pelajaran']}</td>
+                        <td class='text-center'>{$row['kelompok_mata_pelajaran']}</td>
+                        <td class='text-center'>
+                          <a href='data_mapel_edit.php?id={$row['id_mata_pelajaran']}' class='btn btn-warning btn-sm'>
+                            <i class='bi bi-pencil-square'></i> Edit
+                          </a>
+                          <a href='hapus_mapel.php?id={$row['id_mata_pelajaran']}' class='btn btn-danger btn-sm' 
+                            onclick=\"return confirm('Yakin ingin menghapus data ini?');\">
+                            <i class='bi bi-trash'></i> Del
+                          </a>
+                        </td>
+                      </tr>";
+                      $no++;
+                    }
+                  } else {
+                    echo "<tr><td colspan='5' class='text-center'>Belum ada data mata pelajaran</td></tr>";
+                  }
+                  ?>
                 </tbody>
               </table>
             </div>

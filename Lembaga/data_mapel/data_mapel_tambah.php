@@ -14,22 +14,19 @@ include '../../includes/navbar.php';
       <div class="container py-4">
         <h4 class="fw-bold mb-4">Tambah Data Mapel</h4>
 
-        <form>
+        <!-- Form Simpan -->
+        <form action="mapel_tambah_proses.php" method="POST">
           <div class="mb-3">
-            <label class="form-label fw-semibold">Nama Mapel</label>
-            <input type="text" class="form-control" placeholder="Nama Mapel" required>
+            <label class="form-label fw-semibold">Nama Mata Pelajaran</label>
+            <input type="text" name="nama_mapel" class="form-control" placeholder="Nama Mapel" required>
           </div>
 
           <div class="mb-3">
-            <label class="form-label fw-semibold">Jabatan</label>
-            <select class="form-select" required>
-              <option value="" selected disabled>Pilih Jabatan</option>
-              <option value="Kepala Sekolah">Kepala Sekolah</option>
-              <option value="Wakil Kepala Sekolah">Wakil Kepala Sekolah</option>
-              <option value="Guru Mata Pelajaran">Guru Mata Pelajaran</option>
-              <option value="Guru BK">Guru BK</option>
-              <option value="Staff TU">Staff TU</option>
-              <option value="Operator Sekolah">Operator Sekolah</option>
+            <label class="form-label fw-semibold">Jenis Mata Pelajaran</label>
+            <select name="jenis_mapel" class="form-select" required>
+              <option value="" selected disabled>Pilih</option>
+              <option value="Wajib">Wajib</option>
+              <option value="Pilihan">Pilihan</option>
             </select>
           </div>
 
