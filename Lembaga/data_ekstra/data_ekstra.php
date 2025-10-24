@@ -37,31 +37,20 @@ include '../../koneksi.php';
           <div class="ms-3 me-3 bg-white d-flex justify-content-center align-items-center flex-wrap p-2 gap-2">
             <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search" style="width: 200px;">
             <button id="searchBtn" class="btn btn-outline-secondary btn-sm p-2 rounded-3 d-flex align-items-center justify-content-center">
-<<<<<<< HEAD
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
-                <path d="M11 6a5 5 0 1 0-2.9 4.7l3.85 3.85a1 1 0 0 0 1.414-1.414l-3.85-3.85A4.978 4.978 0 0 0 11 6zM6 10a4 4 0 1 1 0-8 4 4 0 0 1 0 8z" />
-=======
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
                 fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
                 <path
                   d="M11 6a5 5 0 1 0-2.9 4.7l3.85 3.85a1 1 0 0 0 1.414-1.414l-3.85-3.85A4.978 4.978 0 0 0 11 6zM6 10a4 4 0 1 1 0-8 4 4 0 0 1 0 8z" />
->>>>>>> 25a2514f348b5960069628c8b63a6ad54762fefe
               </svg>
             </button>
 
             <button id="sortBtn" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 rounded-3">
-<<<<<<< HEAD
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-sort-alpha-down" viewBox="0 0 16 16">
-                <path fill-rule="evenodd" d="M10.082 5.629 9.664 7H8.598l1.789-5.332h1.234L13.402 7h-1.12l-.419-1.371zm1.57-.785L11 2.687h-.047l-.652 2.157z" />
-                <path d="M12.96 14H9.028v-.691l2.579-3.72v-.054H9.098v-.867h3.785v.691l-2.567 3.72v.054h2.645zM4.5 2.5a.5.5 0 0 0-1 0v9.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 1.999.007.007a.497.497 0 0 0 .7-.006l2-2a.5.5 0 0 0-.707-.708L4.5 12.293z" />
-=======
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
                 fill="currentColor" class="bi bi-sort-alpha-down" viewBox="0 0 16 16">
                 <path fill-rule="evenodd"
                   d="M10.082 5.629 9.664 7H8.598l1.789-5.332h1.234L13.402 7h-1.12l-.419-1.371zm1.57-.785L11 2.687h-.047l-.652 2.157z" />
                 <path
                   d="M12.96 14H9.028v-.691l2.579-3.72v-.054H9.098v-.867h3.785v.691l-2.567 3.72v.054h2.645zM4.5 2.5a.5.5 0 0 0-1 0v9.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 1.999.007.007a.497.497 0 0 0 .7-.006l2-2a.5.5 0 0 0-.707-.708L4.5 12.293z" />
->>>>>>> 25a2514f348b5960069628c8b63a6ad54762fefe
               </svg>
               Sort
             </button>
@@ -79,8 +68,7 @@ include '../../koneksi.php';
                   </tr>
                 </thead>
                 <tbody>
-<<<<<<< HEAD
-                  <tr>
+                    <tr>
                     <td>1</td>
                     <td>Pramuka</td>
                     <td class="text-center">
@@ -98,15 +86,14 @@ include '../../koneksi.php';
                         <span>Del</span>
                       </a>
                     </td>
-                  </tr>
-=======
-                  <?php
-                  $no = 1;
-                  $query = "SELECT * FROM ekstrakurikuler ORDER BY id_ekstrakurikuler ASC";
-                  $result = mysqli_query($koneksi, $query);
-                  if (mysqli_num_rows($result) > 0) {
-                    while ($row = mysqli_fetch_assoc($result)) {
-                      echo "
+                    </tr>
+                    <?php
+                    $no = 1;
+                    $query = "SELECT * FROM ekstrakurikuler ORDER BY id_ekstrakurikuler ASC";
+                    $result = mysqli_query($koneksi, $query);
+                    if (mysqli_num_rows($result) > 0) {
+                      while ($row = mysqli_fetch_assoc($result)) {
+                        echo "
               <tr>
                 <td>{$no}</td>
                 <td>{$row['nama_ekstrakurikuler']}</td>
@@ -120,13 +107,12 @@ include '../../koneksi.php';
                 </td>
               </tr>
             ";
-                      $no++;
+                        $no++;
+                      }
+                    } else {
+                      echo "<tr><td colspan='3' class='text-center'>Belum ada data</td></tr>";
                     }
-                  } else {
-                    echo "<tr><td colspan='3' class='text-center'>Belum ada data</td></tr>";
-                  }
-                  ?>
->>>>>>> 25a2514f348b5960069628c8b63a6ad54762fefe
+                    ?>
                 </tbody>
               </table>
             </div>
@@ -152,7 +138,7 @@ include '../../koneksi.php';
       }
 
       .h5 {
-        justify-content:center;
+        justify-content: center;
       }
 
       .action-buttons a,
@@ -160,10 +146,8 @@ include '../../koneksi.php';
         width: auto;
       }
     }
-<<<<<<< HEAD
+
   </style>
 
   <?php include '../../includes/footer.php'; ?>
-=======
   </style>
->>>>>>> 25a2514f348b5960069628c8b63a6ad54762fefe
