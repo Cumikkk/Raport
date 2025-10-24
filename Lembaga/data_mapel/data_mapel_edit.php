@@ -51,7 +51,9 @@ if (!$data) {
             <label class="form-label fw-semibold">Jenis Mata Pelajaran</label>
             <select name="jenis_mapel" class="form-select" required>
               <option value="Wajib" <?= ($data['kelompok_mata_pelajaran'] == 'Wajib') ? 'selected' : ''; ?>>Wajib</option>
-              <option value="Pilihan" <?= ($data['kelompok_mata_pelajaran'] == 'Pilihan') ? 'selected' : ''; ?>>Pilihan</option>
+              <option value="Pilihan" <?= ($data['kelompok_mata_pelajaran'] == 'Pilihan') ? 'selected' : ''; ?>>Pilihan</option>              
+              <option value="Peminatan" <?= ($data['kelompok_mata_pelajaran'] == 'Peminatan') ? 'selected' : ''; ?>>Peminatan</option>
+              <option value="Lokal" <?= ($data['kelompok_mata_pelajaran'] == 'Lokal') ? 'selected' : ''; ?>>Lokal</option>
             </select>
           </div>
 

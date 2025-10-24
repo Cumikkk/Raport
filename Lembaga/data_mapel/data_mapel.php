@@ -3,6 +3,31 @@ include '../../includes/header.php';
 include '../../koneksi.php';
 ?>
 
+<?php
+// include header & koneksi awal sudah kamu punya
+// Ubah query supaya ambil id juga
+$query = "SELECT id_mata_pelajaran, nama_mata_pelajaran, kelompok_mata_pelajaran FROM mata_pelajaran";
+$result = mysqli_query($koneksi, $query);
+
+// Bentuk array mapel berdasarkan kategori (simpan objek lengkap)
+$dataMapel = [];
+$kategoriList = [];
+
+while ($row = mysqli_fetch_assoc($result)) {
+  $kategori = strtolower($row['kelompok_mata_pelajaran']);
+  // simpan objek lengkap supaya JS bisa akses id & nama
+  $dataMapel[$kategori][] = [
+    'id_mata_pelajaran' => (int)$row['id_mata_pelajaran'],
+    'nama_mata_pelajaran' => $row['nama_mata_pelajaran']
+  ];
+  $kategoriList[] = $kategori;
+}
+
+// Hapus duplikat kategori dan reindex agar aman
+$kategoriList = array_values(array_unique($kategoriList));
+?>
+
+
 <body>
   <?php include '../../includes/navbar.php'; ?>
 
@@ -17,100 +42,170 @@ include '../../koneksi.php';
 
               <!-- Tombol group -->
               <div class="d-flex flex-wrap gap-2 tombol-aksi">
-               <a href="data_mapel_tambah.php" class="btn btn-primary btn-md d-flex align-items-center gap-1 p-2 pe-3 " style="border-radius: 5px;">
-                <i class="fa-solid fa-plus fa-lg"></i>
-                Tambah
-              </a>
+                <a href="data_mapel_tambah.php" class="btn btn-primary btn-md d-flex align-items-center gap-1 p-2 pe-3 " style="border-radius: 5px;">
+                  <i class="fa-solid fa-plus fa-lg"></i>
+                  Tambah
+                </a>
 
-               <a href="data_mapel_import.php" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
-                <i class="fa-solid fa-file-arrow-down fa-lg"></i>
-                <span>Import</span>
-              </a>
+                <a href="data_mapel_import.php" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
+                  <i class="fa-solid fa-file-arrow-down fa-lg"></i>
+                  <span>Import</span>
+                </a>
 
                 <a href="" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
-                <i class="fa-solid fa-file-arrow-up fa-lg"></i>
-                <span>Export</span>
-              </a>
+                  <i class="fa-solid fa-file-arrow-up fa-lg"></i>
+                  <span>Export</span>
+                </a>
               </div>
             </div>
           </div>
-
-          <!-- Search & Sort -->
-          <div class="ms-3 me-3 bg-white d-flex justify-content-center align-items-center flex-wrap p-2 gap-2">
-            <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search"
-              style="width: 200px;">
-            <button id="searchBtn"
-              class="btn btn-outline-secondary btn-sm p-2 rounded-3 d-flex align-items-center justify-content-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                class="bi bi-search" viewBox="0 0 16 16">
-                <path
-                  d="M11 6a5 5 0 1 0-2.9 4.7l3.85 3.85a1 1 0 0 0 1.414-1.414l-3.85-3.85A4.978 4.978 0 0 0 11 6zM6 10a4 4 0 1 1 0-8 4 4 0 0 1 0 8z" />
-              </svg>
-            </button>
-            <button id="sortBtn"
-              class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 rounded-3">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                class="bi bi-sort-alpha-down" viewBox="0 0 16 16">
-                <path fill-rule="evenodd"
-                  d="M10.082 5.629 9.664 7H8.598l1.789-5.332h1.234L13.402 7h-1.12l-.419-1.371zm1.57-.785L11 2.687h-.047l-.652 2.157z" />
-                <path
-                  d="M12.96 14H9.028v-.691l2.579-3.72v-.054H9.098v-.867h3.785v.691l-2.567 3.72v.054h2.645zM4.5 2.5a.5.5 0 0 0-1 0v9.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 1.999.007.007a.497.497 0 0 0 .7-.006l2-2a.5.5 0 0 0-.707-.708L4.5 12.293z" />
-              </svg>
-              Sort
-            </button>
-          </div>
-
           <!-- Tabel Data -->
           <div class="card-body">
-            <div class="table-responsive">
-              <table class="table table-bordered table-striped align-middle">
-                <thead style="background-color:#1d52a2" class="text-center text-white">
-                  <tr>
-                    <th>No</th>
-                    <th>Kode Mapel</th>
-                    <th>Nama Mata Pelajaran</th>
-                    <th>Jenis</th>
-                    <th>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <?php
-                  $no = 1;
-                  $query = "SELECT * FROM mata_pelajaran ORDER BY id_mata_pelajaran ASC";
-                  $result = mysqli_query($koneksi, $query);
+            <div class="card-header bg-primary">
+              <ul class="nav nav-tabs nav-fill bg-primary" id="kategoriTabs" role="tablist">
+                <?php
+                $first = true;
+                foreach ($kategoriList as $kategori) {
+                  $active = $first ? 'active' : '';
+                  $style = $first
+                    ? 'style="border:none; color:black; font-weight:600;"'
+                    : 'style="border:none; color:white; font-weight:600;"';
+                  $first = false;
+                  echo '
+                  <li class="nav-item" role="presentation">
+                    <a class="nav-link ' . $active . ' fw-semibold" data-category="' . $kategori . '" href="#" ' . $style . '>
+                      ' . ucfirst($kategori) . '
+                    </a>
+                  </li>
+                ';
+                }
+                ?>
+              </ul>
 
-                  if (mysqli_num_rows($result) > 0) {
-                    while ($row = mysqli_fetch_assoc($result)) {
-                      echo "
-                      <tr>
-                        <td class='text-center'>{$no}</td>
-                        <td class='text-center'>{$row['kode_mata_pelajaran']}</td>
-                        <td>{$row['nama_mata_pelajaran']}</td>
-                        <td class='text-center'>{$row['kelompok_mata_pelajaran']}</td>
-                        <td class='text-center'>
-                          <a href='data_mapel_edit.php?id={$row['id_mata_pelajaran']}' class='btn btn-warning btn-sm'>
-                            <i class='bi bi-pencil-square'></i> Edit
-                          </a>
-                          <a href='hapus_mapel.php?id={$row['id_mata_pelajaran']}' class='btn btn-danger btn-sm' 
-                            onclick=\"return confirm('Yakin ingin menghapus data ini?');\">
-                            <i class='bi bi-trash'></i> Del
-                          </a>
-                        </td>
-                      </tr>";
-                      $no++;
-                    }
-                  } else {
-                    echo "<tr><td colspan='5' class='text-center'>Belum ada data mata pelajaran</td></tr>";
-                  }
-                  ?>
-                </tbody>
-              </table>
+              <script>
+                // buat ubah warna text saat tab aktif
+                const navLinks = document.querySelectorAll('#kategoriTabs .nav-link');
+
+                navLinks.forEach(link => {
+                  link.addEventListener('click', function() {
+                    navLinks.forEach(l => l.classList.remove('active', 'text-dark'));
+                    navLinks.forEach(l => l.style.color = 'white');
+
+                    this.classList.add('active', 'text-dark');
+                    this.style.color = 'black';
+                  });
+                });
+              </script>
+            </div>
+
+
+            <div class="card-body">
+              <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+
+                <h5 class="card-title mb-3" id="judulKategori">Mata Pelajaran Wajib</h5>
+                <!-- Search -->
+                <div class="d-flex flex-wrap gap-2 tombol-aksi mb-3">
+                  <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search"
+                    style="width: 200px;">
+                  <button id="searchBtn"
+                    class="btn btn-outline-secondary btn-sm p-2 rounded-3 d-flex align-items-center justify-content-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                      class="bi bi-search" viewBox="0 0 16 16">
+                      <path
+                        d="M11 6a5 5 0 1 0-2.9 4.7l3.85 3.85a1 1 0 0 0 1.414-1.414l-3.85-3.85A4.978 4.978 0 0 0 11 6zM6 10a4 4 0 1 1 0-8 4 4 0 0 1 0 8z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div id="mapelContainer" class="list-group text-start">
+                <!-- Mapel akan muncul di sini -->
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
   </main>
+  <script>
+    // Ambil data dari PHP
+    const dataMapel = <?= json_encode($dataMapel ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE); ?>;
+    const kategoriList = <?= json_encode($kategoriList ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE); ?>;
+
+    const tabs = document.querySelectorAll('#kategoriTabs .nav-link');
+    const mapelContainer = document.getElementById('mapelContainer');
+    const judulKategori = document.getElementById('judulKategori');
+
+    // Fungsi menampilkan mapel sesuai kategori
+    function showMapel(category) {
+      mapelContainer.innerHTML = '';
+
+      if (!dataMapel[category] || dataMapel[category].length === 0) {
+        mapelContainer.innerHTML = '<p class="text-muted">Belum ada data mapel pada kategori ini.</p>';
+        return;
+      }
+
+      dataMapel[category].forEach((mapel, index) => {
+        const div = document.createElement('div');
+        div.className = 'd-flex justify-content-between align-items-center border rounded p-2 bg-white shadow-sm mb-2';
+
+        // Escape nama agar aman untuk dipakai di onclick
+        const namaEscaped = JSON.stringify(mapel.nama_mata_pelajaran);
+
+        div.innerHTML = `
+        <div>
+          <strong>${index + 1}. ${mapel.nama_mata_pelajaran}</strong>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-sm btn-warning" onclick="editMapel(${mapel.id_mata_pelajaran})">
+            <i class="bi bi-pencil-square"></i> Edit
+          </button>
+          <button class="btn btn-sm btn-danger" onclick="hapusMapel(${mapel.id_mata_pelajaran})">
+            <i class="bi bi-trash"></i> Hapus
+          </button>
+        </div>
+      `;
+        mapelContainer.appendChild(div);
+      });
+
+      // Ganti judul di atas daftar mapel
+      const kapital = category.charAt(0).toUpperCase() + category.slice(1);
+      judulKategori.textContent = `Mata Pelajaran ${kapital}`;
+    }
+
+    // Fungsi tombol Edit → arahkan ke halaman edit_mapel.php
+    function editMapel(id) {
+      window.location.href = `data_mapel_edit.php?id=${id}`;
+    }
+
+    // Fungsi tombol Hapus → arahkan ke hapus_mapel.php
+    function hapusMapel(id) {
+      if (confirm("Yakin ingin menghapus ?")) {
+        window.location.href = "hapus_mapel.php?id=" + id;
+      }
+    }
+
+
+    // Event click untuk tiap tab
+    tabs.forEach(tab => {
+      tab.addEventListener('click', e => {
+        e.preventDefault();
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        showMapel(tab.dataset.category);
+      });
+    });
+
+    // Tampilkan data awal (kategori pertama dari PHP, jika ada)
+    if (kategoriList.length > 0) {
+      showMapel(kategoriList[0]);
+    }
+  </script>
+
+
+
+
+
 
   <style>
     /* RESPONSIVE KHUSUS UNTUK TOMBOL */
@@ -129,4 +224,3 @@ include '../../koneksi.php';
   </style>
 
   <?php include '../../includes/footer.php'; ?>
-
