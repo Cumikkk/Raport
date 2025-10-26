@@ -27,6 +27,8 @@ include '../../includes/navbar.php';
               <option value="" selected disabled>Pilih</option>
               <option value="Wajib">Wajib</option>
               <option value="Pilihan">Pilihan</option>
+              <option value="Peminatan">Peminatan</option>
+              <option value="Lokal">Lokal</option>
             </select>
           </div>
 
