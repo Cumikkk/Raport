@@ -72,6 +72,7 @@ include '../../includes/header.php';
                     <th rowspan="2">NISN</th>
                     <th rowspan="2">Nama</th>
                     <th rowspan="2">L/P</th>
+                     <th rowspan="2">Komentar</th>
                      <th rowspan="2">Aksi</th>
                 </thead>
                 <tbody class="text-center">
@@ -81,6 +82,8 @@ include '../../includes/header.php';
                     <td>1234556</td>
                     <td>Fahrul</td>
                     <td>L</td>
+                    <td>Perlu diperbaiki lagi</td>
+
                     
                     <td>
                       <a href="data_absensi_import.php?id=1" class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1">
@@ -98,6 +101,7 @@ include '../../includes/header.php';
                     <td>Ahmad</td>
                     <td>654321</td>
                     <td>L</td>
+                    <td>Perlu diperbaiki lagi</td>
                     <td>
                       <a href="edit_siswa.php?id=2" class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1">
                         <i class="bi bi-pencil-square"></i>Edit

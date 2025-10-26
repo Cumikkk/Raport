@@ -1,3 +1,15 @@
+<?php
+// includes/navbar.php
+// Pastikan header.php sudah di-include sebelumnya sehingga session sudah aktif
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+$current_url = $_SERVER['REQUEST_URI'];
+$role = $_SESSION['role'] ?? ''; // '' jika belum login
+$username_display = $_SESSION['nama_lengkap_user'] ?? $_SESSION['username'] ?? 'Guest';
+?>
+
 <!-- Checkbox hack -->
 <input type="checkbox" id="menu-toggle" />
 
@@ -12,7 +24,8 @@
     <img src="/RAPORT/assets/img/logo/logo navbar.png" alt="Logo" class="dashboard-logo">
   </div>
 
-  <a href="/RAPORT/logout.php" class="logout-btn btn-danger desktop-only">
+  <!-- Tombol logout desktop -->
+  <a href="/RAPORT/logout.php" class="logout-btn btn-danger desktop-only" style="text-decoration:none;padding:8px 12px;border-radius:6px;color:#fff;">
     <i class="fas fa-right-from-bracket"></i> Logout
   </a>
 </header>
@@ -23,32 +36,31 @@
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <nav class="menu">
-    <?php
-      $current_url = $_SERVER['REQUEST_URI'];
-      $is_lembaga = str_contains($current_url, '/Lembaga/');
-      $is_rapor   = str_contains($current_url, '/Rapor/');
-    ?>
+    <div class="user-info" style="padding:12px 16px;">
+      <strong><?= htmlspecialchars($username_display) ?></strong><br>
+      <small style="color: #666;"><?= $role ? ucfirst($role) : 'Guest' ?></small>
+    </div>
 
     <a href="/RAPORT/includes/dashboard.php" class="home-link <?= str_contains($current_url, 'dashboard.php') ? 'active' : '' ?>">
       <i class="fas fa-home"></i><span>Beranda</span>
     </a>
 
-    <!-- Menu Lembaga -->
-    <details <?= $is_lembaga ? 'open' : '' ?>>
+<?php if ($role === 'admin'): ?>
+    <!-- Admin: semua menu -->
+    <details <?= str_contains($current_url, '/Lembaga/') ? 'open' : '' ?>>
       <summary><span><i class="fas fa-building"></i> Lembaga</span><i class="fas fa-angle-right arrow"></i></summary>
       <ul>
         <li><a href="/RAPORT/Lembaga/data_sekolah/data_sekolah.php" class="<?= str_contains($current_url, 'data_sekolah') ? 'active' : '' ?>">Data Sekolah</a></li>
         <li><a href="/RAPORT/Lembaga/data_siswa/data_siswa.php" class="<?= str_contains($current_url, 'data_siswa') ? 'active' : '' ?>">Data Siswa</a></li>
         <li><a href="/RAPORT/Lembaga/data_guru/data_guru.php" class="<?= str_contains($current_url, 'data_guru') ? 'active' : '' ?>">Data Guru</a></li>
         <li><a href="/RAPORT/Lembaga/data_kelas/datakelas.php" class="<?= str_contains($current_url, 'data_kelas') ? 'active' : '' ?>">Data Kelas</a></li>
-        <li><a href="/RAPORT/Lembaga/data_semester/data_semester.php" class="<?= str_contains($current_url, 'data_semester') ? 'active' : '' ?>">Semester Ganjil/Genap</a></li>
+        <li><a href="/RAPORT/Lembaga/data_semester/data_semester.php" class="<?= str_contains($current_url, 'data_semester') ? 'active' : '' ?>">Semester</a></li>
         <li><a href="/RAPORT/Lembaga/data_mapel/data_mapel.php" class="<?= str_contains($current_url, 'data_mapel') ? 'active' : '' ?>">Mata Pelajaran</a></li>
         <li><a href="/RAPORT/Lembaga/data_ekstra/data_ekstra.php" class="<?= str_contains($current_url, 'data_ekstra') ? 'active' : '' ?>">Ekstrakurikuler</a></li>
       </ul>
     </details>
 
-    <!-- Menu Rapor -->
-    <details <?= $is_rapor ? 'open' : '' ?>>
+    <details <?= str_contains($current_url, '/Rapor/') ? 'open' : '' ?>>
       <summary><span><i class="fas fa-book"></i> Rapor</span><i class="fas fa-angle-right arrow"></i></summary>
       <ul>
         <li><a href="/RAPORT/Rapor/pengaturan_cetak_rapor/pengaturan_cetak_rapor.php" class="<?= str_contains($current_url, 'pengaturan_cetak_rapor') ? 'active' : '' ?>">Peraturan Cetak</a></li>
@@ -59,40 +71,46 @@
       </ul>
     </details>
 
-    <a href="/RAPORT/tambah user/tambah_user.php" class="add-user <?= str_contains($current_url, 'tambah_user') ? 'active' : '' ?>">
+    <a href="/RAPORT/tambah%20user/tambah_user.php" class="add-user <?= str_contains($current_url, 'tambah_user') ? 'active' : '' ?>">
       <span><i class="fas fa-user"></i> Tambah User</span>
       <i class="fas fa-plus plus-icon"></i>
     </a>
 
-    <a href="/RAPORT/logout.php" class="logout-btn btn-danger mobile-only">
+<?php elseif ($role === 'guru'): ?>
+    <!-- Guru: hanya Data Kelas -->
+    <details <?= str_contains($current_url, '/Lembaga/') ? 'open' : '' ?>>
+      <summary><span><i class="fas fa-building"></i> Lembaga</span><i class="fas fa-angle-right arrow"></i></summary>
+      <ul>
+        <li><a href="/RAPORT/Lembaga/data_kelas/datakelas.php" class="<?= str_contains($current_url, 'data_kelas') ? 'active' : '' ?>">Data Kelas</a></li>
+      </ul>
+    </details>
+
+<?php else: ?>
+    <!-- Guest / belum login -->
+    <a href="/RAPORT/login.php">Login</a>
+<?php endif; ?>
+
+    <!-- Logout (selalu tampil agar user bisa keluar) -->
+    <a href="/RAPORT/logout.php" class="logout-btn btn-danger" style="margin-top:12px; display:block; padding:8px 12px; border-radius:6px; color:#fff; text-decoration:none;">
       <i class="fas fa-right-from-bracket"></i> Logout
     </a>
   </nav>
 </aside>
 
-<!-- Tambahkan CSS highlight -->
 <style>
   /* efek hover */
   .menu a:hover {
-    background-color: rgba(29, 82, 162, 0.2); /* biru samar saat hover */
+    background-color: rgba(29, 82, 162, 0.2);
     transition: 0.3s;
   }
 
   /* efek aktif */
   .menu a.active {
-    background-color: rgba(29, 82, 162, 0.3); /* biru samar */
+    background-color: rgba(29, 82, 162, 0.3);
     border-left: 4px solid #1d52a2;
     font-weight: 600;
   }
 
-  .menu a.active:hover {
-    background-color: rgba(29, 82, 162, 0.4);
-  }
-
-  /* agar efek juga berlaku di submenu */
-  details ul li a {
-    display: block;
-    padding: 6px 16px;
-    border-radius: 4px;
-  }
+  .menu a.active:hover { background-color: rgba(29, 82, 162, 0.4); }
+  details ul li a { display:block; padding:6px 16px; border-radius:4px; }
 </style>

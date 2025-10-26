@@ -76,6 +76,7 @@ include '../../includes/navbar.php';
                 <th>Jurusan</th>
                 <th>Jenis</th>
                 <th>Kurikulum</th>
+                <th>Komentar</th>
                 <th>Aksi</th>
               </tr>
             </thead>
@@ -88,8 +89,9 @@ include '../../includes/navbar.php';
                 <td>Irsyal Velani, S.Si.</td>
                 <td>XII</td>
                 <td>UMUM</td>
-                <td>Paket</td>
+                <td>Paket</td>    
                 <td>Kurmer</td>
+                <td>Perlu diperbaiki</td>
                 <td>
                   <a class="btn btn-warning btn-sm me-1" href="edit_data.php">Edit</a>
                   <button class="btn btn-danger btn-sm">Del</button>
@@ -105,6 +107,7 @@ include '../../includes/navbar.php';
                 <td>UMUM</td>
                 <td>Paket</td>
                 <td>Kurmer</td>
+                <td>Perlu diperbaiki</td>
                 <td>
                   <button class="btn btn-warning btn-sm me-1">Edit</button>
                   <button class="btn btn-danger btn-sm">Del</button>

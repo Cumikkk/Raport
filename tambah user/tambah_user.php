@@ -1,9 +1,8 @@
-<?php
+<?php 
 include '../includes/header.php';
 ?>
 
 <body>
-
 <?php
 include '../includes/navbar.php';
 ?>
@@ -13,9 +12,8 @@ include '../includes/navbar.php';
     background-color: #f7f8fb;
   }
 
-  /* Bungkus seluruh form di area konten utama */
   .form-wrapper {
-    margin-left: 260px; /* menyesuaikan sidebar */
+    margin-left: 260px;
     height: 100vh;
     display: flex;
     justify-content: center;
@@ -34,7 +32,7 @@ include '../includes/navbar.php';
   h2 {
     text-align: center;
     margin-bottom: 25px;
-    color:rgb(6, 6, 6);
+    color: rgb(6, 6, 6);
   }
 
   label {
@@ -70,7 +68,6 @@ include '../includes/navbar.php';
     background-color: #1d4ed8;
   }
 
-  /* Responsif: form tetap di tengah */
   @media (max-width: 900px) {
     .form-wrapper {
       margin-left: 0;
@@ -87,16 +84,30 @@ include '../includes/navbar.php';
   <div class="form-container">
     <h2>Tambah User</h2>
 
+    <!-- arahkan ke file proses -->
     <form action="proses_tambah_user.php" method="POST">
+      <label for="role">Role:</label>
+<select id="role" name="role" required>
+  <option value="admin">Admin</option>
+  <option value="guru" selected>Guru</option>
+</select>
+
       <label for="nama_lengkap">Nama Lengkap:</label>
       <input type="text" id="nama_lengkap" name="nama_lengkap" required>
 
-      <label for="password">Password:</label>
-      <input type="password" id="password" name="password" required>
+      <label for="email_user">Email:</label>
+      <input type="text" id="email_user" name="email_user">
+
+      <label for="no_telepon_user">No Telepon:</label>
+      <input type="text" id="no_telepon_user" name="no_telepon_user">
+
+      <label for="username">Username:</label>
+      <input type="text" id="username" name="username" required>
+
+      <label for="password_user">Password:</label>
+      <input type="password" id="password_user" name="password_user" required>
 
       <button type="submit">Simpan</button>
-      
-      
     </form>
   </div>
 </div>
