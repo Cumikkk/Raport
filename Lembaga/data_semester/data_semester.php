@@ -51,16 +51,6 @@ include '../../includes/header.php';
             </div>
 
             <div class="mb-3">
-              <label class="form-label fw-semibold">Sistem Penilaian</label>
-              <select class="form-select" name="sistem_penilaian" required>
-                <option value="" selected disabled>Pilih</option>
-                <option value="Paket">Paket</option>
-                <option value="K13">Kurikulum 2013</option>
-                <option value="Merdeka">Kurikulum Merdeka</option>
-              </select>
-            </div>
-
-            <div class="mb-3">
               <label class="form-label fw-semibold">Semester Aktif</label>
               <select class="form-select" name="semester_aktif" required>
                 <option value="" selected disabled>Pilih</option>

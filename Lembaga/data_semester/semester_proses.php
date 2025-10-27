@@ -3,11 +3,10 @@ include '../../koneksi.php'; // pastikan file ini berisi $koneksi = mysqli_conne
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $tahun_ajaran = $_POST['tahun_ajaran'];
-  $sistem_penilaian = $_POST['sistem_penilaian'];
   $semester_aktif = $_POST['semester_aktif'];
 
-  $query = "INSERT INTO semester (nama_semester, tahun_ajaran, sistem_penilaian) 
-            VALUES ('$semester_aktif', '$tahun_ajaran', '$sistem_penilaian')";
+  $query = "INSERT INTO semester (nama_semester, tahun_ajaran) 
+            VALUES ('$semester_aktif', '$tahun_ajaran')";
 
   if (mysqli_query($koneksi, $query)) {
     echo "<script>
