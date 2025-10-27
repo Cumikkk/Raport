@@ -16,7 +16,7 @@ include '../../koneksi.php';
 
             <!-- Tombol di kanan -->
             <div class="ms-auto d-flex gap-2 action-buttons">
-              <a href="data_ekstra_tambah.php" class="btn btn-primary btn-sm d-flex align-items-center gap-1 p-2 pe-3 fw-semibold" style="border-radius: 5px;">
+              <a href="data_ekstra_tambah.php" class="btn btn-primary btn-sm d-flex align-items-center gap-1 p-2 pe-3 fw-semibold" style="border-radius: 5px;" data-bs-toggle="modal" data-bs-target="#tambahEkstraModal">
                 <i class="fa-solid fa-plus fa-lg"></i>
                 Tambah
               </a>
@@ -55,6 +55,43 @@ include '../../koneksi.php';
               Sort
             </button>
           </div>
+          <!-- Modal Tambah Ekstrakurikuler -->
+          <div class="modal fade" id="tambahEkstraModal" tabindex="-1" aria-labelledby="tambahEkstraLabel" aria-hidden="true">
+            <div class="modal-dialog">
+              <div class="modal-content shadow-lg border-0">
+
+                <!-- HEADER -->
+                <div class="modal-header bg-primary text-white">
+                  <h5 class="modal-title fw-bold" id="tambahEkstraLabel">
+                    <i class="fa fa-book"></i> Tambah Ekstrakurikuler
+                  </h5>
+                </div>
+
+                <!-- FORM -->
+                <form action="ekstra_tambah_proses.php" method="POST">
+                  <div class="modal-body">
+                    <div class="mb-3">
+                      <label class="form-label fw-semibold">Nama Ekstrakurikuler</label>
+                      <input type="text" name="nama_ekstra" class="form-control" placeholder="Nama Ekstrakurikuler" required>
+                    </div>
+                  </div>
+
+                  <div class="modal-footer">
+                    <div class="d-flex w-100 gap-2">
+                      <button type="submit" class="btn btn-success w-50">
+                        <i class="fa fa-save"></i>
+                        Simpan</button>
+                      <button type="button" class="btn btn-danger w-50" data-bs-dismiss="modal">
+                        <i class="fa fa-times"></i>
+                        Batal</button>
+                    </div>
+                  </div>
+                </form>
+
+              </div>
+            </div>
+          </div>
+
 
           <!-- Tabel Data Mapel -->
           <div class="card-body">
@@ -68,59 +105,92 @@ include '../../koneksi.php';
                   </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                    <td>1</td>
-                    <td>Pramuka</td>
-                    <td class="text-center">
-                      <a href="data_ekstra_edit.php?id=1"
-                        class="btn btn-warning btn-sm me-1 d-inline-flex align-items-center justify-content-center gap-1 px-2 py-1 me-1"
-                        style="font-size: 15px;">
-                        <i class="bi bi-pencil-square" style="font-size: 15px;"></i>
-                        <span>Edit</span>
-                      </a>
-                      <a href="hapus_mapel.php?id=1"
-                        class="btn btn-danger btn-sm me-1 d-inline-flex align-items-center justify-content-center gap-1 px-2 py-1"
-                        style="font-size: 15px;"
-                        onclick="return confirm('Yakin ingin menghapus data ini?');">
-                        <i class="bi bi-trash" style="font-size: 15px;"></i>
-                        <span>Del</span>
-                      </a>
-                    </td>
-                    </tr>
-                    <?php
-                    $no = 1;
-                    $query = "SELECT * FROM ekstrakurikuler ORDER BY id_ekstrakurikuler ASC";
-                    $result = mysqli_query($koneksi, $query);
-                    if (mysqli_num_rows($result) > 0) {
-                      while ($row = mysqli_fetch_assoc($result)) {
-                        echo "
-              <tr>
-                <td>{$no}</td>
-                <td>{$row['nama_ekstrakurikuler']}</td>
-                <td class='text-center'>
-                  <a href='data_ekstra_edit.php?id={$row['id_ekstrakurikuler']}' class='btn btn-warning btn-sm'>
-                    <i class='bi bi-pencil-square'>Edit</i>
-                  </a>
-                  <a href='hapus_ekstra.php?id={$row['id_ekstrakurikuler']}' class='btn btn-danger btn-sm' onclick=\"return confirm('Yakin ingin menghapus data ini?');\">
-                    <i class='bi bi-trash'>Del</i>
-                  </a>
-                </td>
-              </tr>
-            ";
-                        $no++;
-                      }
-                    } else {
-                      echo "<tr><td colspan='3' class='text-center'>Belum ada data</td></tr>";
+                  <?php
+                  $no = 0;
+                  $query = "SELECT * FROM ekstrakurikuler ORDER BY id_ekstrakurikuler ASC";
+                  $result = mysqli_query($koneksi, $query);
+                  if (mysqli_num_rows($result) > 0) {
+                    while ($row = mysqli_fetch_assoc($result)) {
+                      $no++;
+                      echo "
+                        <tr>
+                          <td>{$no}</td>
+                          <td>{$row['nama_ekstrakurikuler']}</td>
+                          <td class='text-center'>
+                            <button type='button' class='btn btn-warning btn-sm'
+                              onclick='editEkstra({$row['id_ekstrakurikuler']}, \"{$row['nama_ekstrakurikuler']}\")'>
+                              <i class='bi bi-pencil-square'></i> Edit
+                            </button>
+
+                            <a href='hapus_ekstra.php?id={$row['id_ekstrakurikuler']}' class='btn btn-danger btn-sm'
+                              onclick=\"return confirm('Yakin ingin menghapus data ini?');\">
+                              <i class='bi bi-trash'></i> Del
+                            </a>
+                          </td>
+                        </tr>
+                        ";
                     }
-                    ?>
+                  } else {
+                    echo "<tr><td colspan='3' class='text-center'>Belum ada data</td></tr>";
+                  }
+                  ?>
                 </tbody>
               </table>
             </div>
           </div>
+
+          <!-- Modal Edit Ekstrakurikuler -->
+          <div class="modal fade" id="editEkstraModal" tabindex="-1" aria-labelledby="editEkstraLabel" aria-hidden="true">
+            <div class="modal-dialog">
+              <div class="modal-content shadow-lg border-0">
+                <div class="modal-header bg-warning text-dark">
+                  <h5 class="modal-title fw-bold" id="editEkstraLabel">
+                    <i class="fa fa-edit"></i> Edit Ekstrakurikuler
+                  </h5>
+                </div>
+
+                <form action="ekstra_edit_proses.php" method="POST">
+                  <div class="modal-body">
+                    <input type="hidden" name="id" id="edit_id">
+                    <div class="mb-3">
+                      <label class="form-label fw-semibold">Nama Ekstrakurikuler</label>
+                      <input type="text" name="nama_ekstra" id="edit_nama_ekstra" class="form-control" required>
+                    </div>
+                  </div>
+
+                  <div class="modal-footer">
+                    <div class="d-flex w-100 gap-2">
+                      <button type="submit" class="btn btn-success w-50">
+                        <i class="fa fa-save"></i>
+                        Update</button>
+                      <button type="button" class="btn btn-danger w-50" data-bs-dismiss="modal">
+                        <i class="fa fa-times"></i>
+                        Batal</button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+
+
+
         </div>
       </div>
     </div>
   </main>
+  <script>
+    function editEkstra(id, nama) {
+      // Isi field modal
+      document.getElementById('edit_id').value = id;
+      document.getElementById('edit_nama_ekstra').value = nama;
+
+      // Buka modal edit
+      const modal = new bootstrap.Modal(document.getElementById('editEkstraModal'));
+      modal.show();
+    }
+  </script>
+
 
   <style>
     /* Tambahan CSS Responsif */
@@ -146,8 +216,6 @@ include '../../koneksi.php';
         width: auto;
       }
     }
-
   </style>
 
   <?php include '../../includes/footer.php'; ?>
-  </style>
