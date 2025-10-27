@@ -18,7 +18,8 @@ while ($row = mysqli_fetch_assoc($result)) {
   // simpan objek lengkap supaya JS bisa akses id & nama
   $dataMapel[$kategori][] = [
     'id_mata_pelajaran' => (int)$row['id_mata_pelajaran'],
-    'nama_mata_pelajaran' => $row['nama_mata_pelajaran']
+    'nama_mata_pelajaran' => $row['nama_mata_pelajaran'],
+    'jenis_mapel' => ucfirst($row['kelompok_mata_pelajaran'])
   ];
   $kategoriList[] = $kategori;
 }
@@ -42,7 +43,7 @@ $kategoriList = array_values(array_unique($kategoriList));
 
               <!-- Tombol group -->
               <div class="d-flex flex-wrap gap-2 tombol-aksi">
-                <a href="data_mapel_tambah.php" class="btn btn-primary btn-md d-flex align-items-center gap-1 p-2 pe-3 " style="border-radius: 5px;">
+                <a href="data_mapel_tambah.php" class="btn btn-primary btn-md d-flex align-items-center gap-1 p-2 pe-3 " style="border-radius: 5px;" data-bs-toggle="modal" data-bs-target="#modalTambahMapel">
                   <i class="fa-solid fa-plus fa-lg"></i>
                   Tambah
                 </a>
@@ -59,71 +60,185 @@ $kategoriList = array_values(array_unique($kategoriList));
               </div>
             </div>
           </div>
-          <!-- Tabel Data -->
-          <div class="card-body">
-            <div class="card-header bg-primary">
-              <ul class="nav nav-tabs nav-fill bg-primary" id="kategoriTabs" role="tablist">
-                <?php
-                $first = true;
-                foreach ($kategoriList as $kategori) {
-                  $active = $first ? 'active' : '';
-                  $style = $first
-                    ? 'style="border:none; color:black; font-weight:600;"'
-                    : 'style="border:none; color:white; font-weight:600;"';
-                  $first = false;
-                  echo '
-                  <li class="nav-item" role="presentation">
-                    <a class="nav-link ' . $active . ' fw-semibold" data-category="' . $kategori . '" href="#" ' . $style . '>
-                      ' . ucfirst($kategori) . '
-                    </a>
-                  </li>
-                ';
-                }
-                ?>
-              </ul>
 
-              <script>
-                // buat ubah warna text saat tab aktif
-                const navLinks = document.querySelectorAll('#kategoriTabs .nav-link');
+          <!-- Modal Tambah Mapel -->
+          <div class="modal fade" id="modalTambahMapel" tabindex="-1" aria-labelledby="modalTambahMapelLabel" aria-hidden="true">
+            <div class="modal-dialog">
+              <div class="modal-content" style="border-radius: 10px;">
+                <div class="modal-header" style="background-color: #0d6efd; color: white; border-top-left-radius: 10px; border-top-right-radius: 10px;">
+                  <h5 class="modal-title fw-semibold" id="modalTambahMapelLabel">
+                    <i class="fa fa-book"></i> Tambah Data Mapel
+                  </h5>
+                </div>
 
-                navLinks.forEach(link => {
-                  link.addEventListener('click', function() {
-                    navLinks.forEach(l => l.classList.remove('active', 'text-dark'));
-                    navLinks.forEach(l => l.style.color = 'white');
+                <div class="modal-body">
+                  <form action="mapel_tambah_proses.php" method="POST">
+                    <div class="mb-3">
+                      <label class="form-label fw-semibold">Nama Mata Pelajaran</label>
+                      <input type="text" name="nama_mapel" class="form-control" placeholder="Nama Mapel" required>
+                    </div>
 
-                    this.classList.add('active', 'text-dark');
-                    this.style.color = 'black';
-                  });
-                });
-              </script>
-            </div>
+                    <div class="mb-3">
+                      <label class="form-label fw-semibold">Jenis Mata Pelajaran</label>
+                      <select name="jenis_mapel" class="form-select" required>
+                        <option value="" selected disabled>Pilih</option>
+                        <option value="Wajib">Wajib</option>
+                        <option value="Pilihan">Pilihan</option>
+                        <option value="Peminatan">Peminatan</option>
+                        <option value="Lokal">Lokal</option>
+                      </select>
+                    </div>
 
-
-            <div class="card-body">
-              <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-
-                <h5 class="card-title mb-3" id="judulKategori">Mata Pelajaran Wajib</h5>
-                <!-- Search -->
-                <div class="d-flex flex-wrap gap-2 tombol-aksi mb-3">
-                  <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search"
-                    style="width: 200px;">
-                  <button id="searchBtn"
-                    class="btn btn-outline-secondary btn-sm p-2 rounded-3 d-flex align-items-center justify-content-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                      class="bi bi-search" viewBox="0 0 16 16">
-                      <path
-                        d="M11 6a5 5 0 1 0-2.9 4.7l3.85 3.85a1 1 0 0 0 1.414-1.414l-3.85-3.85A4.978 4.978 0 0 0 11 6zM6 10a4 4 0 1 1 0-8 4 4 0 0 1 0 8z" />
-                    </svg>
-                  </button>
+                    <div class="modal-footer">
+                      <div class="d-flex w-100 gap-2">
+                        <button type="submit" class="btn btn-success w-50">
+                          <i class="fa fa-save"></i>
+                          Simpan</button>
+                        <button type="button" class="btn btn-danger w-50" data-bs-dismiss="modal">
+                          <i class="fa fa-times"></i>
+                          Batal</button>
+                      </div>
+                    </div>
+                  </form>
                 </div>
               </div>
+            </div>
+          </div>
+          <!-- Akhir Modal -->
 
-              <div id="mapelContainer" class="list-group text-start">
-                <!-- Mapel akan muncul di sini -->
+          <!-- Tabel Data -->
+          <?php if ((empty($dataMapel) || count($dataMapel) === 0)) { ?>
+            <div class="text-center py-5">
+              <h6 class="text-muted">Tidak ada data mata pelajaran.</h6>
+            </div>
+          <?php } else { ?>
+            <div class="card-body">
+              <div class="card-header bg-primary">
+                <ul class="nav nav-tabs nav-fill bg-primary" id="kategoriTabs" role="tablist">
+                  <?php
+                  $first = true;
+                  foreach ($kategoriList as $kategori) {
+                    $active = $first ? 'active' : '';
+                    $style = $first
+                      ? 'style="border:none; color:black; font-weight:600;"'
+                      : 'style="border:none; color:white; font-weight:600;"';
+                    $first = false;
+                    echo '
+          <li class="nav-item" role="presentation">
+            <a class="nav-link ' . $active . ' fw-semibold" data-category="' . $kategori . '" href="#" ' . $style . '>
+              ' . ucfirst($kategori) . '
+            </a>
+          </li>
+        ';
+                  }
+                  ?>
+                </ul>
+
+                <script>
+                  // buat ubah warna text saat tab aktif
+                  const navLinks = document.querySelectorAll('#kategoriTabs .nav-link');
+
+                  navLinks.forEach(link => {
+                    link.addEventListener('click', function() {
+                      navLinks.forEach(l => l.classList.remove('active', 'text-dark'));
+                      navLinks.forEach(l => l.style.color = 'white');
+
+                      this.classList.add('active', 'text-dark');
+                      this.style.color = 'black';
+                    });
+                  });
+                </script>
+              </div>
+
+              <div class="card-body">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+
+                  <h5 class="card-title mb-3" id="judulKategori">Mata Pelajaran Wajib</h5>
+                  <!-- Search -->
+                  <div class="d-flex flex-wrap gap-2 tombol-aksi mb-3">
+                    <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search"
+                      style="width: 200px;">
+                    <button id="searchBtn"
+                      class="btn btn-outline-secondary btn-sm p-2 rounded-3 d-flex align-items-center justify-content-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                        class="bi bi-search" viewBox="0 0 16 16">
+                        <path
+                          d="M11 6a5 5 0 1 0-2.9 4.7l3.85 3.85a1 1 0 0 0 1.414-1.414l-3.85-3.85A4.978 4.978 0 0 0 11 6zM6 10a4 4 0 1 1 0-8 4 4 0 0 1 0 8z" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div id="mapelContainer" class="list-group text-start">
+                  <!-- Mapel akan muncul di sini -->
+                </div>
+              </div>
+            </div>
+          <?php }; ?>
+
+        </div>
+
+        <!-- Modal Edit Mapel -->
+        <div class="modal fade" id="modalEditMapel" tabindex="-1" aria-labelledby="modalEditMapelLabel" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content" style="border-radius: 10px;">
+              <div class="modal-header" style="background-color: #ffc107; color: black; border-top-left-radius: 10px; border-top-right-radius: 10px;">
+                <h5 class="modal-title fw-semibold" id="modalTambahMapelLabel">
+                  <i class="fa fa-edit"></i> Tambah Data Mapel
+                </h5>
+              </div>
+
+              <div class="modal-body">
+                <form action="mapel_edit_proses.php" method="POST">
+                  <input type="hidden" name="id_mapel" id="edit_id_mapel">
+
+                  <div class="mb-3">
+                    <label class="form-label fw-semibold">Nama Mapel</label>
+                    <input type="text" name="nama_mapel" id="edit_nama_mapel" class="form-control" required>
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label fw-semibold">Jenis Mapel</label>
+                    <select name="jenis_mapel" id="edit_jenis_mapel" class="form-select" required>
+                      <option value="Wajib">Wajib</option>
+                      <option value="Pilihan">Pilihan</option>
+                      <option value="Peminatan">Peminatan</option>
+                      <option value="Lokal">Lokal</option>
+                    </select>
+                  </div>
+                  <div class="modal-footer">
+                    <div class="d-flex w-100 gap-2">
+                      <button type="submit" class="btn btn-success w-50">
+                        <i class="fa fa-save"></i>
+                        Update</button>
+                      <button type="button" class="btn btn-danger w-50" data-bs-dismiss="modal">
+                        <i class="fa fa-times"></i>
+                        Batal</button>
+                    </div>
+                  </div>
+                </form>
               </div>
             </div>
           </div>
         </div>
+        <script>
+          document.addEventListener('DOMContentLoaded', function() {
+            const editModal = document.getElementById('modalEditMapel');
+
+            editModal.addEventListener('show.bs.modal', function(event) {
+              const button = event.relatedTarget; // tombol yang diklik
+              const id = button.getAttribute('data-id');
+              const nama = button.getAttribute('data-nama');
+              const jenis = button.getAttribute('data-jenis');
+
+              // isi ke dalam form modal
+              document.getElementById('edit_id_mapel').value = id;
+              document.getElementById('edit_nama_mapel').value = nama;
+              document.getElementById('edit_jenis_mapel').value = jenis;
+            });
+          });
+        </script>
+
       </div>
     </div>
   </main>
@@ -156,8 +271,8 @@ $kategoriList = array_values(array_unique($kategoriList));
         <div>
           <strong>${index + 1}. ${mapel.nama_mata_pelajaran}</strong>
         </div>
-        <div class="d-flex gap-2">
-          <button class="btn btn-sm btn-warning" onclick="editMapel(${mapel.id_mata_pelajaran})">
+        <div class="d-flex gap-2">        
+          <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#modalEditMapel" onclick="editMapel(${mapel.id_mata_pelajaran}, '${mapel.nama_mata_pelajaran}', '${mapel.jenis_mapel}')">
             <i class="bi bi-pencil-square"></i> Edit
           </button>
           <button class="btn btn-sm btn-danger" onclick="hapusMapel(${mapel.id_mata_pelajaran})">
@@ -173,10 +288,14 @@ $kategoriList = array_values(array_unique($kategoriList));
       judulKategori.textContent = `Mata Pelajaran ${kapital}`;
     }
 
-    // Fungsi tombol Edit → arahkan ke halaman edit_mapel.php
-    function editMapel(id) {
-      window.location.href = `data_mapel_edit.php?id=${id}`;
+    // --- SIMPAN INI ---
+    function editMapel(id, nama, kategori) {
+      document.getElementById('edit_id_mapel').value = id;
+      document.getElementById('edit_nama_mapel').value = nama;
+      document.getElementById('edit_jenis_mapel').value =
+        kategori.charAt(0).toUpperCase() + kategori.slice(1); // <--- taruh di sini
     }
+
 
     // Fungsi tombol Hapus → arahkan ke hapus_mapel.php
     function hapusMapel(id) {
