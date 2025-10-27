@@ -33,6 +33,7 @@ include '../../koneksi.php';
                 </div>
                 <!-- Daftar Mapel -->
                 <?php
+                $cekQuery = mysqli_query($koneksi, "SELECT id_mata_pelajaran, nilai_kurikulum AS nilai FROM kurikulum WHERE id_kelas='" . (isset($_GET['id_kelas']) ? $_GET['id_kelas'] : '') . "'");
                 if (isset($_GET['id_kelas'])) {
                     $id_kelas = $_GET['id_kelas'];
 
@@ -46,6 +47,9 @@ include '../../koneksi.php';
                     }
 
                     $aktifMapel = []; // sementara kosong dulu
+                    while ($c = mysqli_fetch_assoc($cekQuery)) {
+                        $aktifMapel[$c['id_mata_pelajaran']] = $c['nilai'];
+                    }
 
                     // kelompokkan mapel berdasarkan kategori
                     $kategoriMapel = [];
@@ -71,7 +75,9 @@ include '../../koneksi.php';
                         ';
 
                         foreach ($mapelPerKategori as $m) {
-                            $checked = in_array($m['id_mata_pelajaran'], $aktifMapel) ? 'checked' : '';
+                            $status = $aktifMapel[$m['id_mata_pelajaran']] ?? 0; // kalau belum ada, anggap 0
+                            $checked = ($status == 1) ? 'checked' : '';
+
                             echo '
                                 <div class="d-flex justify-content-between align-items-center border rounded p-2 mb-2 bg-white shadow-sm">
                                     <div><strong>' . htmlspecialchars($m['nama_mata_pelajaran']) . '</strong></div>
@@ -79,8 +85,9 @@ include '../../koneksi.php';
                                         <input class="form-check-input" type="checkbox" name="mapel[]" value="' . $m['id_mata_pelajaran'] . '" ' . $checked . '>
                                     </div>
                                 </div>
-                            ';
+                                ';
                         }
+
 
                         echo '
                                 </div>
