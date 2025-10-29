@@ -1,12 +1,13 @@
+data_sekolah.php (old)
 <?php
 include '../../includes/header.php';
 ?>
 
 <body>
 
-<?php
-include '../../includes/navbar.php';
-?>
+  <?php
+  include '../../includes/navbar.php';
+  ?>
   <!-- Tambahan CSS untuk tampilan form -->
   <style>
     body {
@@ -73,7 +74,7 @@ include '../../includes/navbar.php';
       width: 100%;
     }
 
-    
+
 
     .btn-success {
       background-color: #28a745;
@@ -109,126 +110,127 @@ include '../../includes/navbar.php';
       min-width: 250px;
     }
   </style>
-</head>
-<body>
+  </head>
 
-  <!-- Checkbox hack -->
-  <input type="checkbox" id="menu-toggle" />
+  <body>
 
-  
-  <!-- MAIN CONTENT -->
-  <div class="content">
-    <h4>Data Sekolah</h4>
+    <!-- Checkbox hack -->
+    <input type="checkbox" id="menu-toggle" />
 
-    <?php if (isset($_GET['status'])): ?>
-      <?php if ($_GET['status'] === 'success'): ?>
-        <div class="alert alert-success">✅ Data sekolah berhasil diperbarui.</div>
-      <?php else: ?>
-        <div class="alert alert-danger">❌ Gagal memperbarui data sekolah.</div>
+
+    <!-- MAIN CONTENT -->
+    <div class="content">
+      <h4>Data Sekolah</h4>
+
+      <?php if (isset($_GET['status'])): ?>
+        <?php if ($_GET['status'] === 'success'): ?>
+          <div class="alert alert-success">✅ Data sekolah berhasil diperbarui.</div>
+        <?php else: ?>
+          <div class="alert alert-danger">❌ Gagal memperbarui data sekolah.</div>
+        <?php endif; ?>
       <?php endif; ?>
-    <?php endif; ?>
 
-    <div class="row">
-      <!-- Kolom kiri -->
-      <div class="col-md-8">
-        <div class="card">
-          <h5 class="mb-3">Edit Data Sekolah</h5>
+      <div class="row">
+        <!-- Kolom kiri -->
+        <div class="col-md-8">
+          <div class="card">
+            <h5 class="mb-3">Edit Data Sekolah</h5>
 
-          <form action="update_data_sekolah.php" method="POST">
-            <div class="mb-3">
-              <label class="form-label">Nama Sekolah</label>
-              <input type="text" name="nama_sekolah" class="form-control"
-                value="<?= htmlspecialchars($data['nama_sekolah'] ?? '') ?>" required>
-            </div>
-
-            <div class="row">
-              <div class="col-md-6">
-                <label class="form-label">NPSN</label>
-                <input type="text" name="npsn" class="form-control"
-                  value="<?= htmlspecialchars($data['npsn'] ?? '') ?>">
+            <form action="update_data_sekolah.php" method="POST">
+              <div class="mb-3">
+                <label class="form-label">Nama Sekolah</label>
+                <input type="text" name="nama_sekolah" class="form-control"
+                  value="<?= htmlspecialchars($data['nama_sekolah'] ?? '') ?>" required>
               </div>
-              <div class="col-md-6">
-                <label class="form-label">NSS</label>
-                <input type="text" name="nss" class="form-control"
-                  value="<?= htmlspecialchars($data['nss'] ?? '') ?>">
+
+              <div class="row">
+                <div class="col-md-6">
+                  <label class="form-label">NSM</label>
+                  <input type="text" name="npsn" class="form-control"
+                    value="<?= htmlspecialchars($data['npsn'] ?? '') ?>">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">NPSN</label>
+                  <input type="text" name="nss" class="form-control"
+                    value="<?= htmlspecialchars($data['nss'] ?? '') ?>">
+                </div>
               </div>
-            </div>
 
-            <div class="row">
-              <div class="col-md-6">
-                <label class="form-label">Kode POS</label>
-                <input type="text" name="kode_pos" class="form-control"
-                  value="<?= htmlspecialchars($data['kode_pos'] ?? '') ?>">
+              <div class="row">
+                <div class="col-md-6">
+                  <label class="form-label">Alamat</label>
+                  <input type="text" name="kode_pos" class="form-control"
+                    value="<?= htmlspecialchars($data['kode_pos'] ?? '') ?>">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Telepon</label>
+                  <input type="text" name="telepon" class="form-control"
+                    value="<?= htmlspecialchars($data['telepon'] ?? '') ?>">
+                </div>
               </div>
-              <div class="col-md-6">
-                <label class="form-label">Telepon</label>
-                <input type="text" name="telepon" class="form-control"
-                  value="<?= htmlspecialchars($data['telepon'] ?? '') ?>">
+
+              <div class="mb-3">
+                <label class="form-label">Kecamatan</label>
+                <textarea name="alamat" class="form-control" rows="2"><?= htmlspecialchars($data['alamat'] ?? '') ?></textarea>
               </div>
-            </div>
 
-            <div class="mb-3">
-              <label class="form-label">Alamat</label>
-              <textarea name="alamat" class="form-control" rows="2"><?= htmlspecialchars($data['alamat'] ?? '') ?></textarea>
-            </div>
+              <div class="mb-3">
+                <label class="form-label">Kabupaten atau Kota</label>
+                <input type="email" name="email" class="form-control"
+                  value="<?= htmlspecialchars($data['email'] ?? '') ?>">
+              </div>
 
-            <div class="mb-3">
-              <label class="form-label">Email</label>
-              <input type="email" name="email" class="form-control"
-                value="<?= htmlspecialchars($data['email'] ?? '') ?>">
-            </div>
+              <div class="mb-3">
+                <label class="form-label">Provinsi</label>
+                <input type="text" name="website" class="form-control"
+                  value="<?= htmlspecialchars($data['website'] ?? '') ?>">
+              </div>
 
-            <div class="mb-3">
-              <label class="form-label">Website</label>
-              <input type="text" name="website" class="form-control"
-                value="<?= htmlspecialchars($data['website'] ?? '') ?>">
-            </div>
+              <div class="mb-3">
+                <label class="form-label">Kepala Sekolah</label>
+                <input type="text" name="kepala_sekolah" class="form-control"
+                  value="<?= htmlspecialchars($data['kepala_sekolah'] ?? '') ?>">
+              </div>
 
-            <div class="mb-3">
-              <label class="form-label">Kepala Sekolah</label>
-              <input type="text" name="kepala_sekolah" class="form-control"
-                value="<?= htmlspecialchars($data['kepala_sekolah'] ?? '') ?>">
-            </div>
+              <div class="mb-3">
+                <label class="form-label">NIP Kepala Sekolah</label>
+                <input type="text" name="nip_kepala_sekolah" class="form-control"
+                  value="<?= htmlspecialchars($data['nip_kepala_sekolah'] ?? '') ?>">
+              </div>
 
-            <div class="mb-3">
-              <label class="form-label">NIP Kepala Sekolah</label>
-              <input type="text" name="nip_kepala_sekolah" class="form-control"
-                value="<?= htmlspecialchars($data['nip_kepala_sekolah'] ?? '') ?>">
-            </div>
+              <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" value="1" id="confirm" required>
+                <label class="form-check-label" for="confirm">
+                  Saya yakin akan mengubah data tersebut
+                </label>
+              </div>
 
-            <div class="form-check mb-3">
-              <input class="form-check-input" type="checkbox" value="1" id="confirm" required>
-              <label class="form-check-label" for="confirm">
-                Saya yakin akan mengubah data tersebut
-              </label>
-            </div>
-
-            <button type="submit" class="btn btn-success">Simpan</button>
-          </form>
-        </div>
-      </div>
-
-      <!-- Kolom kanan -->
-      <div class="col-md-4">
-        <div class="card">
-          <h5 class="mb-3">Edit Logo Sekolah</h5>
-
-          <div class="text-center mb-3">
-            <img src="uploads/<?= htmlspecialchars($data['logo'] ?? 'default.png') ?>"
-                 class="logo-preview mb-2"
-                 alt="Logo Sekolah">
+              <button type="submit" class="btn btn-success">Simpan</button>
+            </form>
           </div>
+        </div>
 
-          <form action="update_logo_sekolah.php" method="POST" enctype="multipart/form-data">
-            <div class="mb-3">
-              <label class="form-label">Ganti Logo Sekolah</label>
-              <input type="file" name="logo" class="form-control" accept="image/*" required>
+        <!-- Kolom kanan -->
+        <div class="col-md-4">
+          <div class="card">
+            <h5 class="mb-3">Edit Logo Sekolah</h5>
+
+            <div class="text-center mb-3">
+              <img src="uploads/<?= htmlspecialchars($data['logo'] ?? 'default.png') ?>"
+                class="logo-preview mb-2"
+                alt="Logo Sekolah">
             </div>
-            <button type="submit" class="btn btn-warning" style="color:white">Update</button>
-          </form>
+
+            <form action="update_logo_sekolah.php" method="POST" enctype="multipart/form-data">
+              <div class="mb-3">
+                <label class="form-label">Ganti Logo Sekolah</label>
+                <input type="file" name="logo" class="form-control" accept="image/*" required>
+              </div>
+              <button type="submit" class="btn btn-warning" style="color:white">Update</button>
+            </form>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-<?php include '../../includes/footer.php'; ?>
+    <?php include '../../includes/footer.php'; ?>
