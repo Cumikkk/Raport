@@ -212,7 +212,6 @@ $data = $res->fetch_assoc() ?: [];
 
   <div class="container">
     <div class="page-title">
-      <h1>Data Sekolah</h1>
     </div>
 
     <?php if (isset($_GET['status'])): ?>
@@ -294,7 +293,7 @@ $data = $res->fetch_assoc() ?: [];
 
       <!-- Kanan: Preview Logo & Info -->
       <div class="card">
-        <h2 class="section-title">Pratinjau Logo</h2>
+        <h2 class="section-title">Logo</h2>
         <div class="logo-wrap">
           <img id="logoPreview" src="uploads/<?= htmlspecialchars(($data['logo_sekolah'] ?? '') ?: 'default.png') ?>" class="logo-preview" alt="Logo Sekolah">
           <div class="hint">Gambar pratinjau akan berubah saat Anda memilih file.</div>
