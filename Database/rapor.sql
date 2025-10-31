@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Waktu pembuatan: 29 Okt 2025 pada 15.21
+-- Waktu pembuatan: 31 Okt 2025 pada 08.18
 -- Versi server: 10.4.32-MariaDB
 -- Versi PHP: 8.2.12
 
@@ -199,6 +199,13 @@ CREATE TABLE `sekolah` (
   `kabupaten_atau_kota_sekolah` varchar(50) DEFAULT NULL,
   `provinsi_sekolah` varchar(50) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data untuk tabel `sekolah`
+--
+
+INSERT INTO `sekolah` (`id_sekolah`, `logo_sekolah`, `nama_sekolah`, `nsm_sekolah`, `npsn_sekolah`, `alamat_sekolah`, `no_telepon_sekolah`, `kecamatan_sekolah`, `kabupaten_atau_kota_sekolah`, `provinsi_sekolah`) VALUES
+(4, 'logo-channels4_profile-20251031081804-5b06bb.jpg', 'SD Negeri Kedondong 02', '123', '456', 'Kedondong RT 02 RW 01', '789', 'Tulangan', 'Sidoarjo', 'Jawa Timur');
 
 -- --------------------------------------------------------
 
@@ -422,7 +429,7 @@ ALTER TABLE `pengaturan_cetak_rapor`
 -- AUTO_INCREMENT untuk tabel `sekolah`
 --
 ALTER TABLE `sekolah`
-  MODIFY `id_sekolah` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id_sekolah` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT untuk tabel `semester`
