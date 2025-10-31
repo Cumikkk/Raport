@@ -36,8 +36,8 @@ include '../../includes/navbar.php';
             <input type="text" class="form-control" placeholder="Nama Kelas" required>
           </div>
           <div class="mb-3">
-            <label class="form-label fw-semibold">Kurikulum</label>
-            <input type="text" class="form-control" placeholder="Nama Kelas" required>
+            <label class="form-label fw-semibold">Komentar</label>
+            <input type="text" class="form-control" placeholder="Komentar" required>
           </div>
 
           <div class="mb-3">

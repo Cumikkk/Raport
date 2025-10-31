@@ -19,7 +19,7 @@ include '../../includes/header.php';
             <div class="mb-3">
               <label class="form-label fw-semibold">Tahun Ajaran Aktif</label>
               <select class="form-select" id="tahunAjaran" name="tahun_ajaran" required>
-                <option value="" selected disabled>Pilih</option>
+                <option value="" selected disabled>--Pilih--</option>
               </select>
 
               <script>
@@ -53,7 +53,7 @@ include '../../includes/header.php';
             <div class="mb-3">
               <label class="form-label fw-semibold">Semester Aktif</label>
               <select class="form-select" name="semester_aktif" required>
-                <option value="" selected disabled>Pilih</option>
+                <option value="" selected disabled>--Pilih--</option>
                 <option value="1">Ganjil</option>
                 <option value="2">Genap</option>
               </select>

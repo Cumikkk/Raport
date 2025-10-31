@@ -10,20 +10,39 @@ include '../../includes/header.php';
       <div class="col-12">
         <div class="card shadow-sm" style="border-radius: 15px;">
 
-          <!-- BAR ATAS -->
+          <!-- ===== BAR ATAS ===== -->
           <div class="mt-0 d-flex flex-column flex-md-row align-items-md-center justify-content-between p-3 top-bar">
+
             <!-- Kiri: Judul dan Dropdown -->
             <div class="d-flex flex-column align-items-md-start align-items-center text-md-start text-center mb-2 mb-md-0">
               <h5 class="mb-2 fw-semibold fs-4">Cetak Rapor Siswa</h5>
 
-              <div class="filter-group d-flex align-items-center gap-2">
-                <label for="tingkat" class="form-label fw-semibold mb-0">Tingkat</label>
-                <select id="tingkat" class="form-select dk-select" style="width: 120px;">
-                  <option>--Pilih--</option>
-                  <option>X</option>
-                  <option>XI</option>
-                  <option>XII</option>
-                </select>
+              <!-- ===== FILTER CONTAINER ===== -->
+              <div class="filter-container d-flex flex-column align-items-center align-items-md-start gap-2">
+
+                <!-- Dropdown Tingkat -->
+                <div class="filter-group d-flex align-items-center gap-2">
+                  <label for="tingkat" class="form-label fw-semibold mb-0">Tingkat</label>
+                  <select id="tingkat" class="form-select dk-select" style="width: 140px;">
+                    <option selected disabled>--Pilih--</option>
+                    <option>X</option>
+                    <option>XI</option>
+                    <option>XII</option>
+                  </select>
+                </div>
+
+                <!-- Dropdown Kelas (sekarang di bawah Tingkat) -->
+                <div class="filter-group d-flex align-items-center gap-2">
+                  <label for="kelas" class="form-label fw-semibold mb-0">Kelas</label>
+                  <select id="kelas" class="form-select dk-select" style="width: 160px;">
+                    <option selected disabled>--Pilih--</option>
+                    <option>IPA 1</option>
+                    <option>IPA 2</option>
+                    <option>IPS 1</option>
+                    <option>IPS 2</option>
+                  </select>
+                </div>
+
               </div>
             </div>
 
@@ -36,14 +55,10 @@ include '../../includes/header.php';
               <a href="data_absensi_import.php" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
                 <i class="fa-solid fa-file-arrow-down fa-lg"></i> <span>Import</span>
               </a>
-
-              <button id="exportBtn" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
-                <i class="fa-solid fa-file-arrow-up fa-lg"></i> Export
-              </button>
             </div>
           </div>
 
-          <!-- Search & Sort -->
+          <!-- ===== SEARCH & SORT ===== -->
           <div class="ms-3 me-3 bg-white d-flex justify-content-center align-items-center flex-wrap p-2 gap-2">
             <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search" style="width: 200px;">
             <button id="searchBtn" class="btn btn-outline-secondary btn-sm p-2 rounded-3 d-flex align-items-center justify-content-center">
@@ -61,19 +76,20 @@ include '../../includes/header.php';
             </button>
           </div>
 
-          <!-- Tabel -->
+          <!-- ===== TABEL SISWA ===== -->
           <div class="card-body">
             <div class="table-responsive">
               <table class="table table-bordered table-striped align-middle">
                 <thead style="background-color:#1d52a2" class="text-center text-white">
                   <tr>
-                    <th rowspan="2"><input type="checkbox" id="selectAll"></th>
-                    <th rowspan="2">Absen</th>
-                    <th rowspan="2">NISN</th>
-                    <th rowspan="2">Nama</th>
-                    <th rowspan="2">L/P</th>
-                     <th rowspan="2">Komentar</th>
-                     <th rowspan="2">Aksi</th>
+                    <th><input type="checkbox" id="selectAll"></th>
+                    <th>Absen</th>
+                    <th>NISN</th>
+                    <th>Nama</th>
+                    <th>L/P</th>
+                    <th>Komentar</th>
+                    <th>Aksi</th>
+                  </tr>
                 </thead>
                 <tbody class="text-center">
                   <tr>
@@ -83,8 +99,6 @@ include '../../includes/header.php';
                     <td>Fahrul</td>
                     <td>L</td>
                     <td>Perlu diperbaiki lagi</td>
-
-                    
                     <td>
                       <a href="data_absensi_import.php?id=1" class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1">
                         <i class="bi bi-pencil-square"></i>Edit
@@ -98,8 +112,8 @@ include '../../includes/header.php';
                   <tr>
                     <td><input type="checkbox" class="row-check"></td>
                     <td>2</td>
-                    <td>Ahmad</td>
                     <td>654321</td>
+                    <td>Ahmad</td>
                     <td>L</td>
                     <td>Perlu diperbaiki lagi</td>
                     <td>
@@ -128,36 +142,48 @@ include '../../includes/header.php';
     </div>
   </main>
 
-  <!-- SCRIPT CHECKBOX -->
+  <!-- ===== SCRIPT CHECKBOX ===== -->
   <script>
     const selectAll = document.getElementById('selectAll');
     const rowChecks = document.querySelectorAll('.row-check');
     const deleteBtn = document.getElementById('deleteSelected');
 
-    // Fungsi: toggle semua checkbox
     selectAll.addEventListener('change', function () {
       rowChecks.forEach(chk => chk.checked = this.checked);
       toggleDeleteButton();
     });
 
-    // Fungsi: jika satu checkbox baris diubah
     rowChecks.forEach(chk => {
       chk.addEventListener('change', () => {
-        // update status checkbox utama
         selectAll.checked = [...rowChecks].every(c => c.checked);
         toggleDeleteButton();
       });
     });
 
-    // Tombol hapus hanya aktif jika ada yang dicentang
     function toggleDeleteButton() {
       const adaYangDipilih = [...rowChecks].some(c => c.checked);
       deleteBtn.disabled = !adaYangDipilih;
     }
   </script>
 
+  <!-- ===== STYLE RESPONSIVE ===== -->
   <style>
-    /* --- RESPONSIVE STYLE --- */
+    .filter-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .filter-group label {
+      min-width: 70px;
+    }
+
+    @media (min-width: 768px) {
+      .filter-container {
+        align-items: flex-start;
+      }
+    }
+
     @media (max-width: 768px) {
       .top-bar {
         flex-direction: column !important;
@@ -165,9 +191,18 @@ include '../../includes/header.php';
         text-align: center;
       }
 
+      .filter-container {
+        width: 100%;
+        align-items: center !important;
+      }
+
       .filter-group {
         justify-content: center !important;
-        margin-top: 5px;
+        width: 100%;
+      }
+
+      .dk-select {
+        width: 100% !important;
       }
 
       .action-buttons {
@@ -178,4 +213,3 @@ include '../../includes/header.php';
   </style>
 
   <?php include '../../includes/footer.php'; ?>
-

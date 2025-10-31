@@ -1,9 +1,9 @@
 <?php
-include '../../includes/header.php';
+include '../includes/header.php';
 ?>
 
 <body>
-  <?php include '../../includes/navbar.php'; ?>
+  <?php include '../includes/navbar.php'; ?>
 
   <main class="content">
     <div class="cards row" style="margin-top: -50px;">
@@ -15,49 +15,28 @@ include '../../includes/header.php';
 
             <!-- Kiri: Judul dan Dropdown -->
             <div class="d-flex flex-column align-items-md-start align-items-center text-md-start text-center mb-2 mb-md-0">
-              <h5 class="mb-2 fw-semibold fs-4">Data Siswa</h5>
+              <h5 class="mb-2 fw-semibold fs-4">Data User</h5>
 
               <!-- ===== FILTER CONTAINER ===== -->
               <div class="filter-container d-flex flex-column align-items-center align-items-md-start gap-2">
 
                 <!-- Dropdown Tingkat -->
-                <div class="filter-group d-flex align-items-center gap-2">
-                  <label for="tingkat" class="form-label fw-semibold mb-0">Tingkat</label>
-                  <select id="tingkat" class="form-select dk-select" style="width: 140px;">
-                    <option selected disabled>--Pilih--</option>
-                    <option>X</option>
-                    <option>XI</option>
-                    <option>XII</option>
-                  </select>
-                </div>
-
+               
                 <!-- Dropdown Kelas -->
-                <div class="filter-group d-flex align-items-center gap-2">
-                  <label for="kelas" class="form-label fw-semibold mb-0">Kelas</label>
-                  <select id="kelas" class="form-select dk-select" style="width: 160px;">
-                    <option selected disabled>--Pilih--</option>
-                    <option>IPA 1</option>
-                    <option>IPA 2</option>
-                    <option>IPS 1</option>
-                    <option>IPS 2</option>
-                  </select>
-                </div>
+                
               </div>
             </div>
 
             <!-- Kanan: Tombol -->
             <div class="d-flex gap-2 flex-wrap justify-content-md-end justify-content-center mt-3 mt-md-0 action-buttons">
-              <a href="tambah_siswa.php" class="btn btn-primary btn-sm d-flex align-items-center gap-1 px-3 fw-semibold" style="border-radius: 5px;">
-                <i class="fa-solid fa-plus fa-lg"></i> Tambah
+              <a href="tambah_data_user.php" class="btn btn-primary btn-sm d-flex align-items-center gap-1 px-3 fw-semibold" style="border-radius: 5px;">
+                <i class="fa-solid fa-plus fa-lg"></i> Tambah User
               </a>
 
               <a href="data_siswa_import.php" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
                 <i class="fa-solid fa-file-arrow-down fa-lg"></i> <span>Import</span>
               </a>
 
-              <button id="exportBtn" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
-                <i class="fa-solid fa-file-arrow-up fa-lg"></i> Export
-              </button>
             </div>
           </div>
 
@@ -86,10 +65,11 @@ include '../../includes/header.php';
                 <thead style="background-color:#1d52a2" class="text-center text-white">
                   <tr>
                     <th><input type="checkbox" id="selectAll"></th>
-                    <th>Absen</th>
-                    <th>Nama</th>
-                    <th>NIS</th>
-                    <th>Wali Kelas</th>
+                    <th>ID</th>
+                    <th>Nama Lengkap</th>
+                    <th>Username</th>
+                    <th>Password</th>
+                     <th>Role</th>
                     <th>Aksi</th>
                   </tr>
                 </thead>
@@ -97,9 +77,10 @@ include '../../includes/header.php';
                   <tr>
                     <td><input type="checkbox" class="row-check"></td>
                     <td>1</td>
+                    <td>Fahrul Alfanani</td>
                     <td>Fahrul</td>
-                    <td>123456</td>
-                    <td>Bu Sutrisna</td>
+                    <td>1234</td>
+                     <td>Admin</td>
                     <td>
                       <a href="edit_siswa.php?id=1" class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1">
                         <i class="bi bi-pencil-square"></i>Edit
@@ -113,9 +94,10 @@ include '../../includes/header.php';
                   <tr>
                     <td><input type="checkbox" class="row-check"></td>
                     <td>2</td>
-                    <td>Ahmad</td>
-                    <td>654321</td>
-                    <td>Pak Budi</td>
+                    <td>Tegar Kurniawan</td>
+                    <td>Tegar</td>
+                    <td>1234</td>
+                     <td>Guru</td>
                     <td>
                       <a href="edit_siswa.php?id=2" class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1">
                         <i class="bi bi-pencil-square"></i>Edit
@@ -212,5 +194,5 @@ include '../../includes/header.php';
     }
   </style>
 
-  <?php include '../../includes/footer.php'; ?>
+  <?php include '../includes/footer.php'; ?>
 

@@ -5,8 +5,8 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 $current_url = $_SERVER['REQUEST_URI'] ?? '/';
-$roleRaw = $_SESSION['role_user'] ?? '';            // sesuai kolom di tabel user
-$roleKey = strtolower(trim($roleRaw));              // 'admin' / 'guru' / ''
+$roleRaw = $_SESSION['role_user'] ?? '';            
+$roleKey = strtolower(trim($roleRaw));              
 $username_display = $_SESSION['username'] ?? 'Guest';
 
 // Tentukan "Home" sesuai role
@@ -79,10 +79,13 @@ if ($roleKey === 'guru') {
         </ul>
       </details>
 
-      <a href="/RAPORT/tambah%20user/tambah_user.php" class="add-user <?= str_contains($current_url, 'tambah_user') ? 'active' : '' ?>">
-        <span><i class="fas fa-user"></i> Tambah User</span>
-        <i class="fas fa-plus plus-icon"></i>
-      </a>
+      <!-- Ubah Tambah User menjadi dropdown User -->
+      <details <?= str_contains($current_url, 'tambah_user') || str_contains($current_url, 'data_user') ? 'open' : '' ?>>
+        <summary><span><i class="fas fa-user"></i> User</span><i class="fas fa-angle-right arrow"></i></summary>
+        <ul>
+          <li><a href="/RAPORT/tambah%20user/data_user.php" class="<?= str_contains($current_url, 'data_user') ? 'active' : '' ?>">Data User</a></li>
+        </ul>
+      </details>
 
     <?php elseif ($roleKey === 'guru'): ?>
       <!-- Guru: hanya Data Kelas -->
@@ -114,7 +117,7 @@ if ($roleKey === 'guru') {
 
   /* efek aktif */
   .menu a.active {
-    background-color: rgba(29, 82, 162, 0.3);
+    background-color: rgba(65, 188, 255, 0.3);
     border-left: 4px solid #1d52a2;
     font-weight: 600;
   }
@@ -127,5 +130,25 @@ if ($roleKey === 'guru') {
     display: block;
     padding: 6px 16px;
     border-radius: 4px;
+  }
+
+  /* Responsif: sidebar dan overlay tetap seperti sebelumnya */
+  @media (max-width: 768px) {
+    .sidebar {
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+    }
+    #menu-toggle:checked ~ .sidebar {
+      transform: translateX(0);
+    }
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0,0,0,0.3);
+      display: none;
+    }
+    #menu-toggle:checked ~ .overlay {
+      display: block;
+    }
   }
 </style>
