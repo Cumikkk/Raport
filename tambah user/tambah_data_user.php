@@ -1,113 +1,137 @@
-<?php 
-include '../includes/header.php';
-?>
-
-<body>
 <?php
+include '../includes/header.php';
 include '../includes/navbar.php';
-?>
+require_once '../koneksi.php';
 
+// Ambil daftar guru
+$guruRes = mysqli_query($koneksi, "SELECT id_guru, nama_guru FROM guru ORDER BY nama_guru ASC");
+?>
 <style>
+  :root {
+    --brand: #0a4db3;
+    --brand-600: #083f93;
+    --ink: #0f172a;
+    --text: #111827;
+    --muted: #475569;
+    --ring: #cbd5e1;
+    --card: #ffffff;
+    --card-radius: 14px;
+  }
+
   body {
-    background-color: #f7f8fb;
+    background: #f7f8fb;
+    color: var(--text);
   }
 
   .form-wrapper {
     margin-left: 260px;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: clamp(24px, 4vw, 48px) 12px;
   }
 
   .form-container {
-    background: #ffffff;
-    padding: 30px 40px;
-    border-radius: 12px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-    max-width: 400px;
-    width: 100%;
+    background: var(--card);
+    width: min(720px, 100%);
+    border: 1px solid #e8eef6;
+    border-radius: var(--card-radius);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, .06);
+    padding: clamp(18px, 2.6vw, 28px);
   }
 
-  h2 {
-    text-align: center;
-    margin-bottom: 25px;
-    color: rgb(6, 6, 6);
+  .form-title {
+    color: var(--ink);
   }
 
   label {
-    display: block;
-    margin-bottom: 6px;
     font-weight: 600;
-    color: #111827;
+    margin: 10px 0 6px;
+    color: var(--ink);
   }
 
-  input[type="text"],
-  input[type="password"] {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    margin-bottom: 16px;
-    font-size: 15px;
+  .hint {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: -2px;
   }
 
-  button[type="submit"] {
-    width: 100%;
-    background-color: green;
-    color: white;
-    border: none;
-    padding: 10px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: 600;
+  .form-control,
+  .form-select {
+    border: 1px solid var(--ring);
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: var(--ink);
   }
 
-  button[type="submit"]:hover {
-    background-color: #1d4ed8;
+  .form-control:focus,
+  .form-select:focus {
+    box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
+    border-color: var(--brand);
   }
 
-  @media (max-width: 900px) {
+  .btn-brand {
+    background: var(--brand);
+    border-color: var(--brand);
+    color: #fff;
+    font-weight: 700;
+  }
+
+  .btn-brand:hover {
+    background: var(--brand-600);
+    border-color: var(--brand-600);
+  }
+
+  @media (max-width:900px) {
     .form-wrapper {
       margin-left: 0;
-      height: auto;
-      padding: 100px 0;
-    }
-    .form-container {
-      margin: 0 20px;
     }
   }
 </style>
 
 <div class="form-wrapper">
   <div class="form-container">
-    <h2>Tambah User</h2>
+    <div class="d-flex align-items-center justify-content-between">
+      <h2 class="form-title h4 mb-0">Tambah User</h2>
+      <a href="data_user.php" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Kembali</a>
+    </div>
+    <hr class="mt-3 mb-3">
 
-    <!-- arahkan ke file proses -->
-    <form action="proses_tambah_user.php" method="POST">
-      <label for="role">Role:</label>
-<select id="role" name="role" required>
-  <option value="admin">Admin</option>
-  <option value="guru" selected>Guru</option>
-</select>
+    <form action="proses_tambah_user.php" method="POST" autocomplete="off" novalidate>
+      <div class="row g-3">
+        <div class="col-12 col-md-4">
+          <label for="role">Role</label>
+          <select id="role" name="role" class="form-select" required>
+            <option value="Admin">Admin</option>
+            <option value="Guru" selected>Guru</option>
+          </select>
+        </div>
 
-      <label for="nama_lengkap">Nama Lengkap:</label>
-      <input type="text" id="nama_lengkap" name="nama_lengkap" required>
+        <div class="col-12 col-md-8">
+          <label for="id_guru">Pilih Guru</label>
+          <select id="id_guru" name="id_guru" class="form-select">
+            <option value="">-- Tanpa Guru --</option>
+            <?php while ($g = mysqli_fetch_assoc($guruRes)): ?>
+              <option value="<?= (int)$g['id_guru'] ?>"><?= htmlspecialchars($g['nama_guru']) ?></option>
+            <?php endwhile; ?>
+          </select>
+        </div>
 
-      <label for="email_user">Email:</label>
-      <input type="text" id="email_user" name="email_user">
+        <div class="col-12 col-md-6">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" maxlength="50" class="form-control" required>
+        </div>
 
-      <label for="no_telepon_user">No Telepon:</label>
-      <input type="text" id="no_telepon_user" name="no_telepon_user">
+        <div class="col-12 col-md-6">
+          <label for="password_user">Password</label>
+          <input type="password" id="password_user" name="password_user" class="form-control" required>
+        </div>
+      </div>
 
-      <label for="username">Username:</label>
-      <input type="text" id="username" name="username" required>
-
-      <label for="password_user">Password:</label>
-      <input type="password" id="password_user" name="password_user" required>
-
-      <button type="submit">Simpan</button>
+      <div class="d-grid d-sm-flex gap-2 mt-4">
+        <button type="submit" class="btn btn-brand px-4"><i class="bi bi-check2-circle"></i> Simpan</button>
+        <a href="data_user.php" class="btn btn-outline-secondary px-4">Batal</a>
+      </div>
     </form>
   </div>
 </div>

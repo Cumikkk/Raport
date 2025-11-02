@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Waktu pembuatan: 31 Okt 2025 pada 08.18
+-- Waktu pembuatan: 02 Nov 2025 pada 05.01
 -- Versi server: 10.4.32-MariaDB
 -- Versi PHP: 8.2.12
 
@@ -79,8 +79,8 @@ CREATE TABLE `guru` (
 --
 
 INSERT INTO `guru` (`id_guru`, `nama_guru`, `jabatan_guru`) VALUES
-(1, 'Tegar', 'Guru'),
-(2, 'Fahrul', 'Guru');
+(1, 'Fahrul', 'Kepala Sekolah'),
+(2, 'Cumikkk.', 'Guru');
 
 -- --------------------------------------------------------
 
@@ -205,7 +205,7 @@ CREATE TABLE `sekolah` (
 --
 
 INSERT INTO `sekolah` (`id_sekolah`, `logo_sekolah`, `nama_sekolah`, `nsm_sekolah`, `npsn_sekolah`, `alamat_sekolah`, `no_telepon_sekolah`, `kecamatan_sekolah`, `kabupaten_atau_kota_sekolah`, `provinsi_sekolah`) VALUES
-(4, 'logo-channels4_profile-20251031081804-5b06bb.jpg', 'SD Negeri Kedondong 02', '123', '456', 'Kedondong RT 02 RW 01', '789', 'Tulangan', 'Sidoarjo', 'Jawa Timur');
+(1, 'logo-channels4_profile-20251102044954-78aead.jpg', 'SD Negeri Kedondong 02', '123', '456', 'Kedondong RT 02 RW 01', '789', 'Tulangan', 'Sidoarjo', 'Jawa Timur');
 
 -- --------------------------------------------------------
 
@@ -252,8 +252,8 @@ CREATE TABLE `user` (
 --
 
 INSERT INTO `user` (`id_user`, `id_guru`, `role_user`, `username`, `password_user`) VALUES
-(1, 1, 'Guru', 'Tegar', '123'),
-(2, 2, 'Admin', 'Cumikkk.', '456');
+(1, 1, 'Admin', 'Fahrul', '123'),
+(2, 2, 'Guru', 'Cumikkk.', '456');
 
 --
 -- Indexes for dumped tables
@@ -387,7 +387,7 @@ ALTER TABLE `ekstrakurikuler`
 -- AUTO_INCREMENT untuk tabel `guru`
 --
 ALTER TABLE `guru`
-  MODIFY `id_guru` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id_guru` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
 -- AUTO_INCREMENT untuk tabel `kelas`
@@ -405,7 +405,7 @@ ALTER TABLE `kurikulum`
 -- AUTO_INCREMENT untuk tabel `mata_pelajaran`
 --
 ALTER TABLE `mata_pelajaran`
-  MODIFY `id_mata_pelajaran` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id_mata_pelajaran` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT untuk tabel `nilai_ekstrakurikuler`
@@ -435,7 +435,7 @@ ALTER TABLE `sekolah`
 -- AUTO_INCREMENT untuk tabel `semester`
 --
 ALTER TABLE `semester`
-  MODIFY `id_semester` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id_semester` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT untuk tabel `siswa`

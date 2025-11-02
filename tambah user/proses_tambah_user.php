@@ -1,22 +1,47 @@
 <?php
-include '../koneksi.php';
+require_once '../koneksi.php';
 
-$nama_lengkap = $_POST['nama_lengkap'];
-$email_user = $_POST['email_user'];
-$no_telepon_user = $_POST['no_telepon_user'];
-$username = $_POST['username'];
-$password = $_POST['password_user'];
-$role = $_POST['role'];
+$role        = isset($_POST['role']) ? trim($_POST['role']) : '';
+$username    = isset($_POST['username']) ? trim($_POST['username']) : '';
+$passwordRaw = isset($_POST['password_user']) ? $_POST['password_user'] : '';
+$id_guru     = isset($_POST['id_guru']) && $_POST['id_guru'] !== '' ? (int)$_POST['id_guru'] : null;
 
-$query = "INSERT INTO user (nama_lengkap_user, email_user, no_telepon_user, username, password_user, role)
-          VALUES ('$nama_lengkap', '$email_user', '$no_telepon_user', '$username', '$password', '$role')";
-
-
-if (mysqli_query($koneksi, $query)) {
-    echo "<script>alert('Data user berhasil ditambahkan!'); window.location.href='../index.php';</script>";
-} else {
-    echo "Error: " . mysqli_error($koneksi);
+// Validasi dasar
+$allowedRoles = ['Admin', 'Guru'];
+if (!in_array($role, $allowedRoles, true)) {
+    exit("<script>alert('Role tidak valid.'); history.back();</script>");
+}
+if ($username === '' || strlen($username) > 50) {
+    exit("<script>alert('Username wajib dan maks 50 karakter.'); history.back();</script>");
+}
+if ($passwordRaw === '') {
+    exit("<script>alert('Password wajib diisi.'); history.back();</script>");
 }
 
-mysqli_close($koneksi);
-?>
+// Cek username unik
+$sqlCheck = "SELECT 1 FROM user WHERE username = ? LIMIT 1";
+$stmt = mysqli_prepare($koneksi, $sqlCheck);
+mysqli_stmt_bind_param($stmt, 's', $username);
+mysqli_stmt_execute($stmt);
+$res = mysqli_stmt_get_result($stmt);
+if (mysqli_num_rows($res) > 0) {
+    exit("<script>alert('Username sudah digunakan.'); history.back();</script>");
+}
+
+// Insert (tanpa hash password, sesuai permintaan)
+if ($id_guru === null) {
+    $sql = "INSERT INTO user (id_guru, role_user, username, password_user) VALUES (NULL, ?, ?, ?)";
+    $stmt = mysqli_prepare($koneksi, $sql);
+    mysqli_stmt_bind_param($stmt, 'sss', $role, $username, $passwordRaw);
+} else {
+    $sql = "INSERT INTO user (id_guru, role_user, username, password_user) VALUES (?, ?, ?, ?)";
+    $stmt = mysqli_prepare($koneksi, $sql);
+    mysqli_stmt_bind_param($stmt, 'isss', $id_guru, $role, $username, $passwordRaw);
+}
+
+$ok = mysqli_stmt_execute($stmt);
+if ($ok) {
+    echo "<script>alert('User berhasil ditambahkan'); window.location.href='data_user.php';</script>";
+} else {
+    echo "<script>alert('Gagal menambahkan user: " . htmlspecialchars(mysqli_error($koneksi)) . "'); history.back();</script>";
+}
