@@ -2,6 +2,35 @@
 include '../../includes/header.php';
 ?>
 
+<?php
+// ===== BACKEND: ambil data tanpa mengubah tampilan =====
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+error_reporting(E_ALL);
+require_once __DIR__ . '/../../koneksi.php';
+mysqli_set_charset($koneksi, 'utf8mb4');
+
+$mapel = [];
+try {
+  $cek = $koneksi->query("SHOW TABLES LIKE 'mata_pelajaran'");
+  if ($cek && $cek->num_rows > 0) {
+    // Pakai kolom sesuai skema: id_mata_pelajaran, nama_mata_pelajaran, kelompok_mata_pelajaran
+    $stmt = $koneksi->prepare("
+      SELECT id_mata_pelajaran, nama_mata_pelajaran, kelompok_mata_pelajaran
+      FROM mata_pelajaran
+      ORDER BY nama_mata_pelajaran ASC
+    ");
+    $stmt->execute();
+    $res = $stmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+      $mapel[] = $row;
+    }
+    $stmt->close();
+  }
+} catch (Throwable $e) {
+  // biarkan kosong jika error, tampilan tetap sama
+}
+?>
+
 <body>
   <?php include '../../includes/navbar.php'; ?>
 
@@ -53,7 +82,7 @@ include '../../includes/header.php';
           <!-- Tabel nilai Mapel ambil data mapel -->
           <div class="card-body">
             <div class="table-responsive">
-              <table class="table table-bordered table-striped align-middle">
+              <table id="mapelTable" class="table table-bordered table-striped align-middle">
                 <thead style="background-color:#1d52a2" class="text-center text-white">
                   <tr>
                     <th>No</th>
@@ -62,20 +91,26 @@ include '../../includes/header.php';
                     <th>Aksi</th>
                   </tr>
                 </thead>
-                <tbody>
-                  <tr>
-                    <td>1</td>
-                    <td>Bahasa Inggris</td>
-                    <td>Wajib</td>
-                    <td class="text-center">
-                      <a href="nilai_mapel.php?id=1"
-                        class="btn btn-warning btn-sm me-1 d-inline-flex align-items-center justify-content-center gap-1 px-2 py-1 me-1"
-                        style="font-size: 15px;">
-                        <i class="bi bi-pencil-square" style="font-size: 15px;"></i>
-                        <span>Details</span>
-                      </a>
-                    </td>
-                  </tr>
+                <tbody id="mapelBody">
+                  <?php if (count($mapel) === 0): ?>
+                    <tr>
+                      <td colspan="4" class="text-center text-muted">Belum ada data mata pelajaran.</td>
+                    </tr>
+                  <?php else: $no=1; foreach ($mapel as $m): ?>
+                    <tr>
+                      <td><?= $no++; ?></td>
+                      <td><?= htmlspecialchars($m['nama_mata_pelajaran']); ?></td>
+                      <td><?= htmlspecialchars($m['kelompok_mata_pelajaran']); ?></td>
+                      <td class="text-center">
+                        <a href="nilai_mapel.php?id=<?= urlencode($m['id_mata_pelajaran']); ?>"
+                          class="btn btn-warning btn-sm me-1 d-inline-flex align-items-center justify-content-center gap-1 px-2 py-1 me-1"
+                          style="font-size: 15px;">
+                          <i class="bi bi-pencil-square" style="font-size: 15px;"></i>
+                          <span>Details</span>
+                        </a>
+                      </td>
+                    </tr>
+                  <?php endforeach; endif; ?>
                 </tbody>
               </table>
             </div>
@@ -92,24 +127,87 @@ include '../../includes/header.php';
         flex-direction: column !important;
         align-items: flex-center !important;
       }
-
       .action-buttons {
         margin-top: 10px;
         width: 100%;
         justify-content: center !important;
         flex-wrap: wrap;
       }
-
-      .h5 {
-        justify-content:center;
-      }
-
+      .h5 { justify-content:center; }
       .action-buttons a,
-      .action-buttons button {
-        width: auto;
-      }
+      .action-buttons button { width: auto; }
     }
   </style>
+
+  <script>
+    // ====== SEARCH (tanpa mengubah tampilan) ======
+    (function(){
+      const input = document.getElementById('searchInput');
+      const btn = document.getElementById('searchBtn');
+      const body = document.getElementById('mapelBody');
+      function filter() {
+        const q = (input.value || '').toLowerCase();
+        Array.from(body.querySelectorAll('tr')).forEach(tr => {
+          const nameCell = tr.children[1];
+          if (!nameCell) return;
+          const txt = nameCell.textContent.toLowerCase();
+          tr.style.display = txt.indexOf(q) !== -1 ? '' : 'none';
+        });
+      }
+      if (btn) btn.addEventListener('click', filter);
+      if (input) input.addEventListener('keyup', e => { if (e.key === 'Enter') filter(); });
+    })();
+
+    // ====== SORT A-Z / Z-A (klik bergantian) ======
+    (function(){
+      const btn = document.getElementById('sortBtn');
+      const body = document.getElementById('mapelBody');
+      let asc = false; // pertama klik -> A-Z
+
+      function sortRows() {
+        const rows = Array.from(body.querySelectorAll('tr')).filter(tr => tr.querySelectorAll('td').length > 1);
+        rows.sort((a, b) => {
+          const A = a.children[1].textContent.trim().toLowerCase();
+          const B = b.children[1].textContent.trim().toLowerCase();
+          return asc ? A.localeCompare(B) : B.localeCompare(A);
+        });
+        rows.forEach((tr, i) => {
+          tr.children[0].textContent = i + 1;
+          body.appendChild(tr);
+        });
+        asc = !asc;
+      }
+      if (btn) btn.addEventListener('click', sortRows);
+    })();
+
+    // ====== EXPORT CSV (tampilan sama, hanya aksi tombol) ======
+    (function(){
+      const btn = document.getElementById('exportBtn');
+      if (!btn) return;
+      btn.addEventListener('click', () => {
+        const table = document.getElementById('mapelTable');
+        if (!table) return;
+        let csv = [];
+        for (const row of table.querySelectorAll('tr')) {
+          if (row.style.display === 'none') continue;
+          const cells = Array.from(row.querySelectorAll('th,td')).map(td => {
+            let text = td.innerText.replace(/\r?\n|\r/g, ' ').replace(/"/g, '""').trim();
+            return `"${text}"`;
+          });
+          csv.push(cells.join(','));
+        }
+        const blob = new Blob([csv.join('\n')], {type: 'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'mapel.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+    })();
+  </script>
 
   <?php include '../../includes/footer.php'; ?>
 </body>
