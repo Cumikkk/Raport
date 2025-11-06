@@ -33,27 +33,9 @@ include '../../koneksi.php';
             </div>
           </div>
 
-          <!-- Search & Sort -->
+          <!-- Search  -->
           <div class="ms-3 me-3 bg-white d-flex justify-content-center align-items-center flex-wrap p-2 gap-2">
             <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search" style="width: 200px;">
-            <button id="searchBtn" class="btn btn-outline-secondary btn-sm p-2 rounded-3 d-flex align-items-center justify-content-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
-                <path
-                  d="M11 6a5 5 0 1 0-2.9 4.7l3.85 3.85a1 1 0 0 0 1.414-1.414l-3.85-3.85A4.978 4.978 0 0 0 11 6zM6 10a4 4 0 1 1 0-8 4 4 0 0 1 0 8z" />
-              </svg>
-            </button>
-
-            <button id="sortBtn" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 rounded-3">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                fill="currentColor" class="bi bi-sort-alpha-down" viewBox="0 0 16 16">
-                <path fill-rule="evenodd"
-                  d="M10.082 5.629 9.664 7H8.598l1.789-5.332h1.234L13.402 7h-1.12l-.419-1.371zm1.57-.785L11 2.687h-.047l-.652 2.157z" />
-                <path
-                  d="M12.96 14H9.028v-.691l2.579-3.72v-.054H9.098v-.867h3.785v.691l-2.567 3.72v.054h2.645zM4.5 2.5a.5.5 0 0 0-1 0v9.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 1.999.007.007a.497.497 0 0 0 .7-.006l2-2a.5.5 0 0 0-.707-.708L4.5 12.293z" />
-              </svg>
-              Sort
-            </button>
           </div>
           <!-- Modal Tambah Ekstrakurikuler -->
           <div class="modal fade" id="tambahEkstraModal" tabindex="-1" aria-labelledby="tambahEkstraLabel" aria-hidden="true">
@@ -96,7 +78,7 @@ include '../../koneksi.php';
           <!-- Tabel Data Mapel -->
           <div class="card-body">
             <div class="table-responsive">
-              <table class="table table-bordered table-striped align-middle">
+              <table class="table table-bordered table-striped align-middle" id ="dataTable">
                 <thead style="background-color:#1d52a2" class="text-center text-white">
                   <tr>
                     <th>No</th>
@@ -179,7 +161,39 @@ include '../../koneksi.php';
       </div>
     </div>
   </main>
+
   <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const searchInput = document.getElementById('searchInput');
+      const table = document.getElementById('dataTable');
+      const rows = table.querySelectorAll('tbody tr');
+
+      searchInput.addEventListener('input', function() {
+        const searchText = this.value.toLowerCase();
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+          const rowText = row.textContent.toLowerCase();
+          if (rowText.includes(searchText)) {
+            row.style.display = '';
+            visibleCount++;
+          } else {
+            row.style.display = 'none';
+          }
+        });
+
+        // Tambah pesan "tidak ada data"
+        let noData = document.getElementById('noDataRow');
+        if (!noData) {
+          noData = document.createElement('tr');
+          noData.id = 'noDataRow';
+          noData.innerHTML = `<td colspan="${table.querySelectorAll('thead th').length}" class="text-center text-muted">Tidak ada data ditemukan</td>`;
+          table.querySelector('tbody').appendChild(noData);
+        }
+        noData.style.display = visibleCount === 0 ? '' : 'none';
+      });
+    });
+
     function editEkstra(id, nama) {
       // Isi field modal
       document.getElementById('edit_id').value = id;

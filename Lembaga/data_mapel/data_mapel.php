@@ -4,18 +4,14 @@ include '../../koneksi.php';
 ?>
 
 <?php
-// include header & koneksi awal sudah kamu punya
-// Ubah query supaya ambil id juga
 $query = "SELECT id_mata_pelajaran, nama_mata_pelajaran, kelompok_mata_pelajaran FROM mata_pelajaran";
 $result = mysqli_query($koneksi, $query);
 
-// Bentuk array mapel berdasarkan kategori (simpan objek lengkap)
 $dataMapel = [];
 $kategoriList = [];
 
 while ($row = mysqli_fetch_assoc($result)) {
   $kategori = strtolower($row['kelompok_mata_pelajaran']);
-  // simpan objek lengkap supaya JS bisa akses id & nama
   $dataMapel[$kategori][] = [
     'id_mata_pelajaran' => (int)$row['id_mata_pelajaran'],
     'nama_mata_pelajaran' => $row['nama_mata_pelajaran'],
@@ -24,7 +20,6 @@ while ($row = mysqli_fetch_assoc($result)) {
   $kategoriList[] = $kategori;
 }
 
-// Hapus duplikat kategori dan reindex agar aman
 $kategoriList = array_values(array_unique($kategoriList));
 ?>
 
@@ -151,23 +146,6 @@ $kategoriList = array_values(array_unique($kategoriList));
               </div>
 
               <div class="card-body">
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-
-                  <h5 class="card-title mb-3" id="judulKategori">Mata Pelajaran Wajib</h5>
-                  <!-- Search -->
-                  <div class="d-flex flex-wrap gap-2 tombol-aksi mb-3">
-                    <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search"
-                      style="width: 200px;">
-                    <button id="searchBtn"
-                      class="btn btn-outline-secondary btn-sm p-2 rounded-3 d-flex align-items-center justify-content-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                        class="bi bi-search" viewBox="0 0 16 16">
-                        <path
-                          d="M11 6a5 5 0 1 0-2.9 4.7l3.85 3.85a1 1 0 0 0 1.414-1.414l-3.85-3.85A4.978 4.978 0 0 0 11 6zM6 10a4 4 0 1 1 0-8 4 4 0 0 1 0 8z" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
 
                 <div id="mapelContainer" class="list-group text-start">
                   <!-- Mapel akan muncul di sini -->
