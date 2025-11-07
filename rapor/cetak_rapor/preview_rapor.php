@@ -1,7 +1,7 @@
 <?php
 include '../../includes/header.php';
 include '../../includes/navbar.php';
-include '../../includes/koneksi.php'; // jika path ini salah, gunakan '../../koneksi.php' sesuai struktur kamu
+include '../../koneksi.php'; // ✅ perbaikan path koneksi.php
 
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     echo "<script>alert('ID siswa tidak valid.'); window.location='data_rapor.php';</script>";
@@ -75,9 +75,7 @@ if (!$data) {
         </table>
 
         <div class="d-flex justify-content-between mt-3">
-          <a href="data_rapor.php" class="btn btn-danger">
-            Kembali
-          </a>
+          <a href="data_rapor.php" class="btn btn-danger">Kembali</a>
         </div>
 
       </div>
