@@ -1,9 +1,25 @@
 <?php
 include '../../includes/header.php';
-?>
+include '../../includes/navbar.php';
+include '../../koneksi.php';
 
-<body>
-<?php include '../../includes/navbar.php'; ?>
+/* Join catatan terbaru per siswa dari cetak_rapor
+ * Asumsi: ada kolom AUTO_INCREMENT id_cetak_rapor.
+ * Jika pakai kolom waktu (mis. updated_at), ganti MAX(id_cetak_rapor) jadi MAX(updated_at)
+ * dan sesuaikan ON last.max_id = crx.id_cetak_rapor -> last.max_ts = crx.updated_at
+*/
+$joinCrLatest = "
+  LEFT JOIN (
+    SELECT crx.id_siswa, crx.catatan_wali_kelas
+    FROM cetak_rapor crx
+    INNER JOIN (
+      SELECT id_siswa, MAX(id_cetak_rapor) AS max_id
+      FROM cetak_rapor
+      GROUP BY id_siswa
+    ) last ON last.id_siswa = crx.id_siswa AND last.max_id = crx.id_cetak_rapor
+  ) cr ON s.id_siswa = cr.id_siswa
+";
+?>
 
 <main class="content">
   <div class="cards row" style="margin-top: -50px;">
@@ -82,25 +98,29 @@ include '../../includes/header.php';
               </thead>
               <tbody id="tbodyData" class="text-center">
                 <?php
-                include '../../koneksi.php';
-                $q = mysqli_query($koneksi, "
-                  SELECT s.id_siswa, s.no_absen_siswa, s.nama_siswa, s.no_induk_siswa, s.komentar_siswa, k.nama_kelas
+                $sql = "
+                  SELECT 
+                    s.id_siswa, s.no_absen_siswa, s.nama_siswa, s.no_induk_siswa,
+                    k.nama_kelas,
+                    cr.catatan_wali_kelas
                   FROM siswa s
                   LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
+                  $joinCrLatest
                   ORDER BY s.no_absen_siswa ASC
-                ");
+                ";
+                $q = mysqli_query($koneksi, $sql);
                 while ($d = mysqli_fetch_assoc($q)) : ?>
-                  <tr data-kelas="<?= htmlspecialchars($d['nama_kelas']); ?>">
+                  <tr data-kelas="<?= htmlspecialchars($d['nama_kelas'] ?? ''); ?>">
                     <td><?= htmlspecialchars($d['no_absen_siswa']); ?></td>
                     <td><?= htmlspecialchars($d['nama_siswa']); ?></td>
                     <td><?= htmlspecialchars($d['no_induk_siswa']); ?></td>
                     <td><?= htmlspecialchars($d['nama_kelas'] ?? '-'); ?></td>
-                    <td class="text-start"><?= nl2br(htmlspecialchars($d['komentar_siswa'])); ?></td>
+                    <td class="text-start"><?= nl2br(htmlspecialchars($d['catatan_wali_kelas'] ?? '')); ?></td>
                     <td>
-                      <a href="preview_rapor.php?id=<?= $d['id_siswa']; ?>" class="btn btn-info btn-sm">
+                      <a href="preview_rapor.php?id=<?= (int)$d['id_siswa']; ?>" class="btn btn-info btn-sm">
                         <i class="fa-solid fa-eye fa-lg"></i> Preview
                       </a>
-                      <a href="print_rapor.php?id=<?= $d['id_siswa']; ?>" class="btn btn-primary btn-sm">
+                      <a href="print_rapor.php?id=<?= (int)$d['id_siswa']; ?>" class="btn btn-primary btn-sm">
                         <i class="fa-solid fa-print fa-lg"></i> Print
                       </a>
                     </td>
@@ -127,13 +147,13 @@ const filterKelas = document.getElementById('kelas');
 });
 
 function filterTable() {
-  const s = searchInput.value.toLowerCase();
-  const t = filterTingkat.value.toLowerCase();
-  const k = filterKelas.value.toLowerCase();
+  const s = (searchInput.value || '').toLowerCase();
+  const t = (filterTingkat.value || '').toLowerCase();
+  const k = (filterKelas.value || '').toLowerCase();
   document.querySelectorAll('#tbodyData tr').forEach(row => {
     const rText = row.innerText.toLowerCase();
-    const rKelas = row.dataset.kelas.toLowerCase();
-    const matchesFilter = (!t || rText.includes(t)) && (!k || rKelas.includes(k));
+    const rKelasAttr = (row.dataset.kelas || '').toLowerCase();
+    const matchesFilter = (!t || rText.includes(t)) && (!k || rKelasAttr.includes(k));
     const matchesSearch = !s || rText.includes(s);
 
     if(matchesFilter && matchesSearch){

@@ -1,7 +1,7 @@
 <?php
 include '../../includes/header.php';
 include '../../includes/navbar.php';
-include '../../koneksi.php';
+include '../../includes/koneksi.php'; // jika path ini salah, gunakan '../../koneksi.php' sesuai struktur kamu
 
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     echo "<script>alert('ID siswa tidak valid.'); window.location='data_rapor.php';</script>";
@@ -10,11 +10,25 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 
 $id = (int) $_GET['id'];
 
+/* Join catatan terbaru per siswa */
+$joinCrLatest = "
+  LEFT JOIN (
+    SELECT crx.id_siswa, crx.catatan_wali_kelas
+    FROM cetak_rapor crx
+    INNER JOIN (
+      SELECT id_siswa, MAX(id_cetak_rapor) AS max_id
+      FROM cetak_rapor
+      GROUP BY id_siswa
+    ) last ON last.id_siswa = crx.id_siswa AND last.max_id = crx.id_cetak_rapor
+  ) cr ON s.id_siswa = cr.id_siswa
+";
+
 $q = mysqli_query($koneksi, "
-    SELECT s.*, k.nama_kelas, g.nama_guru AS wali_kelas
+    SELECT s.*, k.nama_kelas, g.nama_guru AS wali_kelas, cr.catatan_wali_kelas
     FROM siswa s
     LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
     LEFT JOIN guru g ON k.id_guru = g.id_guru
+    $joinCrLatest
     WHERE s.id_siswa = $id
     LIMIT 1
 ");
@@ -56,7 +70,7 @@ if (!$data) {
           </tr>
           <tr>
             <th>Komentar</th>
-            <td><?= nl2br(htmlspecialchars($data['komentar_siswa'])); ?></td>
+            <td><?= nl2br(htmlspecialchars($data['catatan_wali_kelas'] ?? '')); ?></td>
           </tr>
         </table>
 
