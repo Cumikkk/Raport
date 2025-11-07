@@ -8,11 +8,16 @@ if (!isset($_GET['id'])) {
   exit;
 }
 
-$id = $_GET['id'];
+$id = (int)$_GET['id'];
 
-// Ambil data siswa
-$siswa = mysqli_query($koneksi, "SELECT * FROM siswa WHERE id_siswa = '$id'");
-$data = mysqli_fetch_assoc($siswa);
+// Ambil data siswa + catatan wali
+$query = mysqli_query($koneksi, "
+  SELECT s.*, cr.catatan_wali_kelas
+  FROM siswa s
+  LEFT JOIN cetak_rapor cr ON s.id_siswa = cr.id_siswa
+  WHERE s.id_siswa = '$id'
+");
+$data = mysqli_fetch_assoc($query);
 
 // Ambil data kelas
 $kelas = mysqli_query($koneksi, "SELECT * FROM kelas ORDER BY nama_kelas ASC");
@@ -23,25 +28,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $nisn     = mysqli_real_escape_string($koneksi, $_POST['no_induk_siswa']);
   $absen    = mysqli_real_escape_string($koneksi, $_POST['no_absen_siswa']);
   $id_kelas = mysqli_real_escape_string($koneksi, $_POST['id_kelas']);
-  $komentar = mysqli_real_escape_string($koneksi, $_POST['komentar_siswa']);
+  $catatan  = mysqli_real_escape_string($koneksi, $_POST['catatan_wali_kelas']);
 
-  $query = "
-    UPDATE siswa SET
-      nama_siswa = '$nama',
-      no_induk_siswa = '$nisn',
-      no_absen_siswa = '$absen',
-      id_kelas = '$id_kelas',
-      komentar_siswa = '$komentar'
-    WHERE id_siswa = '$id'
-  ";
+  mysqli_begin_transaction($koneksi);
 
-  if (mysqli_query($koneksi, $query)) {
+  try {
+    mysqli_query($koneksi, "
+      UPDATE siswa SET 
+        nama_siswa='$nama',
+        no_induk_siswa='$nisn',
+        no_absen_siswa='$absen',
+        id_kelas='$id_kelas'
+      WHERE id_siswa='$id'
+    ");
+
+    mysqli_query($koneksi, "
+      INSERT INTO cetak_rapor (id_siswa, catatan_wali_kelas)
+      VALUES ('$id', '$catatan')
+      ON DUPLICATE KEY UPDATE catatan_wali_kelas='$catatan'
+    ");
+
+    mysqli_commit($koneksi);
     echo "<script>alert('Data berhasil diperbarui!'); window.location='data_siswa.php';</script>";
-    exit;
-  } else {
+  } catch (Exception $e) {
+    mysqli_rollback($koneksi);
     echo "<script>alert('Gagal memperbarui data!'); history.back();</script>";
-    exit;
   }
+  exit;
 }
 ?>
 
@@ -50,9 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="dk-content-box">
       <div class="container py-4">
         <h4 class="fw-bold mb-4">Edit Data Siswa</h4>
-
         <form method="POST">
-
           <div class="mb-3">
             <label class="form-label fw-semibold">Nama Siswa</label>
             <input type="text" name="nama_siswa" class="form-control" value="<?= $data['nama_siswa']; ?>" required>
@@ -81,17 +92,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
 
           <div class="mb-3">
-            <label class="form-label fw-semibold">Komentar</label>
-            <textarea name="komentar_siswa" class="form-control" rows="3"><?= $data['komentar_siswa']; ?></textarea>
+            <label class="form-label fw-semibold">Catatan Wali Kelas</label>
+            <textarea name="catatan_wali_kelas" class="form-control" rows="3"><?= htmlspecialchars($data['catatan_wali_kelas'] ?? ''); ?></textarea>
           </div>
 
           <div class="d-flex flex-wrap gap-2 justify-content-between">
             <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> Update</button>
             <a href="data_siswa.php" class="btn btn-danger"><i class="fas fa-times"></i> Batal</a>
           </div>
-
         </form>
-
       </div>
     </div>
   </div>
