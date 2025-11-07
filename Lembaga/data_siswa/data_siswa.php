@@ -1,216 +1,236 @@
+
+
 <?php
 include '../../includes/header.php';
+include '../../includes/navbar.php';
+include '../../koneksi.php';
+
+// EXPORT CSV
+if (isset($_GET['action']) && $_GET['action'] === 'export') {
+    $res = mysqli_query($koneksi, "
+        SELECT s.id_siswa, s.no_absen_siswa, s.nama_siswa, s.no_induk_siswa, s.komentar_siswa, k.nama_kelas
+        FROM siswa s
+        LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
+        ORDER BY s.no_absen_siswa ASC
+    ");
+
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename=siswa_export_' . date('Ymd_His') . '.csv');
+    $out = fopen('php://output', 'w');
+    fputcsv($out, ['id_siswa','no_absen_siswa','nama_siswa','no_induk_siswa','kelas','komentar_siswa']);
+
+    while ($row = mysqli_fetch_assoc($res)) {
+        fputcsv($out, $row);
+    }
+    fclose($out);
+    exit;
+}
 ?>
 
-<body>
-  <?php include '../../includes/navbar.php'; ?>
+<main class="content">
+  <div class="cards row" style="margin-top: -50px;">
+    <div class="col-12">
+      <div class="card shadow-sm" style="border-radius: 15px;">
+        <!-- HEADER & ACTION BUTTONS -->
+        <div class="mt-0 d-flex flex-column flex-md-row align-items-md-center justify-content-between p-3 top-bar">
+          <div class="d-flex flex-column align-items-md-start align-items-center text-md-start text-center mb-2 mb-md-0">
+            <h5 class="mb-2 fw-semibold fs-4">Data Siswa</h5>
 
-  <main class="content">
-    <div class="cards row" style="margin-top: -50px;">
-      <div class="col-12">
-        <div class="card shadow-sm" style="border-radius: 15px;">
-
-          <!-- ===== BAR ATAS ===== -->
-          <div class="mt-0 d-flex flex-column flex-md-row align-items-md-center justify-content-between p-3 top-bar">
-
-            <!-- Kiri: Judul dan Dropdown -->
-            <div class="d-flex flex-column align-items-md-start align-items-center text-md-start text-center mb-2 mb-md-0">
-              <h5 class="mb-2 fw-semibold fs-4">Data Siswa</h5>
-
-              <!-- ===== FILTER CONTAINER ===== -->
-              <div class="filter-container d-flex flex-column align-items-center align-items-md-start gap-2">
-
-                <!-- Dropdown Tingkat -->
-                <div class="filter-group d-flex align-items-center gap-2">
-                  <label for="tingkat" class="form-label fw-semibold mb-0">Tingkat</label>
-                  <select id="tingkat" class="form-select dk-select" style="width: 140px;">
-                    <option selected disabled>--Pilih--</option>
-                    <option>X</option>
-                    <option>XI</option>
-                    <option>XII</option>
-                  </select>
-                </div>
-
-                <!-- Dropdown Kelas -->
-                <div class="filter-group d-flex align-items-center gap-2">
-                  <label for="kelas" class="form-label fw-semibold mb-0">Kelas</label>
-                  <select id="kelas" class="form-select dk-select" style="width: 160px;">
-                    <option selected disabled>--Pilih--</option>
-                    <option>IPA 1</option>
-                    <option>IPA 2</option>
-                    <option>IPS 1</option>
-                    <option>IPS 2</option>
-                  </select>
-                </div>
+            <!-- FILTER DROPDOWN -->
+            <div class="filter-container d-flex flex-column gap-2 mt-2">
+              <div class="filter-group d-flex align-items-center gap-2">
+                <label for="filterTingkat" class="form-label fw-semibold mb-0">Tingkat</label>
+                <select id="filterTingkat" class="form-select dk-select" style="width: 120px;">
+                  <option selected value="">-- Semua --</option>
+                  <option>X</option>
+                  <option>XI</option>
+                  <option>XII</option>
+                </select>
+              </div>
+              <div class="filter-group d-flex align-items-center gap-2">
+                <label for="filterKelas" class="form-label fw-semibold mb-0">Kelas</label>
+                <select id="filterKelas" class="form-select dk-select" style="width: 140px;">
+                  <option selected value="">-- Semua --</option>
+                  <?php
+                  $kelasQuery = mysqli_query($koneksi, "SELECT * FROM kelas ORDER BY nama_kelas ASC");
+                  while ($k = mysqli_fetch_assoc($kelasQuery)) {
+                      echo '<option value="'.htmlspecialchars($k['id_kelas']).'">'.htmlspecialchars($k['nama_kelas']).'</option>';
+                  }
+                  ?>
+                </select>
               </div>
             </div>
-
-            <!-- Kanan: Tombol -->
-            <div class="d-flex gap-2 flex-wrap justify-content-md-end justify-content-center mt-3 mt-md-0 action-buttons">
-              <a href="tambah_siswa.php" class="btn btn-primary btn-sm d-flex align-items-center gap-1 px-3 fw-semibold" style="border-radius: 5px;">
-                <i class="fa-solid fa-plus fa-lg"></i> Tambah
-              </a>
-
-              <a href="data_siswa_import.php" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
-                <i class="fa-solid fa-file-arrow-down fa-lg"></i> <span>Import</span>
-              </a>
-
-              <button id="exportBtn" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
-                <i class="fa-solid fa-file-arrow-up fa-lg"></i> Export
-              </button>
-            </div>
           </div>
 
-          <!-- ===== SEARCH & SORT ===== -->
-          <div class="ms-3 me-3 bg-white d-flex justify-content-center align-items-center flex-wrap p-2 gap-2">
-            <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search" style="width: 200px;">
-            <button id="searchBtn" class="btn btn-outline-secondary btn-sm p-2 rounded-3 d-flex align-items-center justify-content-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
-                <path d="M11 6a5 5 0 1 0-2.9 4.7l3.85 3.85a1 1 0 0 0 1.414-1.414l-3.85-3.85A4.978 4.978 0 0 0 11 6zM6 10a4 4 0 1 1 0-8 4 4 0 0 1 0 8z" />
-              </svg>
-            </button>
-
-            <button id="sortBtn" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 rounded-3">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-sort-alpha-down" viewBox="0 0 16 16">
-                <path fill-rule="evenodd" d="M10.082 5.629 9.664 7H8.598l1.789-5.332h1.234L13.402 7h-1.12l-.419-1.371zm1.57-.785L11 2.687h-.047l-.652 2.157z" />
-                <path d="M12.96 14H9.028v-.691l2.579-3.72v-.054H9.098v-.867h3.785v.691l-2.567 3.72v.054h2.645zM4.5 2.5a.5.5 0 0 0-1 0v9.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 1.999.007.007a.497.497 0 0 0 .7-.006l2-2a.5.5 0 0 0-.707-.708L4.5 12.293z" />
-              </svg>
-              Sort
+          <div class="d-flex gap-2 flex-wrap justify-content-md-end justify-content-center mt-3 mt-md-0 action-buttons">
+            <a href="tambah_siswa.php" class="btn btn-primary btn-sm d-flex align-items-center gap-1 px-3 fw-semibold">
+              <i class="fa-solid fa-plus"></i> Tambah
+            </a>
+            <a href="data_siswa_import.php" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
+              <i class="fa-solid fa-file-arrow-down"></i> Import
+            </a>
+            <button id="exportBtn" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
+              <i class="fa-solid fa-file-arrow-up"></i> Export
             </button>
           </div>
+        </div>
 
-          <!-- ===== TABEL SISWA ===== -->
-          <div class="card-body">
-            <div class="table-responsive">
-              <table class="table table-bordered table-striped align-middle">
-                <thead style="background-color:#1d52a2" class="text-center text-white">
-                  <tr>
-                    <th><input type="checkbox" id="selectAll"></th>
-                    <th>Absen</th>
-                    <th>Nama</th>
-                    <th>NIS</th>
-                    <th>Wali Kelas</th>
-                    <th>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody class="text-center">
-                  <tr>
-                    <td><input type="checkbox" class="row-check"></td>
-                    <td>1</td>
-                    <td>Fahrul</td>
-                    <td>123456</td>
-                    <td>Bu Sutrisna</td>
-                    <td>
-                      <a href="edit_siswa.php?id=1" class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1">
-                        <i class="bi bi-pencil-square"></i>Edit
+        <div class="card-body">
+
+          <!-- SEARCH -->
+          <div class="search-container mt-3 position-relative">
+            <input type="text" id="searchInput" class="form-control form-control-sm search-input" placeholder="Masukan kata kunci">
+            <span class="search-icon"><i class="bi bi-search"></i></span>
+          </div>
+
+          <!-- FORM HAPUS MULTIPLE -->
+          <form id="formDeleteMultiple" action="hapus_siswa_multiple.php" method="POST">
+
+          <div class="table-responsive mt-3">
+            <table class="table table-bordered table-striped align-middle">
+              <thead style="background-color:#1d52a2" class="text-center text-white">
+                <tr>
+                  <th><input type="checkbox" id="selectAll"></th>
+                  <th>Absen</th>
+                  <th>Nama</th>
+                  <th>NISN</th>
+                  <th>Kelas</th>
+                  <th>Komentar</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyData">
+                <?php
+                $query = mysqli_query($koneksi, "
+                    SELECT s.*, k.nama_kelas 
+                    FROM siswa s
+                    LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
+                    ORDER BY s.no_absen_siswa ASC
+                ");
+                if (mysqli_num_rows($query) > 0) {
+                  while ($data = mysqli_fetch_assoc($query)) :
+                ?>
+                  <tr data-kelas="<?= $data['id_kelas']; ?>" data-tingkat="<?= htmlspecialchars($data['tingkat'] ?? ''); ?>">
+                    <td class="text-center"><input type="checkbox" name="id_siswa[]" class="row-check" value="<?= $data['id_siswa']; ?>"></td>
+                    <td class="text-center"><?= htmlspecialchars($data['no_absen_siswa']); ?></td>
+                    <td><?= htmlspecialchars($data['nama_siswa']); ?></td>
+                    <td class="text-center"><?= htmlspecialchars($data['no_induk_siswa']); ?></td>
+                    <td class="text-center"><?= htmlspecialchars($data['nama_kelas'] ?? '-'); ?></td>
+                    <td><?= nl2br(htmlspecialchars($data['komentar_siswa'])); ?></td>
+                    <td class="text-center">
+                      <a href="edit_siswa.php?id=<?= $data['id_siswa']; ?>" class="btn btn-warning btn-sm">
+                        <i class="bi bi-pencil-square"></i> Edit
                       </a>
-                      <a href="hapus_mapel.php?id=1" class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 px-2 py-1"
-                        onclick="return confirm('Yakin ingin menghapus data ini?');">
-                        <i class="bi bi-trash"></i>Del
+                      <a href="hapus_siswa.php?id=<?= $data['id_siswa']; ?>" onclick="return confirm('Yakin ingin menghapus data?');" class="btn btn-danger btn-sm">
+                        <i class="bi bi-trash"></i> Del
                       </a>
                     </td>
                   </tr>
-                  <tr>
-                    <td><input type="checkbox" class="row-check"></td>
-                    <td>2</td>
-                    <td>Ahmad</td>
-                    <td>654321</td>
-                    <td>Pak Budi</td>
-                    <td>
-                      <a href="edit_siswa.php?id=2" class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1">
-                        <i class="bi bi-pencil-square"></i>Edit
-                      </a>
-                      <a href="hapus_mapel.php?id=2" class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 px-2 py-1"
-                        onclick="return confirm('Yakin ingin menghapus data ini?');">
-                        <i class="bi bi-trash"></i>Del
-                      </a>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Tombol Hapus Terpilih -->
-            <div class="mt-2">
-              <button id="deleteSelected" class="btn btn-danger btn-sm" disabled>
-                <i class="bi bi-trash"></i> Hapus Terpilih
-              </button>
-            </div>
+                <?php
+                  endwhile;
+                } else {
+                  echo '<tr><td colspan="7" class="text-center text-muted py-4">Tidak ada data siswa yang tersedia.</td></tr>';
+                }
+                ?>
+              </tbody>
+            </table>
           </div>
+
+          <button type="submit" id="deleteSelected" class="btn btn-danger btn-sm mt-2" disabled>
+            <i class="bi bi-trash"></i> Hapus Terpilih
+          </button>
+          </form>
+
         </div>
       </div>
     </div>
-  </main>
+  </div>
+</main>
 
-  <!-- ===== SCRIPT CHECKBOX ===== -->
-  <script>
-    const selectAll = document.getElementById('selectAll');
-    const rowChecks = document.querySelectorAll('.row-check');
-    const deleteBtn = document.getElementById('deleteSelected');
+<script>
+document.getElementById('exportBtn').onclick = () => {
+  const url = new URL(window.location.href);
+  url.searchParams.set('action','export');
+  window.location.href = url.toString();
+};
 
-    selectAll.addEventListener('change', function () {
-      rowChecks.forEach(chk => chk.checked = this.checked);
-      toggleDeleteButton();
-    });
+// SELECT ALL
+document.getElementById('selectAll').addEventListener('click', function(){
+  document.querySelectorAll('.row-check').forEach(cb => cb.checked = this.checked);
+  toggleDeleteButton();
+});
 
-    rowChecks.forEach(chk => {
-      chk.addEventListener('change', () => {
-        selectAll.checked = [...rowChecks].every(c => c.checked);
-        toggleDeleteButton();
-      });
-    });
+// TOGGLE DELETE BUTTON
+document.querySelectorAll('.row-check').forEach(cb => {
+  cb.addEventListener('change', toggleDeleteButton);
+});
 
-    function toggleDeleteButton() {
-      const adaYangDipilih = [...rowChecks].some(c => c.checked);
-      deleteBtn.disabled = !adaYangDipilih;
+function toggleDeleteButton(){
+  const checked = document.querySelectorAll('.row-check:checked').length;
+  document.getElementById('deleteSelected').disabled = checked === 0;
+}
+
+// FILTER DROPDOWN
+const filterTingkat = document.getElementById('filterTingkat');
+const filterKelas = document.getElementById('filterKelas');
+filterTingkat.addEventListener('change', filterTable);
+filterKelas.addEventListener('change', filterTable);
+
+function filterTable(){
+  const t = filterTingkat.value.toLowerCase();
+  const k = filterKelas.value;
+  document.querySelectorAll('#tbodyData tr').forEach(row => {
+    const rTingkat = row.dataset.tingkat?.toLowerCase() || '';
+    const rKelas = row.dataset.kelas || '';
+    const show = (!t || rTingkat === t) && (!k || rKelas === k);
+    row.style.display = show ? '' : 'none';
+  });
+}
+
+// SEARCH
+const searchInput = document.getElementById('searchInput');
+searchInput.addEventListener('input', () => {
+  const filter = searchInput.value.toLowerCase();
+  document.querySelectorAll('#tbodyData tr').forEach(row => {
+    let text = row.innerText.toLowerCase();
+    if (!filter) {
+      row.style.display = '';
+      row.classList.remove('highlight');
+    } else if (text.includes(filter)) {
+      row.style.display = '';
+      row.classList.add('highlight');
+    } else {
+      row.style.display = 'none';
+      row.classList.remove('highlight');
     }
-  </script>
+  });
+});
+</script>
 
-  <!-- ===== STYLE RESPONSIVE ===== -->
-  <style>
-    .filter-container {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
+<style>
+/* FILTER */
+.filter-container { display:flex; flex-direction:column; gap:10px; }
+.filter-group label { min-width:60px; }
 
-    .filter-group label {
-      min-width: 70px;
-    }
+/* SEARCH */
+.search-container { width:180px; position:relative; margin-top:10px; }
+.search-input { padding-right:30px; padding-top:4px; padding-bottom:4px; }
+.search-icon { position:absolute; top:50%; right:8px; transform:translateY(-50%); color:#6c757d; pointer-events:none; font-size:0.9rem; }
+.highlight { background-color: rgba(0, 128, 0, 0.2); }
 
-    @media (min-width: 768px) {
-      .filter-container {
-        align-items: flex-start;
-      }
-    }
+/* RESPONSIVE */
+@media (min-width:768px){
+  .filter-container{ flex-direction:column; align-items:flex-start; } 
+}
 
-    @media (max-width: 768px) {
-      .top-bar {
-        flex-direction: column !important;
-        align-items: center !important;
-        text-align: center;
-      }
+@media (max-width:768px){
+  .top-bar{ flex-direction:column !important; align-items:center !important; text-align:center; }
+  .filter-container{ width:100%; align-items:center !important; margin-top:10px; }
+  .filter-group{ justify-content:center !important; width:100%; }
+  .dk-select{ width:100% !important; }
+  .action-buttons{ justify-content:center !important; margin-top:10px; }
+  .table-responsive{ overflow-x:auto; }
+}
+</style>
 
-      .filter-container {
-        width: 100%;
-        align-items: center !important;
-      }
-
-      .filter-group {
-        justify-content: center !important;
-        width: 100%;
-      }
-
-      .dk-select {
-        width: 100% !important;
-      }
-
-      .action-buttons {
-        justify-content: center !important;
-        margin-top: 10px;
-      }
-    }
-  </style>
-
-  <?php include '../../includes/footer.php'; ?>
-
+<?php include '../../includes/footer.php'; ?>

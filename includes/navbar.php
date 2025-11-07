@@ -92,7 +92,7 @@ if ($roleKey === 'guru') {
       <details <?= str_contains($current_url, '/Lembaga/') ? 'open' : '' ?>>
         <summary><span><i class="fas fa-building"></i> Lembaga</span><i class="fas fa-angle-right arrow"></i></summary>
         <ul>
-          <li><a href="/RAPORT/Lembaga/data_kelas/datakelas.php" class="<?= str_contains($current_url, 'data_kelas') ? 'active' : '' ?>">Data Kelas</a></li>
+          <li><a href="/RAPORT/Lembaga/data_siswa/data_siswa.php" class="<?= str_contains($current_url, 'data_siswa') ? 'active' : '' ?>">Data Siswa</a></li>
         </ul>
       </details>
 
