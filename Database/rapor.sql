@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Waktu pembuatan: 02 Nov 2025 pada 05.01
+-- Waktu pembuatan: 13 Nov 2025 pada 00.27
 -- Versi server: 10.4.32-MariaDB
 -- Versi PHP: 8.2.12
 
@@ -79,8 +79,10 @@ CREATE TABLE `guru` (
 --
 
 INSERT INTO `guru` (`id_guru`, `nama_guru`, `jabatan_guru`) VALUES
-(1, 'Fahrul', 'Kepala Sekolah'),
-(2, 'Cumikkk.', 'Guru');
+(1, 'Andre Naufaldi', 'Kepala Sekolah'),
+(2, 'Maziyatul Hikmah', 'Guru'),
+(3, 'Muhhamad Tegar Kurniawan', 'Guru'),
+(4, 'M. Fahrul Alfanani', 'Guru');
 
 -- --------------------------------------------------------
 
@@ -200,13 +202,6 @@ CREATE TABLE `sekolah` (
   `provinsi_sekolah` varchar(50) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data untuk tabel `sekolah`
---
-
-INSERT INTO `sekolah` (`id_sekolah`, `logo_sekolah`, `nama_sekolah`, `nsm_sekolah`, `npsn_sekolah`, `alamat_sekolah`, `no_telepon_sekolah`, `kecamatan_sekolah`, `kabupaten_atau_kota_sekolah`, `provinsi_sekolah`) VALUES
-(1, 'logo-channels4_profile-20251102044954-78aead.jpg', 'SD Negeri Kedondong 02', '123', '456', 'Kedondong RT 02 RW 01', '789', 'Tulangan', 'Sidoarjo', 'Jawa Timur');
-
 -- --------------------------------------------------------
 
 --
@@ -252,8 +247,8 @@ CREATE TABLE `user` (
 --
 
 INSERT INTO `user` (`id_user`, `id_guru`, `role_user`, `username`, `password_user`) VALUES
-(1, 1, 'Admin', 'Fahrul', '123'),
-(2, 2, 'Guru', 'Cumikkk.', '456');
+(1, 4, 'Admin', 'Cumikkk.', '123'),
+(2, 4, 'Guru', 'Fahrul', '456');
 
 --
 -- Indexes for dumped tables
@@ -387,7 +382,7 @@ ALTER TABLE `ekstrakurikuler`
 -- AUTO_INCREMENT untuk tabel `guru`
 --
 ALTER TABLE `guru`
-  MODIFY `id_guru` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `id_guru` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT untuk tabel `kelas`
@@ -405,7 +400,7 @@ ALTER TABLE `kurikulum`
 -- AUTO_INCREMENT untuk tabel `mata_pelajaran`
 --
 ALTER TABLE `mata_pelajaran`
-  MODIFY `id_mata_pelajaran` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id_mata_pelajaran` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT untuk tabel `nilai_ekstrakurikuler`
@@ -429,13 +424,13 @@ ALTER TABLE `pengaturan_cetak_rapor`
 -- AUTO_INCREMENT untuk tabel `sekolah`
 --
 ALTER TABLE `sekolah`
-  MODIFY `id_sekolah` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id_sekolah` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT untuk tabel `semester`
 --
 ALTER TABLE `semester`
-  MODIFY `id_semester` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id_semester` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT untuk tabel `siswa`
@@ -447,7 +442,7 @@ ALTER TABLE `siswa`
 -- AUTO_INCREMENT untuk tabel `user`
 --
 ALTER TABLE `user`
-  MODIFY `id_user` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id_user` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- Ketidakleluasaan untuk tabel pelimpahan (Dumped Tables)
@@ -457,58 +452,58 @@ ALTER TABLE `user`
 -- Ketidakleluasaan untuk tabel `absensi`
 --
 ALTER TABLE `absensi`
-  ADD CONSTRAINT `fk_absensi_relations_semester` FOREIGN KEY (`id_semester`) REFERENCES `semester` (`id_semester`),
-  ADD CONSTRAINT `fk_absensi_relations_siswa` FOREIGN KEY (`id_siswa`) REFERENCES `siswa` (`id_siswa`);
+  ADD CONSTRAINT `fk_absensi_relations_semester` FOREIGN KEY (`id_semester`) REFERENCES `semester` (`id_semester`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_absensi_relations_siswa` FOREIGN KEY (`id_siswa`) REFERENCES `siswa` (`id_siswa`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Ketidakleluasaan untuk tabel `cetak_rapor`
 --
 ALTER TABLE `cetak_rapor`
-  ADD CONSTRAINT `fk_cetak_ra_relations_guru` FOREIGN KEY (`id_guru`) REFERENCES `guru` (`id_guru`),
-  ADD CONSTRAINT `fk_cetak_ra_relations_pengatur` FOREIGN KEY (`id_pengaturan_cetak_rapor`) REFERENCES `pengaturan_cetak_rapor` (`id_pengaturan_cetak_rapor`),
-  ADD CONSTRAINT `fk_cetak_ra_relations_sekolah` FOREIGN KEY (`id_sekolah`) REFERENCES `sekolah` (`id_sekolah`),
-  ADD CONSTRAINT `fk_cetak_ra_relations_siswa` FOREIGN KEY (`id_siswa`) REFERENCES `siswa` (`id_siswa`);
+  ADD CONSTRAINT `fk_cetak_ra_relations_guru` FOREIGN KEY (`id_guru`) REFERENCES `guru` (`id_guru`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_cetak_ra_relations_pengatur` FOREIGN KEY (`id_pengaturan_cetak_rapor`) REFERENCES `pengaturan_cetak_rapor` (`id_pengaturan_cetak_rapor`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_cetak_ra_relations_sekolah` FOREIGN KEY (`id_sekolah`) REFERENCES `sekolah` (`id_sekolah`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_cetak_ra_relations_siswa` FOREIGN KEY (`id_siswa`) REFERENCES `siswa` (`id_siswa`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Ketidakleluasaan untuk tabel `kelas`
 --
 ALTER TABLE `kelas`
-  ADD CONSTRAINT `fk_kelas_relations_guru` FOREIGN KEY (`id_guru`) REFERENCES `guru` (`id_guru`);
+  ADD CONSTRAINT `fk_kelas_relations_guru` FOREIGN KEY (`id_guru`) REFERENCES `guru` (`id_guru`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- Ketidakleluasaan untuk tabel `kurikulum`
 --
 ALTER TABLE `kurikulum`
-  ADD CONSTRAINT `fk_kurikulu_relations_kelas` FOREIGN KEY (`id_kelas`) REFERENCES `kelas` (`id_kelas`),
-  ADD CONSTRAINT `fk_kurikulu_relations_mata_pel` FOREIGN KEY (`id_mata_pelajaran`) REFERENCES `mata_pelajaran` (`id_mata_pelajaran`);
+  ADD CONSTRAINT `fk_kurikulu_relations_kelas` FOREIGN KEY (`id_kelas`) REFERENCES `kelas` (`id_kelas`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_kurikulu_relations_mata_pel` FOREIGN KEY (`id_mata_pelajaran`) REFERENCES `mata_pelajaran` (`id_mata_pelajaran`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Ketidakleluasaan untuk tabel `nilai_ekstrakurikuler`
 --
 ALTER TABLE `nilai_ekstrakurikuler`
-  ADD CONSTRAINT `fk_nilai_ek_relations_ekstraku` FOREIGN KEY (`id_ekstrakurikuler`) REFERENCES `ekstrakurikuler` (`id_ekstrakurikuler`),
-  ADD CONSTRAINT `fk_nilai_ek_relations_semester` FOREIGN KEY (`id_semester`) REFERENCES `semester` (`id_semester`),
-  ADD CONSTRAINT `fk_nilai_ek_relations_siswa` FOREIGN KEY (`id_siswa`) REFERENCES `siswa` (`id_siswa`);
+  ADD CONSTRAINT `fk_nilai_ek_relations_ekstraku` FOREIGN KEY (`id_ekstrakurikuler`) REFERENCES `ekstrakurikuler` (`id_ekstrakurikuler`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_nilai_ek_relations_semester` FOREIGN KEY (`id_semester`) REFERENCES `semester` (`id_semester`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_nilai_ek_relations_siswa` FOREIGN KEY (`id_siswa`) REFERENCES `siswa` (`id_siswa`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Ketidakleluasaan untuk tabel `nilai_mata_pelajaran`
 --
 ALTER TABLE `nilai_mata_pelajaran`
-  ADD CONSTRAINT `fk_nilai_ma_relations_mata_pel` FOREIGN KEY (`id_mata_pelajaran`) REFERENCES `mata_pelajaran` (`id_mata_pelajaran`),
-  ADD CONSTRAINT `fk_nilai_ma_relations_semester` FOREIGN KEY (`id_semester`) REFERENCES `semester` (`id_semester`),
-  ADD CONSTRAINT `fk_nilai_ma_relations_siswa` FOREIGN KEY (`id_siswa`) REFERENCES `siswa` (`id_siswa`);
+  ADD CONSTRAINT `fk_nilai_ma_relations_mata_pel` FOREIGN KEY (`id_mata_pelajaran`) REFERENCES `mata_pelajaran` (`id_mata_pelajaran`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_nilai_ma_relations_semester` FOREIGN KEY (`id_semester`) REFERENCES `semester` (`id_semester`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_nilai_ma_relations_siswa` FOREIGN KEY (`id_siswa`) REFERENCES `siswa` (`id_siswa`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Ketidakleluasaan untuk tabel `siswa`
 --
 ALTER TABLE `siswa`
-  ADD CONSTRAINT `fk_siswa_relations_kelas` FOREIGN KEY (`id_kelas`) REFERENCES `kelas` (`id_kelas`);
+  ADD CONSTRAINT `fk_siswa_relations_kelas` FOREIGN KEY (`id_kelas`) REFERENCES `kelas` (`id_kelas`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- Ketidakleluasaan untuk tabel `user`
 --
 ALTER TABLE `user`
-  ADD CONSTRAINT `fk_user_relations_guru` FOREIGN KEY (`id_guru`) REFERENCES `guru` (`id_guru`);
+  ADD CONSTRAINT `fk_user_relations_guru` FOREIGN KEY (`id_guru`) REFERENCES `guru` (`id_guru`) ON DELETE SET NULL ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
