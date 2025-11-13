@@ -1,12 +1,15 @@
 <?php
-include '../../includes/header.php';
-include '../../includes/navbar.php';
 include '../../koneksi.php';
 
-/* --- Subquery: ambil 1 catatan terbaru per siswa dari cetak_rapor ---
- * Asumsi ada kolom AUTO_INCREMENT: id_cetak_rapor
- * Jika tidak ada, GANTI blok $joinCrLatest (lihat komentar alternatif di bawah).
- */
+// ====== PROSES DATA (MODE AJAX TANPA OUTPUT HTML) ======
+if (session_status() === PHP_SESSION_NONE) {
+  session_start();
+}
+if (empty($_SESSION['csrf'])) {
+  $_SESSION['csrf'] = bin2hex(random_bytes(32));
+}
+$csrf = $_SESSION['csrf'] ?? '';
+
 $joinCrLatest = "
   LEFT JOIN (
     SELECT crx.id_siswa, crx.catatan_wali_kelas
@@ -19,48 +22,77 @@ $joinCrLatest = "
   ) cr ON s.id_siswa = cr.id_siswa
 ";
 
-/* --- Alternatif kalau kamu pakai kolom waktu (mis. updated_at) ---
-$joinCrLatest = "
-  LEFT JOIN (
-    SELECT crx.id_siswa, crx.catatan_wali_kelas
-    FROM cetak_rapor crx
-    INNER JOIN (
-      SELECT id_siswa, MAX(updated_at) AS max_ts
-      FROM cetak_rapor
-      GROUP BY id_siswa
-    ) last ON last.id_siswa = crx.id_siswa AND last.max_ts = crx.updated_at
-  ) cr ON s.id_siswa = cr.id_siswa
-";
-*/
+// ===== Parameter =====
+$q       = isset($_GET['q']) ? trim($_GET['q']) : '';
+$perPage = isset($_GET['per']) ? (int)$_GET['per'] : 10;
+$perPage = ($perPage >= 1 && $perPage <= 100) ? $perPage : 10;
+$page    = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$page    = max(1, $page);
 
-// EXPORT CSV
-if (isset($_GET['action']) && $_GET['action'] === 'export') {
-    $sqlExport = "
-      SELECT 
-        s.id_siswa,
-        s.no_absen_siswa,
-        s.nama_siswa,
-        s.no_induk_siswa,
-        k.nama_kelas,
-        cr.catatan_wali_kelas
-      FROM siswa s
-      LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
-      $joinCrLatest
-      ORDER BY s.no_absen_siswa ASC
-    ";
-    $res = mysqli_query($koneksi, $sqlExport);
-
-    header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename=siswa_export_' . date('Ymd_His') . '.csv');
-    $out = fopen('php://output', 'w');
-    fputcsv($out, ['id_siswa','no_absen_siswa','nama_siswa','no_induk_siswa','kelas','catatan_wali_kelas']);
-
-    while ($row = mysqli_fetch_assoc($res)) {
-        fputcsv($out, $row);
-    }
-    fclose($out);
-    exit;
+// ===== Hitung total =====
+if ($q !== '') {
+  $sqlCount = "SELECT COUNT(*) AS total FROM siswa s 
+               LEFT JOIN kelas k ON s.id_kelas = k.id_kelas 
+               WHERE s.nama_siswa LIKE CONCAT('%', ?, '%')";
+  $stmtC = $koneksi->prepare($sqlCount);
+  $stmtC->bind_param('s', $q);
+} else {
+  $sqlCount = "SELECT COUNT(*) AS total FROM siswa s";
+  $stmtC = $koneksi->prepare($sqlCount);
 }
+$stmtC->execute();
+$total = (int)$stmtC->get_result()->fetch_assoc()['total'];
+$totalPages = max(1, ceil($total / $perPage));
+$page = min($page, $totalPages);
+$offset = ($page - 1) * $perPage;
+
+// ===== Ambil data halaman ini =====
+if ($q !== '') {
+  $sql = "SELECT s.*, k.nama_kelas, cr.catatan_wali_kelas
+          FROM siswa s
+          LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
+          $joinCrLatest
+          WHERE s.nama_siswa LIKE CONCAT('%', ?, '%')
+          ORDER BY s.no_absen_siswa ASC
+          LIMIT ? OFFSET ?";
+  $stmt = $koneksi->prepare($sql);
+  $stmt->bind_param('sii', $q, $perPage, $offset);
+} else {
+  $sql = "SELECT s.*, k.nama_kelas, cr.catatan_wali_kelas
+          FROM siswa s
+          LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
+          $joinCrLatest
+          ORDER BY s.no_absen_siswa ASC
+          LIMIT ? OFFSET ?";
+  $stmt = $koneksi->prepare($sql);
+  $stmt->bind_param('ii', $perPage, $offset);
+}
+$stmt->execute();
+$result = $stmt->get_result();
+
+$rows = [];
+while ($r = $result->fetch_assoc()) {
+  $rows[] = $r;
+}
+
+// ===== Mode AJAX =====
+if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
+  header('Content-Type: application/json; charset=utf-8');
+  echo json_encode([
+    'ok' => true,
+    'csrf' => $csrf,
+    'data' => $rows,
+    'page' => $page,
+    'per' => $perPage,
+    'total' => $total,
+    'totalPages' => $totalPages,
+    'q' => $q
+  ]);
+  exit;
+}
+
+include '../../includes/header.php';
+include '../../includes/navbar.php';
 ?>
 
 <main class="content">
@@ -73,22 +105,22 @@ if (isset($_GET['action']) && $_GET['action'] === 'export') {
 
             <div class="filter-container d-flex flex-column gap-2 mt-2">
               <div class="filter-group d-flex align-items-center gap-2">
-                <label for="filterTingkat" class="form-label fw-semibold mb-0">Tingkat</label>
+                <label class="form-label fw-semibold mb-0">Tingkat</label>
                 <select id="filterTingkat" class="form-select dk-select" style="width: 120px;">
-                  <option selected value="">-- Semua --</option>
+                  <option value="">-- Semua --</option>
                   <option>X</option>
                   <option>XI</option>
                   <option>XII</option>
                 </select>
               </div>
               <div class="filter-group d-flex align-items-center gap-2">
-                <label for="filterKelas" class="form-label fw-semibold mb-0">Kelas</label>
+                <label class="form-label fw-semibold mb-0">Kelas</label>
                 <select id="filterKelas" class="form-select dk-select" style="width: 140px;">
-                  <option selected value="">-- Semua --</option>
+                  <option value="">-- Semua --</option>
                   <?php
                   $kelasQuery = mysqli_query($koneksi, "SELECT * FROM kelas ORDER BY nama_kelas ASC");
                   while ($k = mysqli_fetch_assoc($kelasQuery)) {
-                      echo '<option value="'.htmlspecialchars($k['id_kelas']).'">'.htmlspecialchars($k['nama_kelas']).'</option>';
+                    echo '<option value="'.$k['id_kelas'].'">'.$k['nama_kelas'].'</option>';
                   }
                   ?>
                 </select>
@@ -110,68 +142,57 @@ if (isset($_GET['action']) && $_GET['action'] === 'export') {
         </div>
 
         <div class="card-body">
-          <div class="search-container mt-3 position-relative">
-            <input type="text" id="searchInput" class="form-control form-control-sm search-input" placeholder="Masukan kata kunci">
-            <span class="search-icon"><i class="bi bi-search"></i></span>
-          </div>
+          <form id="searchForm" class="d-flex flex-wrap align-items-center gap-2 mb-2">
+            <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Masukan kata kunci" style="width:200px;">
+            <select id="perSelect" class="form-select form-select-sm" style="width:120px;">
+              <?php foreach ([10, 20, 50, 100] as $opt): ?>
+                <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>><?= $opt ?>/hal</option>
+              <?php endforeach; ?>
+            </select>
+          </form>
 
           <form id="formDeleteMultiple" action="hapus_siswa_multiple.php" method="POST">
-          <div class="table-responsive mt-3">
-            <table class="table table-bordered table-striped align-middle">
-              <thead style="background-color:#1d52a2" class="text-center text-white">
-                <tr>
-                  <th><input type="checkbox" id="selectAll"></th>
-                  <th>Absen</th>
-                  <th>Nama</th>
-                  <th>NISN</th>
-                  <th>Kelas</th>
-                  <th>Komentar</th>
-                  <th>Aksi</th>
-                </tr>
-              </thead>
-              <tbody id="tbodyData">
-                <?php
-                $sqlList = "
-                  SELECT s.*, k.nama_kelas, cr.catatan_wali_kelas
-                  FROM siswa s
-                  LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
-                  $joinCrLatest
-                  ORDER BY s.no_absen_siswa ASC
-                ";
-                $query = mysqli_query($koneksi, $sqlList);
-
-                if (mysqli_num_rows($query) > 0):
-                  while ($data = mysqli_fetch_assoc($query)):
-                ?>
-                  <tr data-kelas="<?= $data['id_kelas']; ?>" data-tingkat="<?= htmlspecialchars($data['tingkat'] ?? ''); ?>">
-                    <td class="text-center"><input type="checkbox" name="id_siswa[]" class="row-check" value="<?= $data['id_siswa']; ?>"></td>
-                    <td class="text-center"><?= htmlspecialchars($data['no_absen_siswa']); ?></td>
-                    <td><?= htmlspecialchars($data['nama_siswa']); ?></td>
-                    <td class="text-center"><?= htmlspecialchars($data['no_induk_siswa']); ?></td>
-                    <td class="text-center"><?= htmlspecialchars($data['nama_kelas'] ?? '-'); ?></td>
-                    <td><?= nl2br(htmlspecialchars($data['catatan_wali_kelas'] ?? '')); ?></td>
+            <div class="table-responsive">
+              <table class="table table-bordered table-striped align-middle">
+                <thead style="background-color:#1d52a2" class="text-center text-white">
+                  <tr>
+                    <th><input type="checkbox" id="selectAll"></th>
+                    <th>Absen</th>
+                    <th>Nama</th>
+                    <th>NISN</th>
+                    <th>Kelas</th>
+                    <th>Komentar</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyData">
+                  <?php
+                  $no = $offset + 1;
+                  foreach ($rows as $data):
+                  ?>
+                  <tr data-kelas="<?= $data['id_kelas'] ?>" data-tingkat="<?= htmlspecialchars($data['tingkat'] ?? '') ?>">
+                    <td class="text-center"><input type="checkbox" name="id_siswa[]" class="row-check" value="<?= $data['id_siswa'] ?>"></td>
+                    <td class="text-center"><?= $data['no_absen_siswa'] ?></td>
+                    <td><?= htmlspecialchars($data['nama_siswa']) ?></td>
+                    <td class="text-center"><?= htmlspecialchars($data['no_induk_siswa']) ?></td>
+                    <td class="text-center"><?= htmlspecialchars($data['nama_kelas'] ?? '-') ?></td>
+                    <td><?= nl2br(htmlspecialchars($data['catatan_wali_kelas'] ?? '')) ?></td>
                     <td class="text-center">
-                      <a href="edit_siswa.php?id=<?= $data['id_siswa']; ?>" class="btn btn-warning btn-sm">
-                        <i class="bi bi-pencil-square"></i> Edit
-                      </a>
-                      <a href="hapus_siswa.php?id=<?= $data['id_siswa']; ?>" onclick="return confirm('Yakin ingin menghapus data?');" class="btn btn-danger btn-sm">
-                        <i class="bi bi-trash"></i> Del
-                      </a>
+                      <a href="edit_siswa.php?id=<?= $data['id_siswa'] ?>" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square"></i> Edit</a>
+                      <a href="hapus_siswa.php?id=<?= $data['id_siswa'] ?>" onclick="return confirm('Yakin ingin menghapus data?');" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i> Del</a>
                     </td>
                   </tr>
-                <?php
-                  endwhile;
-                else:
-                  echo '<tr><td colspan="7" class="text-center text-muted py-4">Tidak ada data siswa yang tersedia.</td></tr>';
-                endif;
-                ?>
-              </tbody>
-            </table>
-          </div>
-          <button type="submit" id="deleteSelected" class="btn btn-danger btn-sm mt-2" disabled>
-            <i class="bi bi-trash"></i> Hapus Terpilih
-          </button>
+                  <?php endforeach; ?>
+                </tbody>
+              </table>
+            </div>
+            <button type="submit" id="deleteSelected" class="btn btn-danger btn-sm mt-2" disabled><i class="bi bi-trash"></i> Hapus Terpilih</button>
           </form>
+
+          <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center" id="pagination"></ul>
+            <p class="text-center text-muted mt-2 mb-0" id="pageInfo"></p>
+          </nav>
         </div>
       </div>
     </div>
@@ -180,120 +201,228 @@ if (isset($_GET['action']) && $_GET['action'] === 'export') {
 
 <?php include '../../includes/footer.php'; ?>
 
-<!-- ===== Script: Select All, Hapus Terpilih, Filter, Search ===== -->
 <script>
-// ===== EXPORT =====
-document.getElementById('exportBtn').onclick = () => {
-  const url = new URL(window.location.href);
-  url.searchParams.set('action','export');
-  window.location.href = url.toString();
-};
+(function() {
+  const tbody = document.getElementById('tbodyData');
+  const pagUl = document.getElementById('pagination');
+  const pageInfo = document.getElementById('pageInfo');
+  const input = document.getElementById('searchInput');
+  const perSel = document.getElementById('perSelect');
+  const deleteBtn = document.getElementById('deleteSelected');
+  const selectAll = document.getElementById('selectAll');
+  const formDelete = document.getElementById('formDeleteMultiple');
+  let currentPage = <?= $page ?>;
+  let typingTimer;
 
-// ===== UTIL =====
-function getRowChecks() {
-  return Array.from(document.querySelectorAll('input.row-check'));
-}
-function anyChecked() {
-  return document.querySelector('input.row-check:checked') !== null;
-}
-function toggleDeleteButton() {
-  const btn = document.getElementById('deleteSelected');
-  if (btn) btn.disabled = !anyChecked();
-}
-
-// ===== EVENT DELEGATION =====
-document.addEventListener('change', (e) => {
-  if (e.target && e.target.id === 'selectAll') {
-    const checked = e.target.checked;
-    getRowChecks().forEach(cb => { cb.checked = checked; });
-    toggleDeleteButton();
-    return;
+  // ================== UTIL ==================
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.innerText = str ?? '';
+    return div.innerHTML;
   }
-  if (e.target && e.target.matches('input.row-check')) {
-    const all = getRowChecks();
-    const header = document.getElementById('selectAll');
-    if (header) header.checked = all.length > 0 && all.every(cb => cb.checked);
-    toggleDeleteButton();
-  }
-});
 
-// Protek submit tanpa pilihan
-const formDelete = document.getElementById('formDeleteMultiple');
-if (formDelete) {
-  formDelete.addEventListener('submit', (e) => {
-    if (!anyChecked()) {
+  function highlightText(text, keyword) {
+    if (!keyword) return escapeHtml(text);
+    const pattern = new RegExp(`(${keyword})`, 'gi');
+    return escapeHtml(text).replace(pattern, '<span class="highlight">$1</span>');
+  }
+
+  // ================== RENDER TABLE ==================
+  function renderRows(data, startNumber, keyword = '') {
+    if (!data || data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Tidak ada data siswa.</td></tr>';
+      deleteBtn.disabled = true;
+      return;
+    }
+
+    let html = '';
+    for (const r of data) {
+      const nama = highlightText(r.nama_siswa || '', keyword);
+      const nisn = highlightText(r.no_induk_siswa || '', keyword);
+      const komentar = highlightText(r.catatan_wali_kelas || '', keyword);
+
+      html += `
+        <tr data-kelas="${r.id_kelas || ''}" data-tingkat="${escapeHtml(r.tingkat || '')}">
+          <td class="text-center"><input type="checkbox" class="row-check" name="id_siswa[]" value="${r.id_siswa}"></td>
+          <td class="text-center">${escapeHtml(r.no_absen_siswa || '')}</td>
+          <td>${nama}</td>
+          <td class="text-center">${nisn}</td>
+          <td class="text-center">${escapeHtml(r.nama_kelas || '-')}</td>
+          <td>${komentar}</td>
+          <td class="text-center">
+            <a href="edit_siswa.php?id=${r.id_siswa}" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square"></i> Edit</a>
+            <a href="hapus_siswa.php?id=${r.id_siswa}" onclick="return confirm('Yakin ingin menghapus data?');" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i> Del</a>
+          </td>
+        </tr>`;
+    }
+    tbody.innerHTML = html;
+
+    // highlight baris yang cocok
+    if (keyword) {
+      const rows = tbody.querySelectorAll('tr');
+      rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        if (text.includes(keyword.toLowerCase())) {
+          row.classList.add('row-highlight');
+        } else {
+          row.classList.remove('row-highlight');
+        }
+      });
+    }
+
+    // re-register event checkbox
+    initCheckboxEvents();
+  }
+
+  // ================== PAGINATION ==================
+  function renderPagination(page, totalPages, total, showed, per) {
+    const start = Math.max(1, page - 2);
+    const end = Math.min(totalPages, page + 2);
+    let html = '';
+    const makeLi = (disabled, target, text, active = false) => {
+      const cls = ['page-item', disabled ? 'disabled' : '', active ? 'active' : ''].filter(Boolean).join(' ');
+      const aAttr = disabled ? 'tabindex="-1"' : `data-page="${target}"`;
+      return `<li class="${cls}"><a class="page-link" href="#" ${aAttr}>${text}</a></li>`;
+    };
+    html += makeLi(page <= 1, 1, '« First');
+    html += makeLi(page <= 1, Math.max(1, page - 1), '‹ Prev');
+    for (let i = start; i <= end; i++) html += makeLi(false, i, String(i), i === page);
+    html += makeLi(page >= totalPages, Math.min(totalPages, page + 1), 'Next ›');
+    html += makeLi(page >= totalPages, totalPages, 'Last »');
+    pagUl.innerHTML = html;
+    pageInfo.innerHTML = `Menampilkan <strong>${showed}</strong> dari <strong>${total}</strong> data • Halaman <strong>${page}</strong> / <strong>${totalPages}</strong>`;
+    [...pagUl.querySelectorAll('a[data-page]')].forEach(a => {
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        currentPage = Number(a.getAttribute('data-page'));
+        doSearch();
+      });
+    });
+  }
+
+  // ================== AJAX ==================
+  async function doSearch() {
+    const q = input.value.trim();
+    const per = Number(perSel.value || 10);
+    const page = currentPage;
+    const params = new URLSearchParams({ ajax: '1', q, per, page });
+    try {
+      const res = await fetch(`?${params.toString()}`);
+      const json = await res.json();
+      if (!json.ok) return;
+      const startNumber = (json.page - 1) * json.per + 1;
+      renderRows(json.data, startNumber, q);
+      renderPagination(json.page, json.totalPages, json.total, json.data.length, json.per);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // ================== CHECKBOX & DELETE ==================
+  function initCheckboxEvents() {
+    const allCheckboxes = tbody.querySelectorAll('.row-check');
+
+    allCheckboxes.forEach(cb => {
+      cb.addEventListener('change', () => {
+        const anyChecked = tbody.querySelectorAll('.row-check:checked').length > 0;
+        deleteBtn.disabled = !anyChecked;
+        selectAll.checked = allCheckboxes.length > 0 && [...allCheckboxes].every(c => c.checked);
+      });
+    });
+
+    selectAll.addEventListener('change', () => {
+      const checked = selectAll.checked;
+      allCheckboxes.forEach(cb => cb.checked = checked);
+      deleteBtn.disabled = !checked;
+    });
+  }
+
+  // konfirmasi sebelum submit
+  formDelete.addEventListener('submit', function(e) {
+    const checked = tbody.querySelectorAll('.row-check:checked').length;
+    if (checked === 0) {
       e.preventDefault();
-      alert('Pilih setidaknya satu data siswa yang akan dihapus.');
+      alert('Tidak ada data yang dipilih.');
+      return false;
+    }
+    if (!confirm('Yakin ingin menghapus data terpilih?')) {
+      e.preventDefault();
+      return false;
     }
   });
-}
 
-// ===== FILTER =====
-const filterTingkat = document.getElementById('filterTingkat');
-const filterKelas   = document.getElementById('filterKelas');
-function filterTable(){
-  const t = (filterTingkat?.value || '').toLowerCase();
-  const k = filterKelas?.value || '';
-  document.querySelectorAll('#tbodyData tr').forEach(row => {
-    const rTingkat = row.dataset.tingkat?.toLowerCase() || '';
-    const rKelas   = row.dataset.kelas || '';
-    row.style.display = ((!t || rTingkat === t) && (!k || rKelas === k)) ? '' : 'none';
+  // ================== SEARCH INPUT ==================
+  input.addEventListener('input', () => {
+    clearTimeout(typingTimer);
+    currentPage = 1;
+    typingTimer = setTimeout(doSearch, 250);
   });
-}
-filterTingkat?.addEventListener('change', filterTable);
-filterKelas?.addEventListener('change', filterTable);
+  perSel.addEventListener('change', () => { currentPage = 1; doSearch(); });
 
-// ===== SEARCH =====
-const searchInput = document.getElementById('searchInput');
-searchInput?.addEventListener('input', () => {
-  const filter = (searchInput.value || '').toLowerCase();
-  document.querySelectorAll('#tbodyData tr').forEach(row => {
-    const text = row.innerText.toLowerCase();
-    if (!filter) {
-      row.style.display = '';
-      row.classList.remove('highlight');
-    } else if (text.includes(filter)) {
-      row.style.display = '';
-      row.classList.add('highlight');
-    } else {
-      row.style.display = 'none';
-      row.classList.remove('highlight');
-    }
-  });
-});
-
-// INIT
-document.addEventListener('DOMContentLoaded', () => {
-  const header = document.getElementById('selectAll');
-  if (header) {
-    const all = getRowChecks();
-    header.checked = all.length > 0 && all.every(cb => cb.checked);
-  }
-  toggleDeleteButton();
-});
+  // jalankan pertama kali
+  doSearch();
+})();
 </script>
 
 <style>
-/* FILTER */
-.filter-container { display:flex; flex-direction:column; gap:10px; }
-.filter-group label { min-width:60px; }
-
-/* SEARCH */
-.search-container { width:180px; position:relative; margin-top:10px; }
-.search-input { padding-right:30px; padding-top:4px; padding-bottom:4px; }
-.search-icon { position:absolute; top:50%; right:8px; transform:translateY(-50%); color:#6c757d; pointer-events:none; font-size:0.9rem; }
-.highlight { background-color: rgba(0, 128, 0, 0.2); }
-
-/* RESPONSIVE */
-@media (min-width:768px){
-  .filter-container{ flex-direction:column; align-items:flex-start; } 
+.highlight {
+  background-color: #d4edda;
+  padding: 1px 2px;
+  border-radius: 3px;
 }
-@media (max-width:768px){
-  .top-bar{ flex-direction:column !important; align-items:center !important; text-align:center; }
-  .filter-container{ width:100%; align-items:center !important; margin-top:10px; }
-  .filter-group{ justify-content:center !important; width:100%; }
-  .dk-select{ width:100% !important; }
-  .action-buttons{ justify-content:center !important; margin-top:10px; }
-  .table-responsive{ overflow-x:auto; }
+.row-highlight {
+  background-color: #d4edda !important;
+  transition: background-color 0.3s ease;
+}
+.filter-container { display:flex; flex-direction:column; gap:10px; }
+.search-input { padding-right:30px; }
+
+/* ==== FIX PAGINATION RESPONSIVE ==== */
+@media (max-width: 768px) {
+  #pagination {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    margin-top: 10px;
+  }
+  #pagination .page-link {
+    padding: 4px 8px;
+    font-size: 13px;
+  }
+  #pageInfo {
+    font-size: 13px;
+    margin-top: 5px;
+    white-space: normal;
+  }
+  nav[aria-label="Page navigation"] {
+    overflow: visible !important;
+    position: relative;
+    z-index: 10;
+  }
+  .table-responsive {
+    overflow-x: auto;
+    margin-bottom: 0 !important;
+  }
+  .top-bar{
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center;
+  }
+  .filter-container{
+    width: 100%;
+    align-items: center !important;
+    margin-top: 10px;
+  }
+  .filter-group{
+    justify-content: center !important;
+    width: 100%;
+  }
+  .dk-select{
+    width: 100% !important;
+  }
+  .action-buttons{
+    justify-content: center !important;
+    margin-top: 10px;
+  }
 }
 </style>
