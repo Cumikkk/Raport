@@ -5,8 +5,8 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 $current_url = $_SERVER['REQUEST_URI'] ?? '/';
-$roleRaw = $_SESSION['role_user'] ?? '';            
-$roleKey = strtolower(trim($roleRaw));              
+$roleRaw = $_SESSION['role_user'] ?? '';
+$roleKey = strtolower(trim($roleRaw));
 $username_display = $_SESSION['username'] ?? 'Guest';
 
 // Tentukan "Home" sesuai role
@@ -47,13 +47,14 @@ if ($roleKey === 'guru') {
       <small style="color: #666;"><?= $roleRaw !== '' ? htmlspecialchars($roleRaw) : 'Guest' ?></small>
     </div>
 
-    <!-- Beranda diarahkan sesuai role -->
-    <a href="<?= $homeLink ?>" class="home-link <?= str_contains($current_url, 'dashboard.php') || str_contains($current_url, 'datakelas.php') ? 'active' : '' ?>">
+    <!-- Beranda sesuai role -->
+    <a href="<?= $homeLink ?>"
+      class="home-link <?= str_contains($current_url, 'dashboard.php') || str_contains($current_url, 'datakelas.php') ? 'active' : '' ?>">
       <i class="fas fa-home"></i><span>Beranda</span>
     </a>
 
     <?php if ($roleKey === 'admin'): ?>
-      <!-- Admin: semua menu -->
+      <!-- MENU LEMBAGA -->
       <details <?= str_contains($current_url, '/Lembaga/') ? 'open' : '' ?>>
         <summary><span><i class="fas fa-building"></i> Lembaga</span><i class="fas fa-angle-right arrow"></i></summary>
         <ul>
@@ -68,6 +69,7 @@ if ($roleKey === 'guru') {
         </ul>
       </details>
 
+      <!-- MENU RAPOR -->
       <details <?= str_contains($current_url, '/Rapor/') ? 'open' : '' ?>>
         <summary><span><i class="fas fa-book"></i> Rapor</span><i class="fas fa-angle-right arrow"></i></summary>
         <ul>
@@ -79,16 +81,13 @@ if ($roleKey === 'guru') {
         </ul>
       </details>
 
-      <!-- Ubah Tambah User menjadi dropdown User -->
-      <details <?= str_contains($current_url, 'tambah_user') || str_contains($current_url, 'data_user') ? 'open' : '' ?>>
-        <summary><span><i class="fas fa-user"></i> User</span><i class="fas fa-angle-right arrow"></i></summary>
-        <ul>
-          <li><a href="/RAPORT/tambah%20user/data_user.php" class="<?= str_contains($current_url, 'data_user') ? 'active' : '' ?>">Data User</a></li>
-        </ul>
-      </details>
+      <!-- USER (ONE CLICK + ALWAYS BOLD) -->
+      <a href="/RAPORT/tambah%20user/data_user.php"
+        class="user-link <?= (str_contains($current_url, 'tambah_user') || str_contains($current_url, 'data_user')) ? 'active' : '' ?>">
+        <i class="fas fa-user"></i><span>User</span>
+      </a>
 
     <?php elseif ($roleKey === 'guru'): ?>
-      <!-- Guru: hanya Data Kelas -->
       <details <?= str_contains($current_url, '/Lembaga/') ? 'open' : '' ?>>
         <summary><span><i class="fas fa-building"></i> Lembaga</span><i class="fas fa-angle-right arrow"></i></summary>
         <ul>
@@ -97,57 +96,86 @@ if ($roleKey === 'guru') {
       </details>
 
     <?php else: ?>
-      <!-- Guest / belum login -->
       <a href="/RAPORT/login.php">Login</a>
     <?php endif; ?>
 
-    <!-- Logout (selalu tampil) -->
+    <!-- LOGOUT -->
     <a href="/RAPORT/logout.php" class="logout-btn btn-danger" style="margin-top:12px; display:block; padding:8px 12px; border-radius:6px; color:#fff; text-decoration:none;">
       <i class="fas fa-right-from-bracket"></i> Logout
     </a>
+
   </nav>
 </aside>
 
 <style>
-  /* efek hover */
-  .menu a:hover {
+  /* === TOP LEVEL ITEM (Beranda, User, Summary) === */
+  .menu>a,
+  .menu>details>summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    margin: 4px 8px;
+    border-radius: 6px;
+    color: #111827;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  /* Hilangkan icon bawaan details */
+  .menu>details>summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .menu>details>summary .arrow {
+    margin-left: auto;
+  }
+
+  /* Hover */
+  .menu a:hover,
+  .menu>details>summary:hover {
     background-color: rgba(29, 82, 162, 0.2);
     transition: 0.3s;
   }
 
-  /* efek aktif */
+  /* Active */
   .menu a.active {
     background-color: rgba(65, 188, 255, 0.3);
     border-left: 4px solid #1d52a2;
     font-weight: 600;
   }
 
-  .menu a.active:hover {
-    background-color: rgba(29, 82, 162, 0.4);
+  /* === PENTING: USER SELALU TEBAL === */
+  .menu a.user-link {
+    font-weight: 600 !important;
   }
 
+  /* Dropdown items */
   details ul li a {
     display: block;
-    padding: 6px 16px;
+    padding: 6px 32px;
     border-radius: 4px;
   }
 
-  /* Responsif: sidebar dan overlay tetap seperti sebelumnya */
+  /* Responsif */
   @media (max-width: 768px) {
     .sidebar {
       transform: translateX(-100%);
       transition: transform 0.3s ease;
     }
-    #menu-toggle:checked ~ .sidebar {
+
+    #menu-toggle:checked~.sidebar {
       transform: translateX(0);
     }
+
     .overlay {
       position: fixed;
       inset: 0;
-      background-color: rgba(0,0,0,0.3);
+      background-color: rgba(0, 0, 0, 0.3);
       display: none;
     }
-    #menu-toggle:checked ~ .overlay {
+
+    #menu-toggle:checked~.overlay {
       display: block;
     }
   }
