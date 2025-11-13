@@ -5,6 +5,14 @@ error_reporting(E_ALL);
 require_once __DIR__ . '/../../koneksi.php';
 mysqli_set_charset($koneksi, 'utf8mb4');
 
+// Pastikan ZipArchive tersedia
+if (!class_exists('ZipArchive')) {
+  header('Content-Type: text/plain; charset=utf-8');
+  http_response_code(500);
+  echo "ZipArchive tidak tersedia. Aktifkan ekstensi zip di php.ini (extension=zip) lalu restart server.";
+  exit;
+}
+
 // Params
 $id_mapel     = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $id_semester  = (isset($_GET['id_semester']) && is_numeric($_GET['id_semester'])) ? (int)$_GET['id_semester'] : 0;
@@ -76,7 +84,7 @@ function xml_t($s) {
   return htmlspecialchars((string)$s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
-// Header kolom (urut & nama sama seperti tabel export sebelumnya)
+// Header kolom (urut & nama sama seperti tabel export)
 $headers = [
   'No_Absen','Nama_Siswa',
   'tp1_lm1','tp2_lm1','tp3_lm1','tp4_lm1','sumatif_lm1',
@@ -90,7 +98,7 @@ $headers = [
 $sheetRows = [];
 $rowNum = 1;
 
-// Row header (bold nanti via styles sederhana)
+// Row header
 $cells = [];
 for ($c = 1; $c <= count($headers); $c++) {
   $ref = xl_col_letter($c) . $rowNum;
@@ -121,7 +129,8 @@ foreach ($data as $row) {
 }
 
 $lastCol = xl_col_letter(count($headers));
-$dimension = 'A1:'.$lastCol.($rowNum-1);
+$lastRow = max(1, $rowNum - 1); // kalau tidak ada data → tetap A1:lastCol1
+$dimension = 'A1:'.$lastCol.$lastRow;
 
 // ====== Semua part XLSX (tanpa sharedStrings untuk menyederhanakan) ======
 $content_types = <<<XML
@@ -184,8 +193,10 @@ XML;
 $sheetRowsStyled = [];
 if (!empty($sheetRows)) {
   // row 1: inject s="1"
-  $sheetRowsStyled[] = preg_replace('/<c /', '<c s="1" ', $sheetRows[0],  -1);
-  for ($i = 1; $i < count($sheetRows); $i++) $sheetRowsStyled[] = $sheetRows[$i];
+  $sheetRowsStyled[] = preg_replace('/<c /', '<c s="1" ', $sheetRows[0], -1);
+  for ($i = 1; $i < count($sheetRows); $i++) {
+    $sheetRowsStyled[] = $sheetRows[$i];
+  }
 }
 
 $sheet1 = '<?xml version="1.0" encoding="UTF-8"?>' .
@@ -201,6 +212,7 @@ $filename = 'Nilai_' . $mapel_nama . '_Semester_' . $id_semester . ($id_kelas_op
 $zip = new ZipArchive();
 $tmp = tempnam(sys_get_temp_dir(), 'xlsx_');
 @unlink($tmp); // ZipArchive butuh nama file yang belum ada
+
 if ($zip->open($tmp, ZipArchive::CREATE) !== TRUE) {
   header('Content-Type: text/plain; charset=utf-8');
   http_response_code(500);

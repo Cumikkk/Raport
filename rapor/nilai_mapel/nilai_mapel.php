@@ -107,12 +107,9 @@ $q->close();
             <label for="selectKelas" class="fw-semibold">Kelas:</label>
             <select id="selectKelas" class="form-select form-select-sm" style="width: 180px;">
               <option value="">-- Pilih Kelas --</option>
-              <option value="1A">1A</option>
-              <option value="1B">1B</option>
-              <option value="2A">2A</option>
-              <option value="2B">2B</option>
-              <option value="3A">3A</option>
-              <option value="3B">3B</option>
+              <option value="X">X</option>
+              <option value="XI">XI</option>
+              <option value="XII">XII</option>
             </select>
           </div>
 
@@ -150,7 +147,7 @@ $q->close();
         <!-- Tabel nilai (tampilan sama) -->
         <div class="card-body">
           <div class="table-responsive">
-            <table class="table table-bordered text-center align-middle">
+            <table id="nilaiTable" class="table table-bordered text-center align-middle">
               <thead style="background-color:#1d52a2" class="text-white">
                 <tr>
                   <th rowspan="3">NO.</th>
@@ -175,7 +172,7 @@ $q->close();
                   <th>LM1</th><th>LM2</th><th>LM3</th><th>LM4</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody id="nilaiBody">
                 <?php if (count($rows) === 0): ?>
                   <tr><td colspan="24" class="text-center text-muted">Belum ada data nilai untuk semester ini.</td></tr>
                 <?php else: $no=1; foreach ($rows as $r): ?>
@@ -224,6 +221,46 @@ $q->close();
     </div>
   </div>
 </main>
+
+<!-- ===== LIVE SEARCH TANPA ENTER (+ auto-renumber kolom NO.) ===== -->
+<script>
+(function () {
+  const input = document.getElementById('searchInput');
+  const btn   = document.getElementById('searchBtn');
+  const body  = document.getElementById('nilaiBody');
+
+  // Debounce agar halus saat mengetik cepat
+  const debounce = (fn, delay = 120) => {
+    let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), delay); };
+  };
+
+  function filter() {
+    const q = (input.value || '').trim().toLowerCase();
+    const rows = Array.from(body.querySelectorAll('tr'));
+    let visible = 0;
+
+    rows.forEach(tr => {
+      const tds = tr.querySelectorAll('td');
+      // Baris placeholder "Belum ada data..." hanya punya 1 kolom → lewati dari filter & renumber
+      if (tds.length < 2) return;
+
+      const nama = (tds[1].textContent || '').toLowerCase(); // kolom NAMA
+      const match = !q || nama.includes(q);
+      tr.style.display = match ? '' : 'none';
+      if (match) {
+        visible++;
+        tds[0].textContent = visible; // kolom NO.
+      }
+    });
+  }
+
+  if (input) input.addEventListener('input', debounce(filter, 120));
+  if (btn) btn.addEventListener('click', (e) => { e.preventDefault(); filter(); input.focus(); });
+
+  // Normalisasi penomoran awal
+  filter();
+})();
+</script>
 
 <?php include '../../includes/footer.php'; ?>
 </body>
