@@ -140,22 +140,40 @@ try {
   </style>
 
   <script>
-    // ====== SEARCH (tanpa mengubah tampilan) ======
-    (function(){
+    // ====== LIVE SEARCH (tanpa Enter, + renumber) ======
+    (function () {
       const input = document.getElementById('searchInput');
-      const btn = document.getElementById('searchBtn');
-      const body = document.getElementById('mapelBody');
+      const btn   = document.getElementById('searchBtn');
+      const body  = document.getElementById('mapelBody');
+
+      const debounce = (fn, delay = 120) => {
+        let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), delay); };
+      };
+
       function filter() {
-        const q = (input.value || '').toLowerCase();
-        Array.from(body.querySelectorAll('tr')).forEach(tr => {
-          const nameCell = tr.children[1];
-          if (!nameCell) return;
-          const txt = nameCell.textContent.toLowerCase();
-          tr.style.display = txt.indexOf(q) !== -1 ? '' : 'none';
+        const q = (input.value || '').trim().toLowerCase();
+        const rows = Array.from(body.querySelectorAll('tr'));
+        let visible = 0;
+
+        rows.forEach(tr => {
+          const tds = tr.querySelectorAll('td');
+          if (tds.length < 4) return; // skip placeholder
+          const nama  = (tds[1].textContent || '').toLowerCase();
+          const jenis = (tds[2].textContent || '').toLowerCase();
+          const match = !q || nama.includes(q) || jenis.includes(q);
+          tr.style.display = match ? '' : 'none';
+          if (match) {
+            visible++;
+            tds[0].textContent = visible; // renumber kolom "No"
+          }
         });
       }
-      if (btn) btn.addEventListener('click', filter);
-      if (input) input.addEventListener('keyup', e => { if (e.key === 'Enter') filter(); });
+
+      if (input) input.addEventListener('input', debounce(filter, 120));
+      if (btn) btn.addEventListener('click', (e) => { e.preventDefault(); filter(); input.focus(); });
+
+      // Normalisasi nomor awal
+      filter();
     })();
 
     // ====== SORT A-Z / Z-A (klik bergantian) ======

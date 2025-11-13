@@ -6,6 +6,14 @@ error_reporting(E_ALL);
 // Path koneksi (file ini di /rapor/absensi/)
 require_once __DIR__ . '/../../koneksi.php';
 
+/* --------- SELF-HEALING SNAPSHOT COLUMNS (AMAN DI-RE-RUN) --------- */
+$koneksi->query("
+  ALTER TABLE absensi
+    ADD COLUMN IF NOT EXISTS nama_siswa_text VARCHAR(100) NOT NULL DEFAULT '-' AFTER id_absensi,
+    ADD COLUMN IF NOT EXISTS nis_text        VARCHAR(50)  NOT NULL DEFAULT '-' AFTER nama_siswa_text,
+    ADD COLUMN IF NOT EXISTS wali_kelas_text VARCHAR(100) NOT NULL DEFAULT '-' AFTER nis_text
+");
+
 /* --------- BULK DELETE --------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aksi']) && $_POST['aksi'] === 'bulk_delete') {
   $ids = isset($_POST['ids']) && is_array($_POST['ids']) ? array_map('intval', $_POST['ids']) : [];
@@ -34,7 +42,7 @@ if (isset($_GET['del'])) {
   exit;
 }
 
-/* --------- AMBIL DATA TABEL --------- */
+/* --------- AMBIL DATA TABEL (TANPA TABEL siswa/kelas/guru) --------- */
 $search = isset($_GET['q']) ? trim($_GET['q']) : '';
 $params = [];
 $types  = '';
@@ -42,24 +50,30 @@ $types  = '';
 $sql = "
   SELECT
     a.id_absensi,
-    s.nama_siswa,
-    s.no_induk_siswa AS nis,
-    COALESCE(g.nama_guru, '-') AS wali_kelas,
+    COALESCE(a.nama_siswa_text, '-') AS nama_siswa,
+    COALESCE(a.nis_text, '-')        AS nis,
+    COALESCE(a.wali_kelas_text, '-') AS wali_kelas,
     a.sakit, a.izin, a.alpha
   FROM absensi a
-  JOIN siswa s ON s.id_siswa = a.id_siswa
-  LEFT JOIN kelas k ON k.id_kelas = s.id_kelas
-  LEFT JOIN guru  g ON g.id_guru  = k.id_guru
 ";
 
 if ($search !== '') {
-  $sql .= " WHERE (s.nama_siswa LIKE ? OR s.no_induk_siswa LIKE ? OR k.nama_kelas LIKE ? OR g.nama_guru LIKE ?) ";
+  // Cari teks di snapshot + jika numeric, cari juga di kolom angka
+  $sql .= " WHERE (a.nama_siswa_text LIKE ? OR a.nis_text LIKE ? OR a.wali_kelas_text LIKE ? ";
   $like = "%{$search}%";
-  $params = [$like, $like, $like, $like];
-  $types  = 'ssss';
+  $params = [$like, $like, $like];
+  $types  = 'sss';
+
+  if (ctype_digit($search)) {
+    $sql .= " OR a.id_absensi = ? OR a.sakit = ? OR a.izin = ? OR a.alpha = ? ";
+    $val = (int)$search;
+    array_push($params, $val, $val, $val, $val);
+    $types .= 'iiii';
+  }
+  $sql .= ") ";
 }
 
-$sql .= " ORDER BY s.nama_siswa ASC ";
+$sql .= " ORDER BY a.nama_siswa_text ASC ";
 
 if ($params) {
   $stmt = $koneksi->prepare($sql);
