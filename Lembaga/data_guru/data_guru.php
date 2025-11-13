@@ -145,10 +145,14 @@ function keep_params($params = [])
           </form>
 
           <div class="card-body">
+
             <div class="table-responsive">
               <table class="table table-bordered table-striped align-middle" id="guruTable">
                 <thead style="background-color:#1d52a2" class="text-center text-white">
                   <tr>
+                    <th style="width:40px;" class="text-center">
+                      <input type="checkbox" id="checkAll" title="Pilih Semua">
+                    </th>
                     <th style="width:60px;">No</th>
                     <th>Nama Guru</th>
                     <th>Jabatan</th>
@@ -161,6 +165,9 @@ function keep_params($params = [])
                   foreach ($rows as $row):
                   ?>
                     <tr>
+                      <td class="text-center">
+                        <input type="checkbox" class="row-check" value="<?= (int)$row['id_guru']; ?>">
+                      </td>
                       <td class="text-center"><?= $no++; ?></td>
                       <td><?= htmlspecialchars($row['nama_guru']); ?></td>
                       <td class="text-center"><?= htmlspecialchars($row['jabatan_guru']); ?></td>
@@ -181,15 +188,22 @@ function keep_params($params = [])
                   <?php endforeach;
                   if (count($rows) === 0): ?>
                     <tr>
-                      <td colspan="4" class="text-center">Belum ada data.</td>
+                      <td colspan="5" class="text-center">Belum ada data.</td>
                     </tr>
                   <?php endif; ?>
                 </tbody>
               </table>
             </div>
 
+            <!-- HAPUS TERPILIH DI BAWAH TABEL -->
+            <div class="mt-2 d-flex justify-content-start">
+              <button type="button" id="bulkDeleteBtn" class="btn btn-danger btn-sm d-flex align-items-center gap-1" disabled>
+                <i class="bi bi-trash"></i> <span>Hapus Terpilih</span>
+              </button>
+            </div>
+
             <!-- Pagination (akan dioverride oleh JS saat live search) -->
-            <nav aria-label="Page navigation">
+            <nav aria-label="Page navigation" class="mt-3">
               <ul class="pagination justify-content-center" id="pagination">
                 <?php
                 $prev = max(1, $page - 1);
@@ -261,6 +275,10 @@ function keep_params($params = [])
       const pagUl = document.getElementById('pagination');
       const pageInfo = document.getElementById('pageInfo');
 
+      const checkAll = document.getElementById('checkAll');
+      const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+      const csrfToken = '<?= htmlspecialchars($csrf); ?>';
+
       let typingTimer = null;
       let currentPage = <?= (int)$page ?>;
 
@@ -270,9 +288,82 @@ function keep_params($params = [])
         return div.innerHTML;
       }
 
+      function getRowCheckboxes() {
+        return Array.from(document.querySelectorAll('.row-check'));
+      }
+
+      function updateBulkUI() {
+        const boxes = getRowCheckboxes();
+        const total = boxes.length;
+        const checked = boxes.filter(b => b.checked).length;
+
+        bulkDeleteBtn.disabled = checked === 0;
+
+        if (total === 0) {
+          checkAll.checked = false;
+          checkAll.indeterminate = false;
+        } else if (checked === 0) {
+          checkAll.checked = false;
+          checkAll.indeterminate = false;
+        } else if (checked === total) {
+          checkAll.checked = true;
+          checkAll.indeterminate = false;
+        } else {
+          checkAll.checked = false;
+          checkAll.indeterminate = true;
+        }
+      }
+
+      function attachCheckboxEvents() {
+        const boxes = getRowCheckboxes();
+        boxes.forEach(box => {
+          box.addEventListener('change', updateBulkUI);
+        });
+        updateBulkUI();
+      }
+
+      checkAll.addEventListener('change', () => {
+        const boxes = getRowCheckboxes();
+        boxes.forEach(b => {
+          b.checked = checkAll.checked;
+        });
+        updateBulkUI();
+      });
+
+      bulkDeleteBtn.addEventListener('click', () => {
+        const boxes = getRowCheckboxes().filter(b => b.checked);
+        if (boxes.length === 0) return;
+
+        if (!confirm(`Yakin ingin menghapus ${boxes.length} data guru terpilih?`)) {
+          return;
+        }
+
+        const form = document.createElement('form');
+        form.method = 'post';
+        form.action = 'data_guru_hapus.php';
+
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+
+        boxes.forEach(box => {
+          const inp = document.createElement('input');
+          inp.type = 'hidden';
+          inp.name = 'ids[]';
+          inp.value = box.value;
+          form.appendChild(inp);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+      });
+
       function renderRows(data, startNumber) {
         if (!Array.isArray(data) || data.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="4" class="text-center">Belum ada data.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="5" class="text-center">Belum ada data.</td></tr>';
+          updateBulkUI();
           return;
         }
         let html = '';
@@ -280,6 +371,9 @@ function keep_params($params = [])
         for (const r of data) {
           html += `
             <tr>
+              <td class="text-center">
+                <input type="checkbox" class="row-check" value="${Number(r.id_guru)}">
+              </td>
               <td class="text-center">${no++}</td>
               <td>${escapeHtml(r.nama_guru)}</td>
               <td class="text-center">${escapeHtml(r.jabatan_guru)}</td>
@@ -290,7 +384,7 @@ function keep_params($params = [])
                 </a>
                 <form method="post" action="data_guru_hapus.php" onsubmit="return confirm('Yakin ingin menghapus data ini?');" class="d-inline">
                   <input type="hidden" name="id" value="${Number(r.id_guru)}">
-                  <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf); ?>">
+                  <input type="hidden" name="csrf" value="${csrfToken}">
                   <button type="submit" class="btn btn-danger btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-2 py-1">
                     <i class="bi bi-trash"></i> <span>Del</span>
                   </button>
@@ -300,6 +394,7 @@ function keep_params($params = [])
           `;
         }
         tbody.innerHTML = html;
+        attachCheckboxEvents();
       }
 
       function renderPagination(page, totalPages, total, showed, per) {
@@ -387,9 +482,9 @@ function keep_params($params = [])
         doSearch();
       });
 
-      // Inisialisasi supaya link pagination (server) diganti ke AJAX saat pertama load
-      // (opsional: langsung doSearch agar info konsisten)
-      doSearch();
+      // Inisialisasi
+      attachCheckboxEvents(); // untuk HTML awal (kalau fetch gagal)
+      doSearch(); // sinkronkan dengan data AJAX
     })();
   </script>
 
