@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aksi']) && $_POST['ak
     $stmt->execute();
     $stmt->close();
   }
-  header('Location: data_absensi.php');
+  header('Location: data_absensi.php?msg=delete_success');
   exit;
 }
 
@@ -38,7 +38,7 @@ if (isset($_GET['del'])) {
     $stmt->execute();
     $stmt->close();
   }
-  header('Location: data_absensi.php');
+  header('Location: data_absensi.php?msg=delete_success');
   exit;
 }
 
@@ -84,6 +84,30 @@ if ($params) {
 } else {
   $result = $koneksi->query($sql);
 }
+
+// --------- TENTUKAN PESAN ALERT BERDASARKAN ?msg= ---------
+$alertMsg = '';
+$alertClass = '';
+
+if (isset($_GET['msg'])) {
+  switch ($_GET['msg']) {
+    case 'add_success':
+      $alertMsg = 'Data absensi berhasil ditambahkan.';
+      $alertClass = 'alert-success'; // hijau
+      break;
+
+    case 'edit_success':
+      $alertMsg = 'Data absensi berhasil diperbarui.';
+      $alertClass = 'alert-success'; // hijau
+      break;
+
+    case 'delete_success':
+      $alertMsg = 'Data absensi berhasil dihapus.';
+      $alertClass = 'alert-danger'; // MERAH
+      break;
+  }
+}
+// ====== END BACKEND SETUP ======
 ?>
 
 <?php include '../../includes/header.php'; ?>
@@ -99,14 +123,32 @@ if ($params) {
           <div class="mt-0 d-flex flex-column flex-md-row align-items-md-center justify-content-between p-3 top-bar">
             <div class="d-flex flex-column align-items-md-start align-items-center text-md-start text-center mb-2 mb-md-0">
               <h5 class="mb-2 fw-semibold fs-4">Data Absensi Siswa</h5>
-              <div class="filter-group d-flex align-items-center gap-2">
-                <label for="tingkat" class="form-label fw-semibold mb-0">Tingkat</label>
-                <select id="tingkat" class="form-select dk-select" style="width: 120px;">
-                  <option>--Pilih--</option>
-                  <option>X</option>
-                  <option>XI</option>
-                  <option>XII</option>
-                </select>
+
+              <!-- TAMPILAN TINGKAT & KELAS (mirip Cetak Rapor) -->
+              <div class="d-flex flex-column gap-2">
+                <!-- Tingkat -->
+                <div class="d-flex align-items-center gap-2">
+                  <label for="tingkat" class="form-label fw-semibold mb-0" style="min-width:70px;">Tingkat</label>
+                  <select id="tingkat" class="form-select dk-select" style="width: 150px;">
+                    <option>-- Semua --</option>
+                    <option>X</option>
+                    <option>XI</option>
+                    <option>XII</option>
+                  </select>
+                </div>
+                <!-- Kelas -->
+                <div class="d-flex align-items-center gap-2">
+                  <label for="kelas" class="form-label fw-semibold mb-0" style="min-width:70px;">Kelas</label>
+                  <select id="kelas" class="form-select dk-select" style="width: 150px;">
+                    <option>-- Semua --</option>
+                    <option>X IPS</option>
+                    <option>XI IPS</option>
+                    <option>XII IPS</option>
+                    <option>X IPA</option>
+                    <option>XI IPA</option>
+                    <option>XII IPA</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -123,9 +165,16 @@ if ($params) {
             </div>
           </div>
 
+          <!-- ALERT SUKSES (ADD / EDIT / DELETE) AUTO HILANG 5 DETIK -->
+          <?php if ($alertMsg !== ''): ?>
+            <div id="topAlert" class="alert <?= $alertClass ?> mx-3 mt-3 mb-0">
+              <?= htmlspecialchars($alertMsg, ENT_QUOTES) ?>
+            </div>
+          <?php endif; ?>
+
           <!-- Search & Sort -->
           <div class="ms-3 me-3 bg-white d-flex justify-content-center align-items-center flex-wrap p-2 gap-2">
-            <form method="get" class="d-flex align-items-center gap-2">
+            <form method="get" class="d-flex align-items-center gap-2" id="searchForm">
               <input type="text" id="searchInput" name="q" value="<?= htmlspecialchars($search, ENT_QUOTES) ?>" class="form-control form-control-sm" placeholder="Search" style="width: 200px;">
               <button class="btn btn-outline-secondary btn-sm p-2 rounded-3 d-flex align-items-center justify-content-center" id="searchBtn">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
@@ -164,7 +213,7 @@ if ($params) {
                       <th>Alpha</th>
                     </tr>
                   </thead>
-                  <tbody class="text-center">
+                  <tbody class="text-center" id="absensiBody">
                     <?php
                     $no = 1;
                     if ($result && $result->num_rows > 0):
@@ -219,6 +268,23 @@ if ($params) {
     </div>
   </main>
 
+  <!-- SCRIPT ALERT AUTO HIDE 5 DETIK -->
+  <script>
+    (function () {
+      const alertBox = document.getElementById('topAlert');
+      if (!alertBox) return;
+      setTimeout(() => {
+        alertBox.style.transition = 'opacity 0.5s ease';
+        alertBox.style.opacity = '0';
+        setTimeout(() => {
+          if (alertBox && alertBox.parentNode) {
+            alertBox.parentNode.removeChild(alertBox);
+          }
+        }, 600);
+      }, 5000); // 5 detik
+    })();
+  </script>
+
   <!-- SCRIPT CHECKBOX / BULK -->
   <script>
     const selectAll = document.getElementById('selectAll');
@@ -251,12 +317,75 @@ if ($params) {
     });
   </script>
 
+  <!-- LIVE SEARCH TANPA ENTER + RENUMBER ABSEN -->
+  <script>
+    (function () {
+      const input  = document.getElementById('searchInput');
+      const btn    = document.getElementById('searchBtn');
+      const form   = document.getElementById('searchForm');
+      const tbody  = document.getElementById('absensiBody');
+
+      // cegah submit normal (biar tidak reload halaman)
+      if (form) {
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+        });
+      }
+
+      // debounce agar halus saat user mengetik cepat
+      function debounce(fn, delay) {
+        let t;
+        return function () {
+          clearTimeout(t);
+          const args = arguments;
+          t = setTimeout(function () { fn.apply(null, args); }, delay);
+        };
+      }
+
+      function filterTable() {
+        const q = (input.value || '').trim().toLowerCase();
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        let absen = 1;
+
+        rows.forEach(tr => {
+          const tds = tr.querySelectorAll('td');
+          // baris "Tidak ada data." punya colspan, lewati dari filter & renumber
+          if (tds.length < 2) return;
+
+          const nama = (tds[2].textContent || '').toLowerCase(); // kolom Nama (index 2)
+          const match = !q || nama.includes(q);
+
+          tr.style.display = match ? '' : 'none';
+          if (match) {
+            tds[1].textContent = absen++; // kolom Absen (index 1)
+          }
+        });
+      }
+
+      const liveFilter = debounce(filterTable, 120);
+
+      if (input) {
+        input.addEventListener('input', liveFilter);  // langsung filter saat ketik
+      }
+      if (btn) {
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          filterTable();
+          if (input) input.focus();
+        });
+      }
+
+      // normalisasi penomoran saat pertama load
+      filterTable();
+    })();
+  </script>
+
   <style>
     @media (max-width: 768px) {
       .top-bar { flex-direction: column !important; align-items: center !important; text-align: center; }
-      .filter-group { justify-content: center !important; margin-top: 5px; }
       .action-buttons { justify-content: center !important; margin-top: 10px; }
     }
   </style>
 
   <?php include '../../includes/footer.php'; ?>
+</body>

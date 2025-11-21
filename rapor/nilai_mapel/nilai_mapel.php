@@ -20,7 +20,11 @@ if ($id_mapel <= 0) {
 
 // Ambil daftar semester
 $semester_list = [];
-$qSem = $koneksi->query("SELECT id_semester, COALESCE(nama_semester, CONCAT('Semester ', id_semester)) AS nama_semester FROM semester ORDER BY id_semester ASC");
+$qSem = $koneksi->query("
+  SELECT id_semester, COALESCE(nama_semester, CONCAT('Semester ', id_semester)) AS nama_semester 
+  FROM semester 
+  ORDER BY id_semester ASC
+");
 while ($row = $qSem->fetch_assoc()) $semester_list[] = $row;
 $qSem->close();
 
@@ -38,11 +42,98 @@ $resMap = $qMap->get_result()->fetch_assoc();
 if ($resMap) $mapel_nama = $resMap['nama_mata_pelajaran'];
 $qMap->close();
 
-// ===== INTI PERBAIKAN JEJAK =====
-// 1) Pakai INNER JOIN agar hanya siswa yang punya baris nilai ditampilkan.
-// 2) Tambah GROUP BY untuk berjaga-jaga jika dulu sempat ada duplikat baris nilai.
+/* ============================
+ * FLAG NOTIFIKASI (ADD / EDIT / DELETE / IMPORT)
+ * ============================ */
+
+// Baca pola utama ?msg=
+$status = $_GET['msg'] ?? '';
+
+// Tambahan: kalau file lain pakai ?add_success=1, ?edit_success=1, ?delete_success=1
+if ($status === '') {
+  if (isset($_GET['add_success'])) {
+    $status = 'add_success';
+  } elseif (isset($_GET['edit_success'])) {
+    $status = 'edit_success';
+  } elseif (isset($_GET['delete_success'])) {
+    $status = 'delete_success';
+  }
+}
+
+// Flag import
+$import_ok = isset($_GET['import_ok']) ? (int)$_GET['import_ok'] : 0;
+$okCount   = isset($_GET['ok'])     ? (int)$_GET['ok']     : 0;
+$updCount  = isset($_GET['update']) ? (int)$_GET['update'] : 0;
+$skipCount = isset($_GET['skip'])   ? (int)$_GET['skip']   : 0;
+$errCount  = isset($_GET['err'])    ? (int)$_GET['err']    : 0;
+
+// Jika ada import_ok=1, override status khusus import
+if ($import_ok === 1) {
+  $status = 'import_success';
+}
+
+/* ============================
+ * BULK DELETE
+ * ============================ */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aksi']) && $_POST['aksi'] === 'bulk_delete') {
+  $ids = isset($_POST['ids']) && is_array($_POST['ids']) ? array_map('intval', $_POST['ids']) : [];
+
+  if (!empty($ids)) {
+    $marks = implode(',', array_fill(0, count($ids), '?'));
+    $types = str_repeat('i', count($ids));   // untuk id_siswa
+
+    $sqlDel = "DELETE FROM nilai_mata_pelajaran 
+               WHERE id_siswa IN ($marks) AND id_mata_pelajaran = ? AND id_semester = ?";
+    $stmt = $koneksi->prepare($sqlDel);
+
+    // tambahkan 2 parameter lagi (id_mapel & id_semester)
+    $types .= 'ii';
+    $params = $ids;          // mulai dari array id_siswa
+    $params[] = $id_mapel;   // tambahkan id_mapel
+    $params[] = $id_semester;// tambahkan id_semester
+
+    // unpack sekali saja, dan di akhir
+    $stmt->bind_param($types, ...$params);
+    $stmt->execute();
+    $stmt->close();
+  }
+
+  header("Location: nilai_mapel.php?id=$id_mapel&id_semester=$id_semester&msg=delete_success");
+  exit;
+}
+
+/* ============================
+ * PAGINATION
+ * ============================ */
+$perPage = isset($_GET['per']) ? (int)$_GET['per'] : 10;
+if ($perPage < 1 || $perPage > 100) $perPage = 10;
+
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($page < 1) $page = 1;
+
+// Hitung total baris
+$sqlCount = "
+  SELECT COUNT(*) AS jml
+  FROM nilai_mata_pelajaran n
+  INNER JOIN siswa s ON s.id_siswa = n.id_siswa
+  WHERE n.id_mata_pelajaran = ? AND n.id_semester = ?
+";
+$stmtCount = $koneksi->prepare($sqlCount);
+$stmtCount->bind_param('ii', $id_mapel, $id_semester);
+$stmtCount->execute();
+$totalRows = (int)$stmtCount->get_result()->fetch_assoc()['jml'];
+$stmtCount->close();
+
+$totalPages = $totalRows > 0 ? (int)ceil($totalRows / $perPage) : 1;
+if ($page > $totalPages) $page = $totalPages;
+
+$offset = ($page - 1) * $perPage;
+
+/* ============================
+ * AMBIL DATA NILAI (LIMIT/OFFSET)
+ * ============================ */
 $rows = [];
-$sql = "
+$sqlData = "
   SELECT 
     s.id_siswa,
     s.nama_siswa,
@@ -65,8 +156,9 @@ $sql = "
     n.tp1_lm4, n.tp2_lm4, n.tp3_lm4, n.tp4_lm4, n.sumatif_lm4,
     n.sumatif_tengah_semester
   ORDER BY (s.no_absen_siswa + 0), s.nama_siswa
+  LIMIT $perPage OFFSET $offset
 ";
-$q = $koneksi->prepare($sql);
+$q = $koneksi->prepare($sqlData);
 $q->bind_param('ii', $id_mapel, $id_semester);
 $q->execute();
 $res = $q->get_result();
@@ -83,13 +175,15 @@ $q->close();
   <div class="cards row" style="margin-top:-50px;">
     <div class="col-12">
       <div class="card shadow-sm" style="border-radius:15px;">
+
+        <!-- JUDUL -->
         <div class="mt-0 d-flex align-items-center flex-wrap mb-0 p-3 top-bar">
           <h5 class="mb-1 fw-semibold fs-4 text-center">
             Nilai Mata Pelajaran - <?= safe($mapel_nama); ?>
           </h5>
         </div>
 
-        <!-- Bagian atas (tampilan asli dipertahankan) -->
+        <!-- BAR ATAS (filter & tombol) -->
         <div class="ms-3 me-3 bg-white d-flex justify-content-between align-items-center flex-wrap p-3 gap-3 rounded shadow-sm">
           <!-- dropdown semester tersembunyi (tidak ubah tampilan) -->
           <form method="get" style="display:none">
@@ -104,7 +198,7 @@ $q->close();
           </form>
 
           <div class="d-flex align-items-center gap-2">
-            <label for="selectKelas" class="fw-semibold">Kelas:</label>
+            <label for="selectKelas" class="fw-semibold mb-0">Kelas:</label>
             <select id="selectKelas" class="form-select form-select-sm" style="width: 180px;">
               <option value="">-- Pilih Kelas --</option>
               <option value="X">X</option>
@@ -140,81 +234,176 @@ $q->close();
               class="btn btn-success btn-sm d-flex align-items-center gap-2">
               <i class="fa-solid fa-file-excel"></i><span>Export</span>
             </a>
-            </a>
           </div>
         </div>
 
-        <!-- Tabel nilai (tampilan sama) -->
+        <!-- ALERT (di bawah bar putih, mirip data_absensi) -->
+        <div id="alertArea">
+          <?php if ($status === 'add_success'): ?>
+            <div class="alert alert-success mx-3 mt-3 mb-0 alert-dismissible fade show" role="alert">
+              Data nilai siswa berhasil <strong>ditambahkan</strong>.
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+          <?php elseif ($status === 'edit_success'): ?>
+            <div class="alert alert-success mx-3 mt-3 mb-0 alert-dismissible fade show" role="alert">
+              Data nilai siswa berhasil <strong>diperbarui</strong>.
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+          <?php elseif ($status === 'delete_success'): ?>
+            <div class="alert alert-danger mx-3 mt-3 mb-0 alert-dismissible fade show" role="alert">
+              Data nilai siswa berhasil <strong>dihapus</strong>.
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+          <?php elseif ($status === 'import_success'): ?>
+            <?php
+              $detail = [];
+              if ($okCount   > 0) $detail[] = $okCount   . ' baris baru';
+              if ($updCount  > 0) $detail[] = $updCount  . ' baris diperbarui';
+              if ($skipCount > 0) $detail[] = $skipCount . ' baris dilewati';
+              if ($errCount  > 0) $detail[] = $errCount  . ' baris error';
+              $textDetail = $detail ? ' ('.implode(', ', $detail).')' : '';
+              $alertClassImport = $errCount > 0 ? 'alert-danger' : 'alert-success';
+            ?>
+            <div class="alert <?= $alertClassImport ?> mx-3 mt-3 mb-0 alert-dismissible fade show" role="alert">
+              Import nilai selesai<?= safe($textDetail) ?>.
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          <?php endif; ?>
+        </div>
+
+        <!-- Tabel nilai -->
         <div class="card-body">
           <div class="table-responsive">
-            <table id="nilaiTable" class="table table-bordered text-center align-middle">
-              <thead style="background-color:#1d52a2" class="text-white">
-                <tr>
-                  <th rowspan="3">NO.</th>
-                  <th rowspan="3">NAMA</th>
-                  <th colspan="16">FORMATIF</th>
-                  <th colspan="4">SUMATIF</th>
-                  <th rowspan="3">SUMATIF<br>TENGAH<br>SEMESTER</th>
-                  <th rowspan="3">AKSI</th>
-                </tr>
-                <tr>
-                  <th colspan="4">LINGKUP MATERI 1</th>
-                  <th colspan="4">LINGKUP MATERI 2</th>
-                  <th colspan="4">LINGKUP MATERI 3</th>
-                  <th colspan="4">LINGKUP MATERI 4</th>
-                  <th colspan="4">LINGKUP MATERI</th>
-                </tr>
-                <tr>
-                  <th>TP1</th><th>TP2</th><th>TP3</th><th>TP4</th>
-                  <th>TP1</th><th>TP2</th><th>TP3</th><th>TP4</th>
-                  <th>TP1</th><th>TP2</th><th>TP3</th><th>TP4</th>
-                  <th>TP1</th><th>TP2</th><th>TP3</th><th>TP4</th>
-                  <th>LM1</th><th>LM2</th><th>LM3</th><th>LM4</th>
-                </tr>
-              </thead>
-              <tbody id="nilaiBody">
-                <?php if (count($rows) === 0): ?>
-                  <tr><td colspan="24" class="text-center text-muted">Belum ada data nilai untuk semester ini.</td></tr>
-                <?php else: $no=1; foreach ($rows as $r): ?>
+            <form method="post" id="bulkForm">
+              <input type="hidden" name="aksi" value="bulk_delete">
+              <table id="nilaiTable" class="table table-bordered text-center align-middle">
+                <thead style="background-color:#1d52a2" class="text-white">
                   <tr>
-                    <td><?= $no++; ?></td>
-                    <td><?= safe($r['nama_siswa']); ?></td>
-                    <td><?= safe($r['tp1_lm1']); ?></td>
-                    <td><?= safe($r['tp2_lm1']); ?></td>
-                    <td><?= safe($r['tp3_lm1']); ?></td>
-                    <td><?= safe($r['tp4_lm1']); ?></td>
-                    <td><?= safe($r['tp1_lm2']); ?></td>
-                    <td><?= safe($r['tp2_lm2']); ?></td>
-                    <td><?= safe($r['tp3_lm2']); ?></td>
-                    <td><?= safe($r['tp4_lm2']); ?></td>
-                    <td><?= safe($r['tp1_lm3']); ?></td>
-                    <td><?= safe($r['tp2_lm3']); ?></td>
-                    <td><?= safe($r['tp3_lm3']); ?></td>
-                    <td><?= safe($r['tp4_lm3']); ?></td>
-                    <td><?= safe($r['tp1_lm4']); ?></td>
-                    <td><?= safe($r['tp2_lm4']); ?></td>
-                    <td><?= safe($r['tp3_lm4']); ?></td>
-                    <td><?= safe($r['tp4_lm4']); ?></td>
-                    <td><?= safe($r['sumatif_lm1']); ?></td>
-                    <td><?= safe($r['sumatif_lm2']); ?></td>
-                    <td><?= safe($r['sumatif_lm3']); ?></td>
-                    <td><?= safe($r['sumatif_lm4']); ?></td>
-                    <td><?= safe($r['sumatif_tengah_semester']); ?></td>
-                    <td>
-                      <a class="btn btn-warning btn-sm px-2 py-1" href="edit_nilai.php?id=<?= urlencode($id_mapel) ?>&id_semester=<?= urlencode($id_semester) ?>&id_siswa=<?= urlencode($r['id_siswa']) ?>">
-                        <i class="bi bi-pencil-square"></i> Edit
-                      </a>
-                      <a href="hapus_nilai.php?id_siswa=<?= urlencode($r['id_siswa']); ?>&id_mapel=<?= urlencode($id_mapel); ?>&id_semester=<?= urlencode($id_semester); ?>"
-                         class="btn btn-danger btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-2 py-1"
-                         onclick="return confirm('Yakin ingin menghapus nilai siswa ini?');">
-                        <i class="bi bi-trash"></i><span>Del</span>
-                      </a>
-                    </td>
+                    <th rowspan="3"><input type="checkbox" id="selectAll"></th>
+                    <th rowspan="3">NO.</th>
+                    <th rowspan="3">NAMA</th>
+                    <th colspan="16">FORMATIF</th>
+                    <th colspan="4">SUMATIF</th>
+                    <th rowspan="3">SUMATIF<br>TENGAH<br>SEMESTER</th>
+                    <th rowspan="3">AKSI</th>
                   </tr>
-                <?php endforeach; endif; ?>
-              </tbody>
-            </table>
+                  <tr>
+                    <th colspan="4">LINGKUP MATERI 1</th>
+                    <th colspan="4">LINGKUP MATERI 2</th>
+                    <th colspan="4">LINGKUP MATERI 3</th>
+                    <th colspan="4">LINGKUP MATERI 4</th>
+                    <th colspan="4">LINGKUP MATERI</th>
+                  </tr>
+                  <tr>
+                    <th>TP1</th><th>TP2</th><th>TP3</th><th>TP4</th>
+                    <th>TP1</th><th>TP2</th><th>TP3</th><th>TP4</th>
+                    <th>TP1</th><th>TP2</th><th>TP3</th><th>TP4</th>
+                    <th>TP1</th><th>TP2</th><th>TP3</th><th>TP4</th>
+                    <th>LM1</th><th>LM2</th><th>LM3</th><th>LM4</th>
+                  </tr>
+                </thead>
+                <tbody id="nilaiBody">
+                  <?php if (count($rows) === 0): ?>
+                    <tr><td colspan="25" class="text-center text-muted">Belum ada data nilai untuk semester ini.</td></tr>
+                  <?php else: 
+                    $no = $offset + 1;
+                    foreach ($rows as $r): ?>
+                    <tr>
+                      <td><input type="checkbox" class="row-check" name="ids[]" value="<?= $r['id_siswa'] ?>"></td>
+                      <td><?= $no++; ?></td>
+                      <td><?= safe($r['nama_siswa']); ?></td>
+                      <td><?= safe($r['tp1_lm1']); ?></td>
+                      <td><?= safe($r['tp2_lm1']); ?></td>
+                      <td><?= safe($r['tp3_lm1']); ?></td>
+                      <td><?= safe($r['tp4_lm1']); ?></td>
+                      <td><?= safe($r['tp1_lm2']); ?></td>
+                      <td><?= safe($r['tp2_lm2']); ?></td>
+                      <td><?= safe($r['tp3_lm2']); ?></td>
+                      <td><?= safe($r['tp4_lm2']); ?></td>
+                      <td><?= safe($r['tp1_lm3']); ?></td>
+                      <td><?= safe($r['tp2_lm3']); ?></td>
+                      <td><?= safe($r['tp3_lm3']); ?></td>
+                      <td><?= safe($r['tp4_lm3']); ?></td>
+                      <td><?= safe($r['tp1_lm4']); ?></td>
+                      <td><?= safe($r['tp2_lm4']); ?></td>
+                      <td><?= safe($r['tp3_lm4']); ?></td>
+                      <td><?= safe($r['tp4_lm4']); ?></td>
+                      <td><?= safe($r['sumatif_lm1']); ?></td>
+                      <td><?= safe($r['sumatif_lm2']); ?></td>
+                      <td><?= safe($r['sumatif_lm3']); ?></td>
+                      <td><?= safe($r['sumatif_lm4']); ?></td>
+                      <td><?= safe($r['sumatif_tengah_semester']); ?></td>
+                      <td>
+                        <a class="btn btn-warning btn-sm px-2 py-1" href="edit_nilai.php?id=<?= urlencode($id_mapel) ?>&id_semester=<?= urlencode($id_semester) ?>&id_siswa=<?= urlencode($r['id_siswa']) ?>">
+                          <i class="bi bi-pencil-square"></i> Edit
+                        </a>
+                        <a href="hapus_nilai.php?id_siswa=<?= urlencode($r['id_siswa']); ?>&id_mapel=<?= urlencode($id_mapel); ?>&id_semester=<?= urlencode($id_semester); ?>"
+                           class="btn btn-danger btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-2 py-1"
+                           onclick="return confirm('Yakin ingin menghapus nilai siswa ini?');">
+                          <i class="bi bi-trash"></i><span>Del</span>
+                        </a>
+                      </td>
+                    </tr>
+                  <?php endforeach; endif; ?>
+                </tbody>
+              </table>
+            </form>
           </div>
+
+          <!-- Tombol Hapus Terpilih -->
+          <div class="mt-2 d-flex justify-content-start">
+            <button id="deleteSelected" class="btn btn-danger btn-sm me-2" disabled>
+              <i class="bi bi-trash"></i> Hapus Terpilih
+            </button>
+          </div>
+
+          <!-- PAGINATION (DITENGAH) -->
+          <div class="mt-3 d-flex justify-content-center">
+            <div class="d-flex flex-column align-items-center text-center">
+              <nav aria-label="Page navigation">
+                <ul class="pagination pagination-sm mb-1">
+                  <?php
+                  // helper buat link
+                  function page_link($pageLabel, $pageNumber, $disabled, $id_mapel, $id_semester, $perPage) {
+                    $href  = $disabled ? '#' : "nilai_mapel.php?id={$id_mapel}&id_semester={$id_semester}&page={$pageNumber}&per={$perPage}";
+                    $class = 'page-item';
+                    if ($disabled) $class .= ' disabled';
+                    $active = ($pageLabel === (string)$pageNumber && !$disabled) ? ' active' : '';
+                    echo '<li class="'.$class.$active.'"><a class="page-link" href="'.$href.'">'.$pageLabel.'</a></li>';
+                  }
+
+                  $isFirst = ($page <= 1);
+                  $isLast  = ($page >= $totalPages);
+
+                  // First & Prev
+                  page_link('« First', 1, $isFirst, $id_mapel, $id_semester, $perPage);
+                  page_link('‹ Prev', max(1, $page-1), $isFirst, $id_mapel, $id_semester, $perPage);
+
+                  // Current page
+                  page_link((string)$page, $page, false, $id_mapel, $id_semester, $perPage);
+
+                  // Next & Last
+                  page_link('Next ›', min($totalPages, $page+1), $isLast, $id_mapel, $id_semester, $perPage);
+                  page_link('Last »', $totalPages, $isLast, $id_mapel, $id_semester, $perPage);
+                  ?>
+                </ul>
+              </nav>
+              <small class="text-muted">
+                Menampilkan <?= count($rows); ?> dari <?= $totalRows; ?> data • Halaman <?= $page; ?> / <?= $totalPages; ?>
+              </small>
+            </div>
+          </div>
+
+          <!-- Tombol Back -->
+          <div class="mt-3 d-flex justify-content-start">
+            <a href="mapel.php" class="btn btn-danger px-4 py-2 d-flex align-items-center gap-2" style="border-radius: 6px;">
+              <i class="bi bi-arrow-left-circle"></i>Back
+            </a>
+          </div>
+
         </div>
 
       </div>
@@ -222,14 +411,13 @@ $q->close();
   </div>
 </main>
 
-<!-- ===== LIVE SEARCH TANPA ENTER (+ auto-renumber kolom NO.) ===== -->
+<!-- ===== LIVE SEARCH TANPA ENTER (+ auto-renumber kolom NO. di halaman aktif) ===== -->
 <script>
 (function () {
   const input = document.getElementById('searchInput');
   const btn   = document.getElementById('searchBtn');
   const body  = document.getElementById('nilaiBody');
 
-  // Debounce agar halus saat mengetik cepat
   const debounce = (fn, delay = 120) => {
     let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), delay); };
   };
@@ -241,15 +429,14 @@ $q->close();
 
     rows.forEach(tr => {
       const tds = tr.querySelectorAll('td');
-      // Baris placeholder "Belum ada data..." hanya punya 1 kolom → lewati dari filter & renumber
-      if (tds.length < 2) return;
+      if (tds.length < 3) return; // baris placeholder
 
-      const nama = (tds[1].textContent || '').toLowerCase(); // kolom NAMA
+      const nama = (tds[2].textContent || '').toLowerCase(); // kolom NAMA (setelah checkbox & NO)
       const match = !q || nama.includes(q);
       tr.style.display = match ? '' : 'none';
       if (match) {
         visible++;
-        tds[0].textContent = visible; // kolom NO.
+        tds[1].textContent = visible; // kolom NO. di halaman aktif
       }
     });
   }
@@ -260,6 +447,59 @@ $q->close();
   // Normalisasi penomoran awal
   filter();
 })();
+</script>
+
+<!-- AUTO HIDE ALERT 5 DETIK -->
+<script>
+  window.addEventListener('DOMContentLoaded', function () {
+    const alerts = document.querySelectorAll('#alertArea .alert');
+    if (!alerts.length) return;
+    setTimeout(() => {
+      alerts.forEach(a => {
+        a.style.transition = 'opacity 0.5s ease';
+        a.style.opacity = '0';
+        setTimeout(() => { if (a.parentNode) a.parentNode.remove(); }, 600);
+      });
+    }, 5000); // 5 detik
+  });
+</script>
+
+<!-- SCRIPT CHECKBOX / BULK -->
+<script>
+  const selectAll = document.getElementById('selectAll');
+  const deleteBtn = document.getElementById('deleteSelected');
+  const bulkForm  = document.getElementById('bulkForm');
+
+  function toggleDeleteButton() {
+    const any = [...document.querySelectorAll('.row-check')].some(c => c.checked);
+    if (deleteBtn) deleteBtn.disabled = !any;
+  }
+
+  if (selectAll) {
+    selectAll.addEventListener('change', function () {
+      document.querySelectorAll('.row-check').forEach(chk => chk.checked = this.checked);
+      toggleDeleteButton();
+    });
+  }
+
+  document.addEventListener('change', (e) => {
+    if (e.target.classList.contains('row-check')) {
+      const all = [...document.querySelectorAll('.row-check')];
+      if (selectAll) {
+        selectAll.checked = all.length > 0 && all.every(c => c.checked);
+      }
+      toggleDeleteButton();
+    }
+  });
+
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', function () {
+      if (this.disabled) return;
+      if (confirm('Yakin ingin menghapus nilai terpilih?')) {
+        bulkForm.submit();
+      }
+    });
+  }
 </script>
 
 <?php include '../../includes/footer.php'; ?>
