@@ -15,6 +15,37 @@ $csrf = $_SESSION['csrf'];
 $search = isset($_GET['q']) ? trim($_GET['q']) : '';
 $like   = "%{$search}%";
 
+// Pagination server-side (untuk tampilan awal sebelum AJAX)
+$allowedPer = [10, 20, 50, 100];
+$perPage    = isset($_GET['per']) ? (int)$_GET['per'] : 10;
+if (!in_array($perPage, $allowedPer, true)) {
+  $perPage = 10;
+}
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($page < 1) $page = 1;
+
+// Hitung total data
+$countSql = "
+  SELECT COUNT(*) AS total
+  FROM user u
+  LEFT JOIN guru g ON g.id_guru = u.id_guru
+  WHERE u.username LIKE ?
+     OR COALESCE(g.nama_guru,'') LIKE ?
+";
+$stmtCount = mysqli_prepare($koneksi, $countSql);
+mysqli_stmt_bind_param($stmtCount, 'ss', $like, $like);
+mysqli_stmt_execute($stmtCount);
+$resCount  = mysqli_stmt_get_result($stmtCount);
+$rowCount  = mysqli_fetch_assoc($resCount);
+$totalRows = (int)($rowCount['total'] ?? 0);
+
+$totalPages = max(1, (int)ceil($totalRows / $perPage));
+if ($page > $totalPages) {
+  $page = $totalPages;
+}
+$offset = ($page - 1) * $perPage;
+
+// Ambil data user untuk halaman awal
 $sql = "
   SELECT 
     u.id_user, 
@@ -28,11 +59,27 @@ $sql = "
   WHERE u.username LIKE ?
      OR COALESCE(g.nama_guru,'') LIKE ?
   ORDER BY u.id_user DESC
+  LIMIT ? OFFSET ?
 ";
 $stmt = mysqli_prepare($koneksi, $sql);
-mysqli_stmt_bind_param($stmt, 'ss', $like, $like);
+mysqli_stmt_bind_param($stmt, 'ssii', $like, $like, $perPage, $offset);
 mysqli_stmt_execute($stmt);
 $result = mysqli_stmt_get_result($stmt);
+
+// Hitung info awal
+if ($totalRows === 0) {
+  $from = 0;
+  $to   = 0;
+  $shown = 0;
+  $pageDisplayCurrent = 0;
+  $pageDisplayTotal   = 0;
+} else {
+  $from = $offset + 1;
+  $to   = min($offset + $perPage, $totalRows);
+  $shown = $to - $from + 1;
+  $pageDisplayCurrent = $page;
+  $pageDisplayTotal   = $totalPages;
+}
 ?>
 <style>
   :root {
@@ -126,11 +173,7 @@ $result = mysqli_stmt_get_result($stmt);
     font-family: monospace;
   }
 
-  /* =======================
-     BUTTON & HOVER
-     ======================= */
-
-  /* Tombol biru brand (Tambah User, Simpan, dll) */
+  /* Tombol & hover */
   .btn-brand {
     background: #0a4db3 !important;
     border-color: #0a4db3 !important;
@@ -143,7 +186,6 @@ $result = mysqli_stmt_get_result($stmt);
     border-color: #083f93 !important;
   }
 
-  /* Tombol Edit (kuning) */
   .btn-warning {
     background: #f0ad4e !important;
     border-color: #eea236 !important;
@@ -156,7 +198,6 @@ $result = mysqli_stmt_get_result($stmt);
     color: #fff !important;
   }
 
-  /* Tombol Hapus (merah) */
   .btn-danger {
     background: #d9534f !important;
     border-color: #d43f3a !important;
@@ -169,7 +210,6 @@ $result = mysqli_stmt_get_result($stmt);
     color: #fff !important;
   }
 
-  /* Tombol outline abu (Batal, dsb) */
   .btn-outline-secondary {
     border-color: #6c757d !important;
     color: #6c757d !important;
@@ -181,7 +221,6 @@ $result = mysqli_stmt_get_result($stmt);
     color: #333 !important;
   }
 
-  /* Tombol toggle password */
   .toggle-password {
     padding: 4px 8px !important;
   }
@@ -189,6 +228,25 @@ $result = mysqli_stmt_get_result($stmt);
   .toggle-password:hover {
     background: #dfe3e6 !important;
     color: #333 !important;
+  }
+
+  /* Styling dropdown per halaman supaya mirip searchbox */
+  #perPage {
+    border: 1px solid var(--ring);
+    border-radius: 10px;
+    padding: 6px 30px;
+    font-size: 14px;
+    color: var(--ink);
+    background-color: #fff;
+  }
+
+  #perPage:focus {
+    box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
+    border-color: var(--brand);
+  }
+
+  .page-info-text {
+    font-size: 0.95rem;
   }
 
   /* Mobile “card table” */
@@ -231,6 +289,15 @@ $result = mysqli_stmt_get_result($stmt);
       width: 100%;
       margin-top: 6px;
     }
+
+    .search-perpage-row {
+      flex-direction: column;
+      align-items: stretch !important;
+    }
+  }
+
+  .searchbox:focus-within {
+    box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
   }
 </style>
 
@@ -239,23 +306,42 @@ $result = mysqli_stmt_get_result($stmt);
     <div class="col-12">
       <div class="card shadow-sm">
 
-        <div class="top-bar p-3 p-md-4 d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between">
-          <div class="d-flex flex-column gap-2">
-            <h5 class="page-title mb-1 fw-bold fs-4">Data User</h5>
+        <!-- TOP BAR: judul, search + perPage + Tambah User satu baris -->
+        <div class="top-bar p-3 p-md-4">
+          <div class="d-flex flex-column gap-3 w-100">
+            <div>
+              <h5 class="page-title mb-0 fw-bold fs-4">Data User</h5>
+            </div>
 
-            <div class="search-wrap">
-              <div class="searchbox" role="search" aria-label="Pencarian user">
-                <i class="bi bi-search icon"></i>
-                <input type="text" id="searchInput" placeholder="Ketik untuk mencari" autofocus>
+            <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-2">
+              <!-- Search + per page (kiri) -->
+              <div class="d-flex search-perpage-row align-items-md-center gap-2 flex-grow-1">
+                <div class="search-wrap flex-grow-1">
+                  <div class="searchbox" role="search" aria-label="Pencarian user">
+                    <i class="bi bi-search icon"></i>
+                    <input type="text" id="searchInput" placeholder="Ketik untuk mencari" autofocus>
+                  </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                  <select id="perPage" class="form-select form-select-sm" style="width:auto;">
+                    <?php foreach ($allowedPer as $opt): ?>
+                      <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>>
+                        <?= $opt ?>/hal
+                      </option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Tombol Tambah User (kanan), sejajar dengan search row -->
+              <div class="d-flex justify-content-md-end">
+                <a href="tambah_data_user.php"
+                  class="btn btn-brand btn-sm d-inline-flex align-items-center gap-2 px-3">
+                  <i class="bi bi-person-plus"></i> Tambah User
+                </a>
               </div>
             </div>
-          </div>
-
-          <div class="d-flex gap-2 flex-wrap mt-3 mt-md-0">
-            <a href="tambah_data_user.php"
-              class="btn btn-brand btn-sm d-inline-flex align-items-center gap-2 px-3">
-              <i class="bi bi-person-plus"></i> Tambah User
-            </a>
           </div>
         </div>
 
@@ -281,7 +367,7 @@ $result = mysqli_stmt_get_result($stmt);
                     <td colspan="7">Belum ada data</td>
                   </tr>
                   <?php else:
-                  $no = 1;
+                  $no = $offset + 1;
                   $rowClass = ($search !== '') ? 'highlight-row' : '';
                   while ($row = mysqli_fetch_assoc($result)): ?>
                     <tr class="<?= $rowClass; ?>">
@@ -335,13 +421,21 @@ $result = mysqli_stmt_get_result($stmt);
             </table>
           </div>
 
+          <!-- HAPUS TERPILIH -->
           <div class="mt-3 d-flex justify-content-start">
-            <button type="button"
-              id="bulkDeleteBtn"
+            <button type="button" id="bulkDeleteBtn"
               class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1"
               disabled>
               <i class="bi bi-trash3"></i> <span>Hapus Terpilih</span>
             </button>
+          </div>
+
+          <!-- Info & Pagination (TENGAH, DI BAWAH HAPUS TERPILIH) -->
+          <div class="mt-3 d-flex flex-column align-items-center gap-1">
+            <nav id="paginationWrap" class="d-flex justify-content-center"></nav>
+            <div id="pageInfo" class="page-info-text text-muted text-center">
+              Menampilkan <?= $shown ?> dari <?= $totalRows ?> data • Halaman <?= $pageDisplayCurrent ?> / <?= $pageDisplayTotal ?>
+            </div>
           </div>
         </div>
 
@@ -357,11 +451,19 @@ $result = mysqli_stmt_get_result($stmt);
 
     const checkAll = document.getElementById('checkAll');
     const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+    const perPageSelect = document.getElementById('perPage');
+    const paginationWrap = document.getElementById('paginationWrap');
+    const pageInfo = document.getElementById('pageInfo');
     const csrfToken = '<?= htmlspecialchars($csrf); ?>';
 
     let typingTimer;
     const debounceMs = 250;
     let currentController = null;
+
+    let currentQuery = '<?= htmlspecialchars($search, ENT_QUOTES, "UTF-8"); ?>';
+    let currentPage = <?= (int)$page ?>;
+    let currentPerPage = <?= (int)$perPage ?>;
+    let currentTotalRows = <?= (int)$totalRows ?>;
 
     function getRowCheckboxes() {
       return Array.from(document.querySelectorAll('.row-check'));
@@ -372,7 +474,7 @@ $result = mysqli_stmt_get_result($stmt);
       const total = boxes.length;
       const checked = boxes.filter(b => b.checked).length;
 
-      bulkDeleteBtn.disabled = checked === 0;
+      bulkDeleteBtn.disabled = (checked === 0);
 
       if (total === 0) {
         checkAll.checked = false;
@@ -397,7 +499,7 @@ $result = mysqli_stmt_get_result($stmt);
       updateBulkUI();
     }
 
-    // Toggle password (lihat / sembunyi)
+    // Toggle password di tabel
     function attachPasswordToggleEvents() {
       const buttons = tbody.querySelectorAll('.toggle-password');
       buttons.forEach(btn => {
@@ -427,6 +529,77 @@ $result = mysqli_stmt_get_result($stmt);
           }
         });
       });
+    }
+
+    // Build pagination UI ala « First • ‹ Prev • 1 • Next › • Last »
+    function buildPagination(totalRows, page, perPage) {
+      currentTotalRows = totalRows;
+      currentPage = page;
+      currentPerPage = perPage;
+
+      const totalPages = Math.max(1, Math.ceil(totalRows / perPage));
+      if (page > totalPages) page = totalPages;
+
+      let from, to, shown;
+      if (totalRows === 0) {
+        from = 0;
+        to = 0;
+        shown = 0;
+      } else {
+        from = (page - 1) * perPage + 1;
+        to = Math.min(page * perPage, totalRows);
+        shown = to - from + 1;
+      }
+
+      const pageDisplayCurrent = totalRows === 0 ? 0 : page;
+      const pageDisplayTotal = totalRows === 0 ? 0 : totalPages;
+      pageInfo.textContent = `Menampilkan ${shown} dari ${totalRows} data • Halaman ${pageDisplayCurrent} / ${pageDisplayTotal}`;
+
+      let html = '<ul class="pagination mb-0">'; // normal size (tanpa pagination-sm)
+
+      const isFirst = (page <= 1);
+      const isLast = (page >= totalPages);
+
+      // First
+      html += `<li class="page-item${isFirst ? ' disabled' : ''}">
+                 <button class="page-link page-btn" type="button" data-page="1">&laquo; First</button>
+               </li>`;
+
+      // Prev
+      html += `<li class="page-item${isFirst ? ' disabled' : ''}">
+                 <button class="page-link page-btn" type="button" data-page="${page - 1}">&lsaquo; Prev</button>
+               </li>`;
+
+      // Current page
+      html += `<li class="page-item active">
+                 <button class="page-link" type="button" data-page="${page}">${page}</button>
+               </li>`;
+
+      // Next
+      html += `<li class="page-item${isLast ? ' disabled' : ''}">
+                 <button class="page-link page-btn" type="button" data-page="${page + 1}">Next &rsaquo;</button>
+               </li>`;
+
+      // Last
+      html += `<li class="page-item${isLast ? ' disabled' : ''}">
+                 <button class="page-link page-btn" type="button" data-page="${totalPages}">Last &raquo;</button>
+               </li>`;
+
+      html += '</ul>';
+
+      paginationWrap.innerHTML = html;
+
+      paginationWrap.querySelectorAll('.page-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const target = parseInt(btn.getAttribute('data-page') || '1', 10);
+          if (isNaN(target) || target < 1 || target === currentPage) return;
+          doSearch(currentQuery, target, currentPerPage);
+        });
+      });
+
+      if (perPageSelect) {
+        perPageSelect.value = String(perPage);
+      }
     }
 
     checkAll.addEventListener('change', () => {
@@ -471,14 +644,18 @@ $result = mysqli_stmt_get_result($stmt);
       tbody.innerHTML = `<tr><td colspan="7">Sedang mencari…</td></tr>`;
     }
 
-    function doSearch(query) {
+    function doSearch(query, page, perPage) {
       setLoading();
       if (currentController) currentController.abort();
       currentController = new AbortController();
 
+      currentQuery = query || '';
       const params = new URLSearchParams({
-        q: query || ''
+        q: currentQuery,
+        page: page || 1,
+        per: perPage || currentPerPage || 10
       });
+
       fetch('ajax_user_list.php?' + params.toString(), {
           method: 'GET',
           signal: currentController.signal,
@@ -492,6 +669,20 @@ $result = mysqli_stmt_get_result($stmt);
         })
         .then(html => {
           tbody.innerHTML = html;
+
+          const metaRow = tbody.querySelector('.meta-row');
+          if (metaRow) {
+            const total = parseInt(metaRow.getAttribute('data-total') || '0', 10);
+            const pg = parseInt(metaRow.getAttribute('data-page') || '1', 10);
+            const pp = parseInt(metaRow.getAttribute('data-per') || String(currentPerPage), 10);
+            metaRow.parentNode.removeChild(metaRow);
+            buildPagination(
+              isNaN(total) ? 0 : total,
+              isNaN(pg) ? 1 : pg,
+              isNaN(pp) ? currentPerPage : pp
+            );
+          }
+
           attachCheckboxEvents();
           attachPasswordToggleEvents();
         })
@@ -504,12 +695,24 @@ $result = mysqli_stmt_get_result($stmt);
 
     input.addEventListener('input', () => {
       clearTimeout(typingTimer);
-      typingTimer = setTimeout(() => doSearch(input.value), debounceMs);
+      typingTimer = setTimeout(() => {
+        doSearch(input.value, 1, currentPerPage);
+      }, debounceMs);
     });
 
-    // Inisialisasi awal
+    if (perPageSelect) {
+      perPageSelect.addEventListener('change', () => {
+        const val = parseInt(perPageSelect.value || '10', 10);
+        if (isNaN(val) || val <= 0) return;
+        currentPerPage = val;
+        doSearch(currentQuery, 1, currentPerPage);
+      });
+    }
+
+    // Inisialisasi pertama kali (server-side data)
     attachCheckboxEvents();
     attachPasswordToggleEvents();
+    buildPagination(currentTotalRows, currentPage, currentPerPage);
   })();
 </script>
 

@@ -1,8 +1,40 @@
 <?php
 require_once '../koneksi.php';
+
 $search = isset($_GET['q']) ? trim($_GET['q']) : '';
 $like   = "%{$search}%";
 
+// Pagination params
+$allowedPer = [10, 20, 50, 100];
+$perPage    = isset($_GET['per']) ? (int)$_GET['per'] : 10;
+if (!in_array($perPage, $allowedPer, true)) {
+    $perPage = 10;
+}
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($page < 1) $page = 1;
+
+// Hitung total data untuk query ini
+$countSql = "
+  SELECT COUNT(*) AS total
+  FROM user u
+  LEFT JOIN guru g ON g.id_guru = u.id_guru
+  WHERE u.username LIKE ?
+     OR COALESCE(g.nama_guru,'') LIKE ?
+";
+$stmtCount = mysqli_prepare($koneksi, $countSql);
+mysqli_stmt_bind_param($stmtCount, 'ss', $like, $like);
+mysqli_stmt_execute($stmtCount);
+$resCount  = mysqli_stmt_get_result($stmtCount);
+$rowCount  = mysqli_fetch_assoc($resCount);
+$totalRows = (int)($rowCount['total'] ?? 0);
+
+$totalPages = max(1, (int)ceil($totalRows / $perPage));
+if ($page > $totalPages) {
+    $page = $totalPages;
+}
+$offset = ($page - 1) * $perPage;
+
+// Ambil data per halaman
 $sql = "
   SELECT 
     u.id_user, 
@@ -16,9 +48,10 @@ $sql = "
   WHERE u.username LIKE ?
      OR COALESCE(g.nama_guru,'') LIKE ?
   ORDER BY u.id_user DESC
+  LIMIT ? OFFSET ?
 ";
 $stmt = mysqli_prepare($koneksi, $sql);
-mysqli_stmt_bind_param($stmt, 'ss', $like, $like);
+mysqli_stmt_bind_param($stmt, 'ssii', $like, $like, $perPage, $offset);
 mysqli_stmt_execute($stmt);
 $result = mysqli_stmt_get_result($stmt);
 
@@ -38,13 +71,20 @@ echo '<style>
 }
 </style>';
 
+// baris meta untuk JS pagination (disembunyikan)
+echo '<tr class="meta-row" style="display:none" 
+        data-total="' . htmlspecialchars((string)$totalRows, ENT_QUOTES, 'UTF-8') . '" 
+        data-page="' . htmlspecialchars((string)$page, ENT_QUOTES, 'UTF-8') . '" 
+        data-per="' . htmlspecialchars((string)$perPage, ENT_QUOTES, 'UTF-8') . '">
+      </tr>';
+
 if (mysqli_num_rows($result) === 0): ?>
     <tr>
         <td colspan="7">Tidak ada data yang cocok.</td>
     </tr>
     <?php
 else:
-    $no = 1;
+    $no = $offset + 1;
     $rowClass = ($search !== '') ? 'highlight-row' : '';
     while ($row = mysqli_fetch_assoc($result)): ?>
         <tr class="<?= $rowClass; ?>">
