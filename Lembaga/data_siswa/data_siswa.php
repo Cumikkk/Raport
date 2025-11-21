@@ -31,20 +31,34 @@ $page    = max(1, $page);
 
 // ===== Hitung total =====
 if ($q !== '') {
+  // cari di nama, absen, nisn
   $sqlCount = "SELECT COUNT(*) AS total FROM siswa s 
                LEFT JOIN kelas k ON s.id_kelas = k.id_kelas 
-               WHERE s.nama_siswa LIKE CONCAT('%', ?, '%')";
+               $joinCrLatest
+               WHERE (s.nama_siswa LIKE CONCAT('%', ?, '%')
+                      OR s.no_absen_siswa LIKE CONCAT('%', ?, '%')
+                      OR s.no_induk_siswa LIKE CONCAT('%', ?, '%'))";
   $stmtC = $koneksi->prepare($sqlCount);
-  $stmtC->bind_param('s', $q);
+  if ($stmtC === false) {
+    die('Prepare failed: ' . $koneksi->error);
+  }
+  $stmtC->bind_param('sss', $q, $q, $q);
 } else {
-  $sqlCount = "SELECT COUNT(*) AS total FROM siswa s";
+  $sqlCount = "SELECT COUNT(*) AS total FROM siswa s
+               LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
+               $joinCrLatest";
   $stmtC = $koneksi->prepare($sqlCount);
+  if ($stmtC === false) {
+    die('Prepare failed: ' . $koneksi->error);
+  }
 }
 $stmtC->execute();
-$total = (int)$stmtC->get_result()->fetch_assoc()['total'];
+$totalRow = $stmtC->get_result()->fetch_assoc();
+$total = (int)($totalRow['total'] ?? 0);
 $totalPages = max(1, ceil($total / $perPage));
 $page = min($page, $totalPages);
 $offset = ($page - 1) * $perPage;
+$stmtC->close();
 
 // ===== Ambil data halaman ini =====
 if ($q !== '') {
@@ -52,11 +66,17 @@ if ($q !== '') {
           FROM siswa s
           LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
           $joinCrLatest
-          WHERE s.nama_siswa LIKE CONCAT('%', ?, '%')
+          WHERE (s.nama_siswa LIKE CONCAT('%', ?, '%')
+                 OR s.no_absen_siswa LIKE CONCAT('%', ?, '%')
+                 OR s.no_induk_siswa LIKE CONCAT('%', ?, '%'))
           ORDER BY s.no_absen_siswa ASC
           LIMIT ? OFFSET ?";
   $stmt = $koneksi->prepare($sql);
-  $stmt->bind_param('sii', $q, $perPage, $offset);
+  if ($stmt === false) {
+    die('Prepare failed: ' . $koneksi->error);
+  }
+  // tiga placeholder LIKE (s), lalu dua integer (i)
+  $stmt->bind_param('sssii', $q, $q, $q, $perPage, $offset);
 } else {
   $sql = "SELECT s.*, k.nama_kelas, cr.catatan_wali_kelas
           FROM siswa s
@@ -65,6 +85,9 @@ if ($q !== '') {
           ORDER BY s.no_absen_siswa ASC
           LIMIT ? OFFSET ?";
   $stmt = $koneksi->prepare($sql);
+  if ($stmt === false) {
+    die('Prepare failed: ' . $koneksi->error);
+  }
   $stmt->bind_param('ii', $perPage, $offset);
 }
 $stmt->execute();
@@ -99,6 +122,23 @@ include '../../includes/navbar.php';
   <div class="cards row" style="margin-top: -50px;">
     <div class="col-12">
       <div class="card shadow-sm" style="border-radius: 15px;">
+
+        <!-- NOTIF: tampil di atas kotak data jika redirect dari add_siswa -->
+        <div id="notifContainer">
+          <?php if (isset($_GET['msg']) && $_GET['msg'] === 'saved'): ?>
+            <div id="notifSaved" class="alert alert-success mx-3 mt-3">
+              Data siswa berhasil ditambahkan.
+            </div>
+            <script>
+              // auto-hide setelah 5 detik (server redirect case)
+              setTimeout(() => {
+                const n = document.getElementById('notifSaved');
+                if (n) n.style.display = 'none';
+              }, 5000);
+            </script>
+          <?php endif; ?>
+        </div>
+
         <div class="mt-0 d-flex flex-column flex-md-row align-items-md-center justify-content-between p-3 top-bar">
           <div class="d-flex flex-column align-items-md-start align-items-center text-md-start text-center mb-2 mb-md-0">
             <h5 class="mb-2 fw-semibold fs-4">Data Siswa</h5>
@@ -120,7 +160,7 @@ include '../../includes/navbar.php';
                   <?php
                   $kelasQuery = mysqli_query($koneksi, "SELECT * FROM kelas ORDER BY nama_kelas ASC");
                   while ($k = mysqli_fetch_assoc($kelasQuery)) {
-                    echo '<option value="'.$k['id_kelas'].'">'.$k['nama_kelas'].'</option>';
+                    echo '<option value="'.htmlspecialchars($k['id_kelas']).'">'.htmlspecialchars($k['nama_kelas']).'</option>';
                   }
                   ?>
                 </select>
@@ -129,9 +169,12 @@ include '../../includes/navbar.php';
           </div>
 
           <div class="d-flex gap-2 flex-wrap justify-content-md-end justify-content-center mt-3 mt-md-0 action-buttons">
-            <a href="tambah_siswa.php" class="btn btn-primary btn-sm d-flex align-items-center gap-1 px-3 fw-semibold">
+            <!-- tombol tambahkan: tetap tampil sama, akan membuka modal via JS -->
+            <button type="button" class="btn btn-primary btn-sm d-flex align-items-center gap-1 px-3 fw-semibold"
+                    id="openTambahModal">
               <i class="fa-solid fa-plus"></i> Tambah
-            </a>
+            </button>
+
             <a href="data_siswa_import.php" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
               <i class="fa-solid fa-file-arrow-down"></i> Import
             </a>
@@ -143,7 +186,7 @@ include '../../includes/navbar.php';
 
         <div class="card-body">
           <form id="searchForm" class="d-flex flex-wrap align-items-center gap-2 mb-2">
-            <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Masukan kata kunci" style="width:200px;">
+            <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Masukan kata kunci" style="width:200px;" value="<?= htmlspecialchars($q) ?>">
             <select id="perSelect" class="form-select form-select-sm" style="width:120px;">
               <?php foreach ([10, 20, 50, 100] as $opt): ?>
                 <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>><?= $opt ?>/hal</option>
@@ -170,16 +213,16 @@ include '../../includes/navbar.php';
                   $no = $offset + 1;
                   foreach ($rows as $data):
                   ?>
-                  <tr data-kelas="<?= $data['id_kelas'] ?>" data-tingkat="<?= htmlspecialchars($data['tingkat'] ?? '') ?>">
-                    <td class="text-center"><input type="checkbox" name="id_siswa[]" class="row-check" value="<?= $data['id_siswa'] ?>"></td>
-                    <td class="text-center"><?= $data['no_absen_siswa'] ?></td>
+                  <tr data-kelas="<?= htmlspecialchars($data['id_kelas']) ?>" data-tingkat="<?= htmlspecialchars($data['tingkat'] ?? '') ?>">
+                    <td class="text-center"><input type="checkbox" name="id_siswa[]" class="row-check" value="<?= (int)$data['id_siswa'] ?>"></td>
+                    <td class="text-center"><?= htmlspecialchars($data['no_absen_siswa']) ?></td>
                     <td><?= htmlspecialchars($data['nama_siswa']) ?></td>
                     <td class="text-center"><?= htmlspecialchars($data['no_induk_siswa']) ?></td>
                     <td class="text-center"><?= htmlspecialchars($data['nama_kelas'] ?? '-') ?></td>
                     <td><?= nl2br(htmlspecialchars($data['catatan_wali_kelas'] ?? '')) ?></td>
                     <td class="text-center">
-                      <a href="edit_siswa.php?id=<?= $data['id_siswa'] ?>" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square"></i> Edit</a>
-                      <a href="hapus_siswa.php?id=<?= $data['id_siswa'] ?>" onclick="return confirm('Yakin ingin menghapus data?');" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i> Del</a>
+                      <a href="edit_siswa.php?id=<?= (int)$data['id_siswa'] ?>" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square"></i> Edit</a>
+                      <a href="hapus_siswa.php?id=<?= (int)$data['id_siswa'] ?>" onclick="return confirm('Yakin ingin menghapus data?');" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i> Del</a>
                     </td>
                   </tr>
                   <?php endforeach; ?>
@@ -199,6 +242,59 @@ include '../../includes/navbar.php';
   </div>
 </main>
 
+<!-- ========================= -->
+<!-- MODAL: Tambah Siswa -->
+<!-- ========================= -->
+<div class="modal fade" id="modalTambahSiswa" tabindex="-1" aria-labelledby="modalTambahSiswaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalTambahSiswaLabel">Tambah Data Siswa</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <form id="formTambahSiswa" autocomplete="off">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nama Siswa</label>
+            <input type="text" name="nama_siswa" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">NISN</label>
+            <input type="text" name="no_induk_siswa" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Absen</label>
+            <input type="text" name="no_absen_siswa" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Kelas</label>
+            <select name="id_kelas" class="form-select" required>
+              <option value="" selected disabled>-- Pilih Kelas --</option>
+              <?php
+              // ambil ulang kelas untuk modal (safe)
+              $kelasQuery2 = mysqli_query($koneksi, "SELECT * FROM kelas ORDER BY nama_kelas ASC");
+              while ($kk = mysqli_fetch_assoc($kelasQuery2)) {
+                echo '<option value="'.htmlspecialchars($kk['id_kelas']).'">'.htmlspecialchars($kk['nama_kelas']).'</option>';
+              }
+              ?>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Catatan Wali Kelas</label>
+            <textarea name="catatan_wali_kelas" class="form-control" rows="3"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <?php include '../../includes/footer.php'; ?>
 
 <script>
@@ -211,10 +307,9 @@ include '../../includes/navbar.php';
   const deleteBtn = document.getElementById('deleteSelected');
   const selectAll = document.getElementById('selectAll');
   const formDelete = document.getElementById('formDeleteMultiple');
-  let currentPage = <?= $page ?>;
+  let currentPage = <?= (int)$page ?>;
   let typingTimer;
 
-  // ================== UTIL ==================
   function escapeHtml(str) {
     const div = document.createElement('div');
     div.innerText = str ?? '';
@@ -227,7 +322,6 @@ include '../../includes/navbar.php';
     return escapeHtml(text).replace(pattern, '<span class="highlight">$1</span>');
   }
 
-  // ================== RENDER TABLE ==================
   function renderRows(data, startNumber, keyword = '') {
     if (!data || data.length === 0) {
       tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Tidak ada data siswa.</td></tr>';
@@ -257,7 +351,6 @@ include '../../includes/navbar.php';
     }
     tbody.innerHTML = html;
 
-    // highlight baris yang cocok
     if (keyword) {
       const rows = tbody.querySelectorAll('tr');
       rows.forEach(row => {
@@ -270,18 +363,16 @@ include '../../includes/navbar.php';
       });
     }
 
-    // re-register event checkbox
     initCheckboxEvents();
   }
 
-  // ================== PAGINATION ==================
   function renderPagination(page, totalPages, total, showed, per) {
     const start = Math.max(1, page - 2);
     const end = Math.min(totalPages, page + 2);
     let html = '';
     const makeLi = (disabled, target, text, active = false) => {
       const cls = ['page-item', disabled ? 'disabled' : '', active ? 'active' : ''].filter(Boolean).join(' ');
-      const aAttr = disabled ? 'tabindex="-1"' : `data-page="${target}"`;
+      const aAttr = disabled ? 'tabindex=\"-1\"' : `data-page=\"${target}\"`;
       return `<li class="${cls}"><a class="page-link" href="#" ${aAttr}>${text}</a></li>`;
     };
     html += makeLi(page <= 1, 1, '« First');
@@ -300,7 +391,6 @@ include '../../includes/navbar.php';
     });
   }
 
-  // ================== AJAX ==================
   async function doSearch() {
     const q = input.value.trim();
     const per = Number(perSel.value || 10);
@@ -318,7 +408,6 @@ include '../../includes/navbar.php';
     }
   }
 
-  // ================== CHECKBOX & DELETE ==================
   function initCheckboxEvents() {
     const allCheckboxes = tbody.querySelectorAll('.row-check');
 
@@ -337,7 +426,6 @@ include '../../includes/navbar.php';
     });
   }
 
-  // konfirmasi sebelum submit
   formDelete.addEventListener('submit', function(e) {
     const checked = tbody.querySelectorAll('.row-check:checked').length;
     if (checked === 0) {
@@ -351,7 +439,6 @@ include '../../includes/navbar.php';
     }
   });
 
-  // ================== SEARCH INPUT ==================
   input.addEventListener('input', () => {
     clearTimeout(typingTimer);
     currentPage = 1;
@@ -361,6 +448,74 @@ include '../../includes/navbar.php';
 
   // jalankan pertama kali
   doSearch();
+
+  // ----------  MODAL: open handler ----------
+  document.addEventListener('DOMContentLoaded', function() {
+    const btnOpen = document.getElementById('openTambahModal');
+    const modalEl = document.getElementById('modalTambahSiswa');
+    if (btnOpen && modalEl && typeof bootstrap !== 'undefined') {
+      const modalInstance = new bootstrap.Modal(modalEl);
+      btnOpen.addEventListener('click', () => modalInstance.show());
+    }
+  });
+
+  // ----------  MODAL FORM SUBMIT (delegated, robust) ----------
+  document.addEventListener('submit', async function(e) {
+    if (e.target && e.target.id === 'formTambahSiswa') {
+      e.preventDefault();
+      const form = e.target;
+      const submitBtn = form.querySelector('button[type="submit"]') || form.querySelector('button.btn-success');
+      if (submitBtn) submitBtn.disabled = true;
+
+      try {
+        const fd = new FormData(form);
+        const resp = await fetch('tambah_siswa.php', { method: 'POST', body: fd });
+        const text = await resp.text();
+        let json;
+        try {
+          json = JSON.parse(text);
+        } catch (err) {
+          console.error('Response not JSON:', text);
+          alert('Terjadi kesalahan server. Cek console network dan PHP error log.');
+          if (submitBtn) submitBtn.disabled = false;
+          return;
+        }
+
+        if (json.status === 'success') {
+          // tampilkan notifikasi sementara di halaman (tanpa reload)
+          const notifWrap = document.getElementById('notifContainer');
+          if (notifWrap) {
+            const el = document.createElement('div');
+            el.className = 'alert alert-success mx-3 mt-3';
+            el.id = 'notifSavedAjax';
+            el.innerText = 'Data siswa berhasil ditambahkan.';
+            notifWrap.appendChild(el);
+            setTimeout(() => { if (el) el.remove(); }, 4000);
+          }
+
+          // tutup modal
+          const modalEl = document.getElementById('modalTambahSiswa');
+          const bsModal = bootstrap.Modal.getInstance(modalEl);
+          if (bsModal) bsModal.hide();
+
+          // bersihkan form
+          form.reset();
+
+          // reload data via AJAX (tetap pada halaman yang sama)
+          currentPage = 1;
+          doSearch();
+        } else {
+          alert('Gagal menyimpan: ' + (json.msg || 'unknown'));
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Terjadi kesalahan jaringan. Cek console.');
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+      }
+    }
+  });
+
 })();
 </script>
 
@@ -377,52 +532,16 @@ include '../../includes/navbar.php';
 .filter-container { display:flex; flex-direction:column; gap:10px; }
 .search-input { padding-right:30px; }
 
-/* ==== FIX PAGINATION RESPONSIVE ==== */
 @media (max-width: 768px) {
-  #pagination {
-    flex-wrap: wrap !important;
-    justify-content: center !important;
-    gap: 4px !important;
-    margin-top: 10px;
-  }
-  #pagination .page-link {
-    padding: 4px 8px;
-    font-size: 13px;
-  }
-  #pageInfo {
-    font-size: 13px;
-    margin-top: 5px;
-    white-space: normal;
-  }
-  nav[aria-label="Page navigation"] {
-    overflow: visible !important;
-    position: relative;
-    z-index: 10;
-  }
-  .table-responsive {
-    overflow-x: auto;
-    margin-bottom: 0 !important;
-  }
-  .top-bar{
-    flex-direction: column !important;
-    align-items: center !important;
-    text-align: center;
-  }
-  .filter-container{
-    width: 100%;
-    align-items: center !important;
-    margin-top: 10px;
-  }
-  .filter-group{
-    justify-content: center !important;
-    width: 100%;
-  }
-  .dk-select{
-    width: 100% !important;
-  }
-  .action-buttons{
-    justify-content: center !important;
-    margin-top: 10px;
-  }
+  #pagination { flex-wrap: wrap !important; justify-content: center !important; gap: 4px !important; margin-top: 10px; }
+  #pagination .page-link { padding: 4px 8px; font-size: 13px; }
+  #pageInfo { font-size: 13px; margin-top: 5px; white-space: normal; }
+  nav[aria-label="Page navigation"] { overflow: visible !important; position: relative; z-index: 10; }
+  .table-responsive { overflow-x: auto; margin-bottom: 0 !important; }
+  .top-bar{ flex-direction: column !important; align-items: center !important; text-align: center; }
+  .filter-container{ width: 100%; align-items: center !important; margin-top: 10px; }
+  .filter-group{ justify-content: center !important; width: 100%; }
+  .dk-select{ width: 100% !important; }
+  .action-buttons{ justify-content: center !important; margin-top: 10px; }
 }
 </style>

@@ -1,82 +1,51 @@
 <?php
-include '../../includes/header.php';
-include '../../includes/navbar.php';
+// tambah_siswa.php (backend only)
 include '../../koneksi.php';
 
-// Ambil daftar kelas untuk dropdown
-$kelasQuery = mysqli_query($koneksi, "SELECT * FROM kelas ORDER BY nama_kelas ASC");
+header('Content-Type: application/json; charset=utf-8');
 
-if ($_SERVER['REQUEST_METHOD'] == "POST") {
-
-  $nama     = mysqli_real_escape_string($koneksi, $_POST['nama_siswa']);
-  $nisn     = mysqli_real_escape_string($koneksi, $_POST['no_induk_siswa']);
-  $absen    = mysqli_real_escape_string($koneksi, $_POST['no_absen_siswa']);
-  $id_kelas = mysqli_real_escape_string($koneksi, $_POST['id_kelas']);
-  $catatan  = mysqli_real_escape_string($koneksi, $_POST['catatan_wali_kelas']);
-
-  mysqli_begin_transaction($koneksi);
-
-  try {
-    mysqli_query($koneksi, "
-      INSERT INTO siswa (nama_siswa, no_induk_siswa, no_absen_siswa, id_kelas)
-      VALUES ('$nama', '$nisn', '$absen', '$id_kelas')
-    ");
-    $id_siswa = mysqli_insert_id($koneksi);
-
-    mysqli_query($koneksi, "
-      INSERT INTO cetak_rapor (id_siswa, catatan_wali_kelas)
-      VALUES ('$id_siswa', '$catatan')
-    ");
-
-    mysqli_commit($koneksi);
-    echo "<script>alert('Data berhasil ditambahkan');window.location='data_siswa.php';</script>";
-  } catch (Exception $e) {
-    mysqli_rollback($koneksi);
-    echo "<script>alert('Gagal menambahkan data!');history.back();</script>";
-  }
+// hanya POST
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+  echo json_encode(['status' => 'error', 'msg' => 'method']);
+  exit;
 }
-?>
 
-<div class="dk-page" style="margin-top: 50px;">
-  <div class="dk-main">
-    <div class="dk-content-box">
-      <div class="container py-4">
-        <h4 class="fw-bold mb-4">Tambah Data Siswa</h4>
+// ambil input
+$nama     = trim($_POST['nama_siswa'] ?? '');
+$nisn     = trim($_POST['no_induk_siswa'] ?? '');
+$absen    = trim($_POST['no_absen_siswa'] ?? '');
+$id_kelas = trim($_POST['id_kelas'] ?? '');
+$catatan  = trim($_POST['catatan_wali_kelas'] ?? '');
 
-        <form method="POST">
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Nama Siswa</label>
-            <input type="text" name="nama_siswa" class="form-control" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-semibold">NISN</label>
-            <input type="text" name="no_induk_siswa" class="form-control" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Absen</label>
-            <input type="text" name="no_absen_siswa" class="form-control" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Kelas</label>
-            <select name="id_kelas" class="form-control" required>
-              <option value="" selected disabled>-- Pilih Kelas --</option>
-              <?php while ($k = mysqli_fetch_assoc($kelasQuery)): ?>
-                <option value="<?= $k['id_kelas']; ?>"><?= $k['nama_kelas']; ?></option>
-              <?php endwhile; ?>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Catatan Wali Kelas</label>
-            <textarea name="catatan_wali_kelas" class="form-control" rows="3"></textarea>
-          </div>
-          <div class="d-flex flex-wrap gap-2 justify-content-between">
-            <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> Simpan</button>
-            <a href="data_siswa.php" class="btn btn-danger"><i class="fas fa-times"></i> Batal</a>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-</div>
+if ($nama === '' || $nisn === '' || $absen === '' || $id_kelas === '') {
+  echo json_encode(['status' => 'error', 'msg' => 'valid']);
+  exit;
+}
 
-<?php include '../../includes/footer.php'; ?>
+mysqli_begin_transaction($koneksi);
+
+try {
+  $stmt = mysqli_prepare($koneksi, "INSERT INTO siswa (nama_siswa, no_induk_siswa, no_absen_siswa, id_kelas) VALUES (?, ?, ?, ?)");
+  if ($stmt === false) throw new Exception('prepare1: ' . $koneksi->error);
+  mysqli_stmt_bind_param($stmt, 'sssi', $nama, $nisn, $absen, $id_kelas);
+  mysqli_stmt_execute($stmt);
+  mysqli_stmt_close($stmt);
+
+  $id_siswa = mysqli_insert_id($koneksi);
+
+  $stmt2 = mysqli_prepare($koneksi, "INSERT INTO cetak_rapor (id_siswa, catatan_wali_kelas) VALUES (?, ?)");
+  if ($stmt2 === false) throw new Exception('prepare2: ' . $koneksi->error);
+  mysqli_stmt_bind_param($stmt2, 'is', $id_siswa, $catatan);
+  mysqli_stmt_execute($stmt2);
+  mysqli_stmt_close($stmt2);
+
+  mysqli_commit($koneksi);
+
+  echo json_encode(['status' => 'success']);
+  exit;
+} catch (Exception $e) {
+  mysqli_rollback($koneksi);
+  error_log('tambah_siswa error: ' . $e->getMessage());
+  echo json_encode(['status' => 'error', 'msg' => 'failed']);
+  exit;
+}
