@@ -62,12 +62,6 @@ $guruRes = mysqli_query($koneksi, "SELECT id_guru, nama_guru FROM guru ORDER BY 
         color: var(--ink);
     }
 
-    .hint {
-        font-size: 12px;
-        color: var(--muted);
-        margin-top: -2px;
-    }
-
     .form-control,
     .form-select {
         border: 1px solid var(--ring);
@@ -82,16 +76,27 @@ $guruRes = mysqli_query($koneksi, "SELECT id_guru, nama_guru FROM guru ORDER BY 
         border-color: var(--brand);
     }
 
+    /* Tombol & hover */
     .btn-brand {
-        background: var(--brand);
-        border-color: var(--brand);
-        color: #fff;
+        background: #0a4db3 !important;
+        border-color: #0a4db3 !important;
+        color: #fff !important;
         font-weight: 700;
     }
 
     .btn-brand:hover {
-        background: var(--brand-600);
-        border-color: var(--brand-600);
+        background: #083f93 !important;
+        border-color: #083f93 !important;
+    }
+
+    .btn-outline-secondary {
+        border-color: #6c757d !important;
+        color: #6c757d !important;
+    }
+
+    .btn-outline-secondary:hover {
+        background: #e9ecef !important;
+        color: #333 !important;
     }
 
     @media (max-width:900px) {
@@ -103,51 +108,67 @@ $guruRes = mysqli_query($koneksi, "SELECT id_guru, nama_guru FROM guru ORDER BY 
 
 <div class="form-wrapper">
     <div class="form-container">
-        <div class="d-flex align-items-center justify-content-between">
-            <h2 class="form-title h4 mb-0">Edit User</h2>
-            <a href="data_user.php" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Kembali</a>
-        </div>
+        <h2 class="form-title h4 mb-0">Edit User</h2>
         <hr class="mt-3 mb-3">
 
-        <form action="proses_edit_user.php" method="POST" autocomplete="off" novalidate>
+        <form action="proses_edit_user.php" method="POST" autocomplete="off">
             <input type="hidden" name="id_user" value="<?= (int)$user['id_user'] ?>">
 
             <div class="row g-3">
-                <div class="col-12 col-md-4">
+                <div class="col-12">
                     <label for="role">Role</label>
                     <select id="role" name="role" class="form-select" required>
+                        <option value="" disabled>-- Pilih Role --</option>
                         <option value="Admin" <?= $user['role_user'] === 'Admin' ? 'selected' : ''; ?>>Admin</option>
                         <option value="Guru" <?= $user['role_user'] === 'Guru'  ? 'selected' : ''; ?>>Guru</option>
                     </select>
                 </div>
 
-                <div class="col-12 col-md-8">
+                <div class="col-12">
                     <label for="id_guru">Pilih Guru</label>
-                    <select id="id_guru" name="id_guru" class="form-select">
-                        <option value="">-- Tanpa Guru --</option>
+                    <select id="id_guru" name="id_guru" class="form-select" required>
+                        <option value="" disabled <?= empty($user['id_guru']) ? 'selected' : ''; ?>>-- Pilih Guru --</option>
                         <?php while ($g = mysqli_fetch_assoc($guruRes)): ?>
-                            <option value="<?= (int)$g['id_guru'] ?>" <?= ((int)$user['id_guru'] === (int)$g['id_guru']) ? 'selected' : ''; ?>>
+                            <option value="<?= (int)$g['id_guru'] ?>"
+                                <?= ((int)$user['id_guru'] === (int)$g['id_guru']) ? 'selected' : ''; ?>>
                                 <?= htmlspecialchars($g['nama_guru']) ?>
                             </option>
                         <?php endwhile; ?>
                     </select>
                 </div>
 
-                <div class="col-12 col-md-6">
+                <div class="col-12">
                     <label for="username">Username</label>
-                    <input type="text" id="username" name="username" maxlength="50" class="form-control" required
+                    <input
+                        type="text"
+                        id="username"
+                        name="username"
+                        maxlength="50"
+                        class="form-control"
+                        required
                         value="<?= htmlspecialchars($user['username']) ?>">
                 </div>
 
-                <div class="col-12 col-md-6">
+                <div class="col-12">
                     <label for="password_user">Password (opsional)</label>
-                    <input type="password" id="password_user" name="password_user" class="form-control">
+                    <input
+                        type="password"
+                        id="password_user"
+                        name="password_user"
+                        class="form-control"
+                        placeholder="Kosongkan jika tidak ingin mengubah password">
                 </div>
             </div>
 
             <div class="d-grid d-sm-flex gap-2 mt-4">
-                <button type="submit" class="btn btn-brand px-4"><i class="bi bi-save"></i> Simpan Perubahan</button>
-                <a href="data_user.php" class="btn btn-outline-secondary px-4">Batal</a>
+                <button type="submit"
+                    class="btn btn-brand px-4 d-inline-flex align-items-center gap-2">
+                    <i class="bi bi-save"></i> Simpan Perubahan
+                </button>
+                <a href="data_user.php"
+                    class="btn btn-outline-secondary px-4 d-inline-flex align-items-center gap-2">
+                    <i class="bi bi-x-lg"></i> Batal
+                </a>
             </div>
         </form>
     </div>
