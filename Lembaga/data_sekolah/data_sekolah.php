@@ -205,12 +205,12 @@ $data = $res->fetch_assoc() ?: [];
     /* Tombol X di alert */
     .alert .close-btn {
       position: absolute;
-      top: 6px;
-      right: 10px;
+      top: 14px;
+      right: 14px;
       font-weight: 700;
       cursor: pointer;
       opacity: 0.6;
-      font-size: 16px;
+      font-size: 18px;
       line-height: 1;
     }
 

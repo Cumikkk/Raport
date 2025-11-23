@@ -40,8 +40,13 @@ if ($id_guru === null) {
 }
 
 $ok = mysqli_stmt_execute($stmt);
+
 if ($ok) {
-    echo "<script>alert('User berhasil ditambahkan'); window.location.href='data_user.php';</script>";
+    $msg = urlencode('User berhasil ditambahkan.');
+    header("Location: data_user.php?status=success&msg={$msg}");
+    exit;
 } else {
-    echo "<script>alert('Gagal menambahkan user: " . htmlspecialchars(mysqli_error($koneksi)) . "'); history.back();</script>";
+    $msg = urlencode('Gagal menambahkan user: ' . mysqli_error($koneksi));
+    header("Location: data_user.php?status=error&msg={$msg}");
+    exit;
 }

@@ -52,8 +52,13 @@ if ($passwordRaw !== '') {
 }
 
 $ok = mysqli_stmt_execute($stmt);
+
 if ($ok) {
-    echo "<script>alert('Perubahan disimpan'); window.location.href='data_user.php';</script>";
+    $msg = urlencode('Perubahan user berhasil disimpan.');
+    header("Location: data_user.php?status=success&msg={$msg}");
+    exit;
 } else {
-    echo "<script>alert('Gagal menyimpan perubahan: " . htmlspecialchars(mysqli_error($koneksi)) . "'); history.back();</script>";
+    $msg = urlencode('Gagal menyimpan perubahan: ' . mysqli_error($koneksi));
+    header("Location: data_user.php?status=error&msg={$msg}");
+    exit;
 }

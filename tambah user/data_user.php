@@ -66,6 +66,13 @@ mysqli_stmt_bind_param($stmt, 'ssii', $like, $like, $perPage, $offset);
 mysqli_stmt_execute($stmt);
 $result = mysqli_stmt_get_result($stmt);
 
+// Ambil daftar guru untuk modal tambah & edit
+$guruList = [];
+$guruRes = mysqli_query($koneksi, "SELECT id_guru, nama_guru FROM guru ORDER BY nama_guru ASC");
+while ($g = mysqli_fetch_assoc($guruRes)) {
+  $guruList[] = $g;
+}
+
 // Hitung info awal
 if ($totalRows === 0) {
   $from = 0;
@@ -93,6 +100,9 @@ if ($totalRows === 0) {
     --thead: #0a4db3;
     --thead-text: #ffffff;
     --card-radius: 14px;
+    --success: #16a34a;
+    --warn: #f59e0b;
+    --danger: #dc2626;
   }
 
   .content {
@@ -245,8 +255,62 @@ if ($totalRows === 0) {
     border-color: var(--brand);
   }
 
-  .page-info-text {
+  .page-info-text strong {
     font-size: 0.95rem;
+  }
+
+  /* ALERT – sama seperti di halaman Data Sekolah */
+  .alert {
+    padding: 12px 14px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    transition:
+      opacity 0.4s ease,
+      transform 0.4s ease,
+      max-height 0.4s ease,
+      margin 0.4s ease,
+      padding-top 0.4s ease,
+      padding-bottom 0.4s ease;
+    max-height: 200px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .alert-success {
+    background: #e8f8ee;
+    border: 1px solid #c8efd9;
+    color: #166534;
+  }
+
+  .alert-danger {
+    background: #fdecec;
+    border: 1px solid #f5c2c2;
+    color: #991b1b;
+  }
+
+  .alert-hide {
+    opacity: 0;
+    transform: translateY(-4px);
+    max-height: 0;
+    margin: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .alert .close-btn {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    opacity: 0.6;
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .alert .close-btn:hover {
+    opacity: 1;
   }
 
   /* Mobile “card table” */
@@ -304,9 +368,25 @@ if ($totalRows === 0) {
 <main class="content">
   <div class="row g-3">
     <div class="col-12">
+
+      <!-- ALERT DI LUAR CARD, DI ATAS DATA USER -->
+      <?php if (isset($_GET['status'])): ?>
+        <?php if ($_GET['status'] === 'success'): ?>
+          <div class="alert alert-success">
+            <span class="close-btn">&times;</span>
+            ✅ <?= htmlspecialchars($_GET['msg'] ?? 'Operasi berhasil.', ENT_QUOTES, 'UTF-8'); ?>
+          </div>
+        <?php else: ?>
+          <div class="alert alert-danger">
+            <span class="close-btn">&times;</span>
+            ❌ <?= htmlspecialchars($_GET['msg'] ?? 'Terjadi kesalahan.', ENT_QUOTES, 'UTF-8'); ?>
+          </div>
+        <?php endif; ?>
+      <?php endif; ?>
+
       <div class="card shadow-sm">
 
-        <!-- TOP BAR: judul, search + perPage + Tambah User satu baris -->
+        <!-- TOP BAR -->
         <div class="top-bar p-3 p-md-4">
           <div class="d-flex flex-column gap-3 w-100">
             <div>
@@ -314,7 +394,7 @@ if ($totalRows === 0) {
             </div>
 
             <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-2">
-              <!-- Search + per page (kiri) -->
+              <!-- Search + per page -->
               <div class="d-flex search-perpage-row align-items-md-center gap-2 flex-grow-1">
                 <div class="search-wrap flex-grow-1">
                   <div class="searchbox" role="search" aria-label="Pencarian user">
@@ -334,12 +414,14 @@ if ($totalRows === 0) {
                 </div>
               </div>
 
-              <!-- Tombol Tambah User (kanan), sejajar dengan search row -->
+              <!-- Tombol Tambah User -> modal -->
               <div class="d-flex justify-content-md-end">
-                <a href="tambah_data_user.php"
-                  class="btn btn-brand btn-sm d-inline-flex align-items-center gap-2 px-3">
+                <button type="button"
+                  class="btn btn-brand btn-sm d-inline-flex align-items-center gap-2 px-3"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalTambahUser">
                   <i class="bi bi-person-plus"></i> Tambah User
-                </a>
+                </button>
               </div>
             </div>
           </div>
@@ -403,15 +485,23 @@ if ($totalRows === 0) {
                       </td>
                       <td data-label="Aksi">
                         <div class="d-flex gap-2 justify-content-center flex-wrap">
-                          <a href="edit_user.php?id=<?= (int)$row['id_user'] ?>"
-                            class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1">
+                          <!-- Edit pakai modal -->
+                          <button type="button"
+                            class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-edit-user"
+                            data-id="<?= (int)$row['id_user'] ?>"
+                            data-role="<?= htmlspecialchars($row['role_user'], ENT_QUOTES, 'UTF-8') ?>"
+                            data-id-guru="<?= (int)($row['id_guru'] ?? 0) ?>"
+                            data-username="<?= htmlspecialchars($row['username'], ENT_QUOTES, 'UTF-8') ?>">
                             <i class="bi bi-pencil-square"></i> Edit
-                          </a>
-                          <a href="hapus_user.php?id=<?= (int)$row['id_user'] ?>"
-                            class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 px-2 py-1"
-                            onclick="return confirm('Yakin ingin menghapus user ini?');">
+                          </button>
+
+                          <!-- Hapus pakai modal konfirmasi -->
+                          <button type="button"
+                            class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-delete-single"
+                            data-href="hapus_user.php?id=<?= (int)$row['id_user'] ?>"
+                            data-label="<?= htmlspecialchars($row['username'], ENT_QUOTES, 'UTF-8') ?>">
                             <i class="bi bi-trash"></i> Hapus
-                          </a>
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -430,7 +520,7 @@ if ($totalRows === 0) {
             </button>
           </div>
 
-          <!-- Info & Pagination (TENGAH, DI BAWAH HAPUS TERPILIH) -->
+          <!-- Info & Pagination -->
           <div class="mt-3 d-flex flex-column align-items-center gap-1">
             <nav id="paginationWrap" class="d-flex justify-content-center"></nav>
             <div id="pageInfo" class="page-info-text text-muted text-center">
@@ -439,9 +529,176 @@ if ($totalRows === 0) {
           </div>
         </div>
 
+      </div><!-- /.card -->
+    </div><!-- /.col-12 -->
+  </div><!-- /.row -->
+
+  <!-- MODAL TAMBAH USER -->
+  <div class="modal fade" id="modalTambahUser" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Tambah User</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+        </div>
+        <form action="proses_tambah_user.php" method="POST" autocomplete="off">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="add_role" class="form-label">Role</label>
+              <select id="add_role" name="role" class="form-select" required>
+                <option value="" disabled selected>-- Pilih Role --</option>
+                <option value="Admin">Admin</option>
+                <option value="Guru">Guru</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="add_id_guru" class="form-label">Pilih Guru</label>
+              <select id="add_id_guru" name="id_guru" class="form-select" required>
+                <option value="" disabled selected>-- Pilih Guru --</option>
+                <?php foreach ($guruList as $g): ?>
+                  <option value="<?= (int)$g['id_guru'] ?>">
+                    <?= htmlspecialchars($g['nama_guru']) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="add_username" class="form-label">Username</label>
+              <input
+                type="text"
+                id="add_username"
+                name="username"
+                maxlength="50"
+                class="form-control"
+                required>
+            </div>
+
+            <div class="mb-3">
+              <label for="add_password_user" class="form-label">Password</label>
+              <input
+                type="password"
+                id="add_password_user"
+                name="password_user"
+                class="form-control"
+                required>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button"
+              class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
+              data-bs-dismiss="modal">
+              <i class="bi bi-x-lg"></i> Batal
+            </button>
+            <button type="submit"
+              class="btn btn-brand d-inline-flex align-items-center gap-2">
+              <i class="bi bi-check2-circle"></i> Simpan
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
+
+  <!-- MODAL EDIT USER -->
+  <div class="modal fade" id="modalEditUser" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit User</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+        </div>
+        <form action="proses_edit_user.php" method="POST" autocomplete="off">
+          <input type="hidden" name="id_user" id="edit_id_user">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="edit_role" class="form-label">Role</label>
+              <select id="edit_role" name="role" class="form-select" required>
+                <option value="" disabled>-- Pilih Role --</option>
+                <option value="Admin">Admin</option>
+                <option value="Guru">Guru</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="edit_id_guru" class="form-label">Pilih Guru</label>
+              <select id="edit_id_guru" name="id_guru" class="form-select" required>
+                <option value="" disabled>-- Pilih Guru --</option>
+                <?php foreach ($guruList as $g): ?>
+                  <option value="<?= (int)$g['id_guru'] ?>">
+                    <?= htmlspecialchars($g['nama_guru']) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="edit_username" class="form-label">Username</label>
+              <input
+                type="text"
+                id="edit_username"
+                name="username"
+                maxlength="50"
+                class="form-control"
+                required>
+            </div>
+
+            <div class="mb-3">
+              <label for="edit_password_user" class="form-label">Password (opsional)</label>
+              <input
+                type="password"
+                id="edit_password_user"
+                name="password_user"
+                class="form-control"
+                placeholder="Kosongkan jika tidak ingin mengubah password">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button"
+              class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
+              data-bs-dismiss="modal">
+              <i class="bi bi-x-lg"></i> Batal
+            </button>
+            <button type="submit"
+              class="btn btn-brand d-inline-flex align-items-center gap-2">
+              <i class="bi bi-save"></i> Simpan Perubahan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL KONFIRMASI HAPUS (untuk single & bulk) -->
+  <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-exclamation-triangle text-danger me-2"></i> Konfirmasi Hapus
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+        </div>
+        <div class="modal-body">
+          <p id="confirmDeleteBody" class="mb-0">Yakin ingin menghapus data ini?</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button"
+            class="btn btn-outline-secondary"
+            data-bs-dismiss="modal">
+            Batal
+          </button>
+          <button type="button"
+            class="btn btn-danger d-inline-flex align-items-center gap-2"
+            id="confirmDeleteBtn">
+            <i class="bi bi-trash"></i> Hapus
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </main>
 
 <script>
@@ -456,6 +713,10 @@ if ($totalRows === 0) {
     const pageInfo = document.getElementById('pageInfo');
     const csrfToken = '<?= htmlspecialchars($csrf); ?>';
 
+    const confirmModalEl = document.getElementById('confirmDeleteModal');
+    const confirmBodyEl = document.getElementById('confirmDeleteBody');
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+
     let typingTimer;
     const debounceMs = 250;
     let currentController = null;
@@ -464,6 +725,43 @@ if ($totalRows === 0) {
     let currentPage = <?= (int)$page ?>;
     let currentPerPage = <?= (int)$perPage ?>;
     let currentTotalRows = <?= (int)$totalRows ?>;
+
+    // handler yang akan dijalankan ketika user klik "Hapus" di modal
+    let pendingDeleteHandler = null;
+
+    function showDeleteConfirm(message, handler) {
+      if (!confirmModalEl || !confirmBodyEl || !confirmBtn) {
+        // fallback kalau modal tidak ada / bootstrap belum siap
+        if (confirm(message)) {
+          handler();
+        }
+        return;
+      }
+
+      confirmBodyEl.textContent = message;
+      pendingDeleteHandler = handler;
+
+      // reset handler dulu supaya tidak numpuk
+      confirmBtn.onclick = function() {
+        if (pendingDeleteHandler) {
+          pendingDeleteHandler();
+        }
+        if (typeof bootstrap !== 'undefined') {
+          const m = bootstrap.Modal.getOrCreateInstance(confirmModalEl);
+          m.hide();
+        }
+      };
+
+      if (typeof bootstrap !== 'undefined') {
+        const m = bootstrap.Modal.getOrCreateInstance(confirmModalEl);
+        m.show();
+      } else {
+        // fallback
+        if (confirm(message)) {
+          handler();
+        }
+      }
+    }
 
     function getRowCheckboxes() {
       return Array.from(document.querySelectorAll('.row-check'));
@@ -531,7 +829,58 @@ if ($totalRows === 0) {
       });
     }
 
-    // Build pagination UI ala « First • ‹ Prev • 1 • Next › • Last »
+    // EDIT: pakai modal Bootstrap saat tombol Edit diklik
+    function attachEditModalEvents() {
+      const editButtons = document.querySelectorAll('.btn-edit-user');
+      const modalEl = document.getElementById('modalEditUser');
+      if (!modalEl) return;
+
+      const inputIdUser = document.getElementById('edit_id_user');
+      const inputRole = document.getElementById('edit_role');
+      const inputGuru = document.getElementById('edit_id_guru');
+      const inputUser = document.getElementById('edit_username');
+      const inputPass = document.getElementById('edit_password_user');
+
+      editButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+
+          const id = btn.getAttribute('data-id') || '';
+          const role = btn.getAttribute('data-role') || '';
+          const idGuru = btn.getAttribute('data-id-guru') || '';
+          const username = btn.getAttribute('data-username') || '';
+
+          if (inputIdUser) inputIdUser.value = id;
+          if (inputRole) inputRole.value = role;
+          if (inputGuru) inputGuru.value = (idGuru && idGuru !== '0') ? idGuru : '';
+          if (inputUser) inputUser.value = username;
+          if (inputPass) inputPass.value = '';
+
+          if (typeof bootstrap !== 'undefined') {
+            const editModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            editModal.show();
+          }
+        });
+      });
+    }
+
+    // HAPUS SATU USER – pakai modal konfirmasi
+    function attachSingleDeleteEvents() {
+      const buttons = document.querySelectorAll('.btn-delete-single');
+      buttons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const href = btn.getAttribute('data-href');
+          const label = btn.getAttribute('data-label') || 'user ini';
+
+          showDeleteConfirm(`Yakin ingin menghapus user "${label}"?`, () => {
+            window.location.href = href;
+          });
+        });
+      });
+    }
+
+    // Build pagination UI
     function buildPagination(totalRows, page, perPage) {
       currentTotalRows = totalRows;
       currentPage = page;
@@ -553,34 +902,31 @@ if ($totalRows === 0) {
 
       const pageDisplayCurrent = totalRows === 0 ? 0 : page;
       const pageDisplayTotal = totalRows === 0 ? 0 : totalPages;
-      pageInfo.textContent = `Menampilkan ${shown} dari ${totalRows} data • Halaman ${pageDisplayCurrent} / ${pageDisplayTotal}`;
+      pageInfo.innerHTML =
+        `Menampilkan <strong>${shown}</strong> dari <strong>${totalRows}</strong> data • 
+        Halaman <strong>${pageDisplayCurrent}</strong> / <strong>${pageDisplayTotal}</strong>`;
 
-      let html = '<ul class="pagination mb-0">'; // normal size (tanpa pagination-sm)
+      let html = '<ul class="pagination mb-0">';
 
       const isFirst = (page <= 1);
       const isLast = (page >= totalPages);
 
-      // First
       html += `<li class="page-item${isFirst ? ' disabled' : ''}">
                  <button class="page-link page-btn" type="button" data-page="1">&laquo; First</button>
                </li>`;
 
-      // Prev
       html += `<li class="page-item${isFirst ? ' disabled' : ''}">
                  <button class="page-link page-btn" type="button" data-page="${page - 1}">&lsaquo; Prev</button>
                </li>`;
 
-      // Current page
       html += `<li class="page-item active">
                  <button class="page-link" type="button" data-page="${page}">${page}</button>
                </li>`;
 
-      // Next
       html += `<li class="page-item${isLast ? ' disabled' : ''}">
                  <button class="page-link page-btn" type="button" data-page="${page + 1}">Next &rsaquo;</button>
                </li>`;
 
-      // Last
       html += `<li class="page-item${isLast ? ' disabled' : ''}">
                  <button class="page-link page-btn" type="button" data-page="${totalPages}">Last &raquo;</button>
                </li>`;
@@ -610,13 +956,12 @@ if ($totalRows === 0) {
       updateBulkUI();
     });
 
+    // HAPUS TERPILIH – lewat modal konfirmasi
     bulkDeleteBtn.addEventListener('click', () => {
       const boxes = getRowCheckboxes().filter(b => b.checked);
       if (boxes.length === 0) return;
 
-      if (!confirm(`Yakin ingin menghapus ${boxes.length} user terpilih?`)) {
-        return;
-      }
+      const count = boxes.length;
 
       const form = document.createElement('form');
       form.method = 'post';
@@ -636,8 +981,10 @@ if ($totalRows === 0) {
         form.appendChild(inp);
       });
 
-      document.body.appendChild(form);
-      form.submit();
+      showDeleteConfirm(`Yakin ingin menghapus ${count} user terpilih?`, () => {
+        document.body.appendChild(form);
+        form.submit();
+      });
     });
 
     function setLoading() {
@@ -685,6 +1032,8 @@ if ($totalRows === 0) {
 
           attachCheckboxEvents();
           attachPasswordToggleEvents();
+          attachEditModalEvents();
+          attachSingleDeleteEvents();
         })
         .catch(e => {
           if (e.name === 'AbortError') return;
@@ -709,11 +1058,36 @@ if ($totalRows === 0) {
       });
     }
 
-    // Inisialisasi pertama kali (server-side data)
+    // Inisialisasi pertama kali
     attachCheckboxEvents();
     attachPasswordToggleEvents();
+    attachEditModalEvents();
+    attachSingleDeleteEvents();
     buildPagination(currentTotalRows, currentPage, currentPerPage);
   })();
+</script>
+
+<script>
+  // Auto-hide alert + tombol X
+  document.addEventListener('DOMContentLoaded', () => {
+    const alerts = document.querySelectorAll('.alert');
+    if (!alerts.length) return;
+
+    alerts.forEach(alert => {
+      const timer = setTimeout(() => {
+        alert.classList.add('alert-hide');
+      }, 4000);
+
+      const close = alert.querySelector('.close-btn');
+      if (close) {
+        close.addEventListener('click', (e) => {
+          e.preventDefault();
+          alert.classList.add('alert-hide');
+          clearTimeout(timer);
+        });
+      }
+    });
+  });
 </script>
 
 <?php include '../includes/footer.php'; ?>

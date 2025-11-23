@@ -5,9 +5,13 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-function redirect_with_alert($message)
+function redirect_with_status(string $status, string $message = '')
 {
-    echo "<script>alert(" . json_encode($message) . "); window.location.href='data_user.php';</script>";
+    $location = 'data_user.php?status=' . urlencode($status);
+    if ($message !== '') {
+        $location .= '&msg=' . urlencode($message);
+    }
+    header("Location: {$location}");
     exit;
 }
 
@@ -15,7 +19,7 @@ function redirect_with_alert($message)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ids']) && is_array($_POST['ids'])) {
     $csrf = $_POST['csrf'] ?? '';
     if (empty($_SESSION['csrf']) || !hash_equals($_SESSION['csrf'], $csrf)) {
-        redirect_with_alert('Token tidak valid. Silakan coba lagi.');
+        redirect_with_status('error', 'Token tidak valid. Silakan coba lagi.');
     }
 
     $rawIds = [];
@@ -28,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ids']) && is_array($_
     $ids = array_values(array_unique($rawIds));
 
     if (empty($ids)) {
-        redirect_with_alert('ID tidak valid.');
+        redirect_with_status('error', 'ID tidak valid.');
     }
 
     $deleted = [];
@@ -53,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ids']) && is_array($_
         if ($ok && mysqli_stmt_affected_rows($stmtDel) > 0) {
             $deleted[] = $username;
         } else {
-            $failed[] = "Gagal menghapus user \"$username\".";
+            $failed[] = "Gagal menghapus user \"{$username}\".";
         }
     }
 
@@ -72,21 +76,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ids']) && is_array($_
         $msgParts[] = 'Tidak ada perubahan data.';
     }
 
-    redirect_with_alert(implode(' ', $msgParts));
+    redirect_with_status('success', implode(' ', $msgParts));
 }
 
-// === MODE SINGLE DELETE (GET id) – tetap seperti sebelumnya ===
+// === MODE SINGLE DELETE (GET id) ===
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 if ($id <= 0) {
-    redirect_with_alert('ID tidak valid');
+    redirect_with_status('error', 'ID tidak valid.');
 }
 
 $stmt = mysqli_prepare($koneksi, "DELETE FROM user WHERE id_user=?");
 mysqli_stmt_bind_param($stmt, 'i', $id);
 $ok = mysqli_stmt_execute($stmt);
 
-if ($ok) {
-    redirect_with_alert('User terhapus');
+if ($ok && mysqli_stmt_affected_rows($stmt) > 0) {
+    redirect_with_status('success', 'User terhapus.');
 } else {
-    redirect_with_alert('Gagal menghapus: ' . mysqli_error($koneksi));
+    redirect_with_status('error', 'Gagal menghapus: ' . mysqli_error($koneksi));
 }

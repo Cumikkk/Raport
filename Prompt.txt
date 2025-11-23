@@ -1,73 +1,6 @@
-aku punya kode ajax_user_list.php, data_user.php, edit_user.php, hapus_user.php, proses_edit_user.php, proses_tambah_user.php, dan tambah_data_user.php.
-buat di halaman user jadi ada kolom untuk data password di sebelah kanan username
-jika sudah kirimkan kode yang kamu ubah saja akan tetapi dia versi lengkap.
+berikut kode versi terbarunya
 
-1. ajax_user_list.php
-<?php
-require_once '../koneksi.php';
-$search = isset($_GET['q']) ? trim($_GET['q']) : '';
-$like   = "%{$search}%";
-
-$sql = "
-  SELECT u.id_user, u.username, u.role_user, u.id_guru, g.nama_guru
-  FROM user u
-  LEFT JOIN guru g ON g.id_guru = u.id_guru
-  WHERE u.username LIKE ?
-     OR COALESCE(g.nama_guru,'') LIKE ?
-  ORDER BY u.id_user DESC
-";
-$stmt = mysqli_prepare($koneksi, $sql);
-mysqli_stmt_bind_param($stmt, 'ss', $like, $like);
-mysqli_stmt_execute($stmt);
-$result = mysqli_stmt_get_result($stmt);
-
-// inject style untuk badge & highlight row jika dimuat via ajax
-echo '<style>
-.role-badge{
-  background:#ecf2ff;
-  color:#0a2a88;
-  border:1px solid #d6e2ff;
-  font-weight:700;
-}
-.highlight-row{
-  background-color:#d4edda !important;
-}
-</style>';
-
-if (mysqli_num_rows($result) === 0): ?>
-    <tr>
-        <td colspan="6">Tidak ada data yang cocok.</td>
-    </tr>
-    <?php
-else:
-    $no = 1;
-    // kalau ada teks pencarian, semua hasilnya dianggap "ketemu" → diberi kelas highlight-row
-    $rowClass = ($search !== '') ? 'highlight-row' : '';
-    while ($row = mysqli_fetch_assoc($result)): ?>
-        <tr class="<?= $rowClass; ?>">
-            <td class="text-center" data-label="Pilih">
-                <input type="checkbox" class="row-check" value="<?= (int)$row['id_user'] ?>">
-            </td>
-            <td data-label="No"><?= $no++; ?></td>
-            <td data-label="Nama (Guru)"><?= htmlspecialchars($row['nama_guru'] ?? '-') ?></td>
-            <td data-label="Username"><?= htmlspecialchars($row['username']) ?></td>
-            <td data-label="Role"><span class="badge role-badge"><?= htmlspecialchars($row['role_user']) ?></span></td>
-            <td data-label="Aksi">
-                <div class="d-flex gap-2 justify-content-center flex-wrap">
-                    <a href="edit_user.php?id=<?= (int)$row['id_user'] ?>" class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1">
-                        <i class="bi bi-pencil-square"></i> Edit
-                    </a>
-                    <a href="hapus_user.php?id=<?= (int)$row['id_user'] ?>" class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 px-2 py-1"
-                        onclick="return confirm('Yakin ingin menghapus user ini?');">
-                        <i class="bi bi-trash"></i> Hapus
-                    </a>
-                </div>
-            </td>
-        </tr>
-<?php endwhile;
-endif;
-
-2. data_user.php
+1. data_user.php
 <?php
 include '../includes/header.php';
 include '../includes/navbar.php';
@@ -85,29 +18,79 @@ $csrf = $_SESSION['csrf'];
 $search = isset($_GET['q']) ? trim($_GET['q']) : '';
 $like   = "%{$search}%";
 
+// Pagination server-side (untuk tampilan awal sebelum AJAX)
+$allowedPer = [10, 20, 50, 100];
+$perPage    = isset($_GET['per']) ? (int)$_GET['per'] : 10;
+if (!in_array($perPage, $allowedPer, true)) {
+  $perPage = 10;
+}
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($page < 1) $page = 1;
+
+// Hitung total data
+$countSql = "
+  SELECT COUNT(*) AS total
+  FROM user u
+  LEFT JOIN guru g ON g.id_guru = u.id_guru
+  WHERE u.username LIKE ?
+     OR COALESCE(g.nama_guru,'') LIKE ?
+";
+$stmtCount = mysqli_prepare($koneksi, $countSql);
+mysqli_stmt_bind_param($stmtCount, 'ss', $like, $like);
+mysqli_stmt_execute($stmtCount);
+$resCount  = mysqli_stmt_get_result($stmtCount);
+$rowCount  = mysqli_fetch_assoc($resCount);
+$totalRows = (int)($rowCount['total'] ?? 0);
+
+$totalPages = max(1, (int)ceil($totalRows / $perPage));
+if ($page > $totalPages) {
+  $page = $totalPages;
+}
+$offset = ($page - 1) * $perPage;
+
+// Ambil data user untuk halaman awal
 $sql = "
-  SELECT u.id_user, u.username, u.role_user, u.id_guru, g.nama_guru
+  SELECT 
+    u.id_user, 
+    u.username, 
+    u.password_user,
+    u.role_user, 
+    u.id_guru, 
+    g.nama_guru
   FROM user u
   LEFT JOIN guru g ON g.id_guru = u.id_guru
   WHERE u.username LIKE ?
      OR COALESCE(g.nama_guru,'') LIKE ?
   ORDER BY u.id_user DESC
+  LIMIT ? OFFSET ?
 ";
 $stmt = mysqli_prepare($koneksi, $sql);
-mysqli_stmt_bind_param($stmt, 'ss', $like, $like);
+mysqli_stmt_bind_param($stmt, 'ssii', $like, $like, $perPage, $offset);
 mysqli_stmt_execute($stmt);
 $result = mysqli_stmt_get_result($stmt);
+
+// Hitung info awal
+if ($totalRows === 0) {
+  $from = 0;
+  $to   = 0;
+  $shown = 0;
+  $pageDisplayCurrent = 0;
+  $pageDisplayTotal   = 0;
+} else {
+  $from = $offset + 1;
+  $to   = min($offset + $perPage, $totalRows);
+  $shown = $to - $from + 1;
+  $pageDisplayCurrent = $page;
+  $pageDisplayTotal   = $totalPages;
+}
 ?>
 <style>
   :root {
     --brand: #0a4db3;
     --brand-600: #083f93;
     --ink: #0f172a;
-    /* judul & teks utama (sangat gelap) */
     --text: #111827;
-    /* teks tabel */
     --muted: #475569;
-    /* hint/sekunder */
     --ring: #cbd5e1;
     --card: #ffffff;
     --thead: #0a4db3;
@@ -166,10 +149,6 @@ $result = mysqli_stmt_get_result($stmt);
     color: #9aa3af;
   }
 
-  .helper {
-    color: var(--muted);
-  }
-
   .table thead th {
     white-space: nowrap;
     background: var(--thead);
@@ -189,9 +168,88 @@ $result = mysqli_stmt_get_result($stmt);
     font-weight: 700;
   }
 
-  /* baris hasil pencarian */
   .highlight-row {
     background-color: #d4edda !important;
+  }
+
+  .password-text {
+    font-family: monospace;
+  }
+
+  /* Tombol & hover */
+  .btn-brand {
+    background: #0a4db3 !important;
+    border-color: #0a4db3 !important;
+    color: #fff !important;
+    font-weight: 700;
+  }
+
+  .btn-brand:hover {
+    background: #083f93 !important;
+    border-color: #083f93 !important;
+  }
+
+  .btn-warning {
+    background: #f0ad4e !important;
+    border-color: #eea236 !important;
+    color: #fff !important;
+  }
+
+  .btn-warning:hover {
+    background: #d98d26 !important;
+    border-color: #c77e20 !important;
+    color: #fff !important;
+  }
+
+  .btn-danger {
+    background: #d9534f !important;
+    border-color: #d43f3a !important;
+    color: #fff !important;
+  }
+
+  .btn-danger:hover {
+    background: #c0392b !important;
+    border-color: #a93226 !important;
+    color: #fff !important;
+  }
+
+  .btn-outline-secondary {
+    border-color: #6c757d !important;
+    color: #6c757d !important;
+    background: transparent !important;
+  }
+
+  .btn-outline-secondary:hover {
+    background: #e9ecef !important;
+    color: #333 !important;
+  }
+
+  .toggle-password {
+    padding: 4px 8px !important;
+  }
+
+  .toggle-password:hover {
+    background: #dfe3e6 !important;
+    color: #333 !important;
+  }
+
+  /* Styling dropdown per halaman supaya mirip searchbox */
+  #perPage {
+    border: 1px solid var(--ring);
+    border-radius: 10px;
+    padding: 6px 30px;
+    font-size: 14px;
+    color: var(--ink);
+    background-color: #fff;
+  }
+
+  #perPage:focus {
+    box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
+    border-color: var(--brand);
+  }
+
+  .page-info-text strong {
+    font-size: 0.95rem;
   }
 
   /* Mobile “card table” */
@@ -234,21 +292,13 @@ $result = mysqli_stmt_get_result($stmt);
       width: 100%;
       margin-top: 6px;
     }
+
+    .search-perpage-row {
+      flex-direction: column;
+      align-items: stretch !important;
+    }
   }
 
-  .btn-brand {
-    background: var(--brand);
-    border-color: var(--brand);
-    color: #fff;
-    font-weight: 700;
-  }
-
-  .btn-brand:hover {
-    background: var(--brand-600);
-    border-color: var(--brand-600);
-  }
-
-  /* subtle focus */
   .searchbox:focus-within {
     box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
   }
@@ -259,23 +309,42 @@ $result = mysqli_stmt_get_result($stmt);
     <div class="col-12">
       <div class="card shadow-sm">
 
-        <div class="top-bar p-3 p-md-4 d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between">
-          <div class="d-flex flex-column gap-2">
-            <h5 class="page-title mb-1 fw-bold fs-4">Data User</h5>
+        <!-- TOP BAR: judul, search + perPage + Tambah User satu baris -->
+        <div class="top-bar p-3 p-md-4">
+          <div class="d-flex flex-column gap-3 w-100">
+            <div>
+              <h5 class="page-title mb-0 fw-bold fs-4">Data User</h5>
+            </div>
 
-            <!-- Hapus tombol 'Cari' — live as-you-type -->
-            <div class="search-wrap">
-              <div class="searchbox" role="search" aria-label="Pencarian user">
-                <i class="bi bi-search icon"></i>
-                <input type="text" id="searchInput" placeholder="Ketik untuk mencari" autofocus>
+            <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-2">
+              <!-- Search + per page (kiri) -->
+              <div class="d-flex search-perpage-row align-items-md-center gap-2 flex-grow-1">
+                <div class="search-wrap flex-grow-1">
+                  <div class="searchbox" role="search" aria-label="Pencarian user">
+                    <i class="bi bi-search icon"></i>
+                    <input type="text" id="searchInput" placeholder="Ketik untuk mencari" autofocus>
+                  </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                  <select id="perPage" class="form-select form-select-sm" style="width:auto;">
+                    <?php foreach ($allowedPer as $opt): ?>
+                      <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>>
+                        <?= $opt ?>/hal
+                      </option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Tombol Tambah User (kanan), sejajar dengan search row -->
+              <div class="d-flex justify-content-md-end">
+                <a href="tambah_data_user.php"
+                  class="btn btn-brand btn-sm d-inline-flex align-items-center gap-2 px-3">
+                  <i class="bi bi-person-plus"></i> Tambah User
+                </a>
               </div>
             </div>
-          </div>
-
-          <div class="d-flex gap-2 flex-wrap mt-3 mt-md-0">
-            <a href="tambah_data_user.php" class="btn btn-brand btn-sm d-inline-flex align-items-center gap-2 px-3">
-              <i class="bi bi-plus-lg"></i> Tambah User
-            </a>
           </div>
         </div>
 
@@ -290,6 +359,7 @@ $result = mysqli_stmt_get_result($stmt);
                   <th style="width:70px;">No</th>
                   <th>Nama Lengkap</th>
                   <th>Username</th>
+                  <th>Password</th>
                   <th>Role</th>
                   <th style="width:200px;">Aksi</th>
                 </tr>
@@ -297,11 +367,10 @@ $result = mysqli_stmt_get_result($stmt);
               <tbody id="userTbody" class="text-center">
                 <?php if (mysqli_num_rows($result) === 0): ?>
                   <tr>
-                    <td colspan="6">Belum ada data</td>
+                    <td colspan="7">Belum ada data</td>
                   </tr>
                   <?php else:
-                  $no = 1;
-                  // jika halaman ini dipanggil dengan ?q=..., baris juga bisa ikut di-highlight
+                  $no = $offset + 1;
                   $rowClass = ($search !== '') ? 'highlight-row' : '';
                   while ($row = mysqli_fetch_assoc($result)): ?>
                     <tr class="<?= $rowClass; ?>">
@@ -311,13 +380,38 @@ $result = mysqli_stmt_get_result($stmt);
                       <td data-label="No"><?= $no++; ?></td>
                       <td data-label="Nama (Guru)"><?= htmlspecialchars($row['nama_guru'] ?? '-') ?></td>
                       <td data-label="Username"><?= htmlspecialchars($row['username']) ?></td>
-                      <td data-label="Role"><span class="badge role-badge"><?= htmlspecialchars($row['role_user']) ?></span></td>
+                      <td data-label="Password">
+                        <?php
+                        $pwd = $row['password_user'] ?? '';
+                        if ($pwd === '') {
+                          echo '-';
+                        } else {
+                        ?>
+                          <div class="d-inline-flex align-items-center gap-1 password-cell">
+                            <span class="password-text" data-visible="0">••••••</span>
+                            <button
+                              type="button"
+                              class="btn btn-sm btn-outline-secondary toggle-password"
+                              data-password="<?= htmlspecialchars($pwd, ENT_QUOTES, 'UTF-8') ?>"
+                              title="Lihat / sembunyikan password">
+                              <i class="bi bi-eye"></i>
+                            </button>
+                          </div>
+                        <?php
+                        }
+                        ?>
+                      </td>
+                      <td data-label="Role">
+                        <span class="badge role-badge"><?= htmlspecialchars($row['role_user']) ?></span>
+                      </td>
                       <td data-label="Aksi">
                         <div class="d-flex gap-2 justify-content-center flex-wrap">
-                          <a href="edit_user.php?id=<?= (int)$row['id_user'] ?>" class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1">
+                          <a href="edit_user.php?id=<?= (int)$row['id_user'] ?>"
+                            class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1">
                             <i class="bi bi-pencil-square"></i> Edit
                           </a>
-                          <a href="hapus_user.php?id=<?= (int)$row['id_user'] ?>" class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 px-2 py-1"
+                          <a href="hapus_user.php?id=<?= (int)$row['id_user'] ?>"
+                            class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 px-2 py-1"
                             onclick="return confirm('Yakin ingin menghapus user ini?');">
                             <i class="bi bi-trash"></i> Hapus
                           </a>
@@ -330,11 +424,21 @@ $result = mysqli_stmt_get_result($stmt);
             </table>
           </div>
 
-          <!-- HAPUS TERPILIH DI BAWAH TABEL -->
+          <!-- HAPUS TERPILIH -->
           <div class="mt-3 d-flex justify-content-start">
-            <button type="button" id="bulkDeleteBtn" class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1" disabled>
-              <i class="bi bi-trash"></i> <span>Hapus Terpilih</span>
+            <button type="button" id="bulkDeleteBtn"
+              class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1"
+              disabled>
+              <i class="bi bi-trash3"></i> <span>Hapus Terpilih</span>
             </button>
+          </div>
+
+          <!-- Info & Pagination (TENGAH, DI BAWAH HAPUS TERPILIH) -->
+          <div class="mt-3 d-flex flex-column align-items-center gap-1">
+            <nav id="paginationWrap" class="d-flex justify-content-center"></nav>
+            <div id="pageInfo" class="page-info-text text-muted text-center">
+              Menampilkan <?= $shown ?> dari <?= $totalRows ?> data • Halaman <?= $pageDisplayCurrent ?> / <?= $pageDisplayTotal ?>
+            </div>
           </div>
         </div>
 
@@ -350,11 +454,19 @@ $result = mysqli_stmt_get_result($stmt);
 
     const checkAll = document.getElementById('checkAll');
     const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+    const perPageSelect = document.getElementById('perPage');
+    const paginationWrap = document.getElementById('paginationWrap');
+    const pageInfo = document.getElementById('pageInfo');
     const csrfToken = '<?= htmlspecialchars($csrf); ?>';
 
     let typingTimer;
     const debounceMs = 250;
     let currentController = null;
+
+    let currentQuery = '<?= htmlspecialchars($search, ENT_QUOTES, "UTF-8"); ?>';
+    let currentPage = <?= (int)$page ?>;
+    let currentPerPage = <?= (int)$perPage ?>;
+    let currentTotalRows = <?= (int)$totalRows ?>;
 
     function getRowCheckboxes() {
       return Array.from(document.querySelectorAll('.row-check'));
@@ -365,7 +477,7 @@ $result = mysqli_stmt_get_result($stmt);
       const total = boxes.length;
       const checked = boxes.filter(b => b.checked).length;
 
-      bulkDeleteBtn.disabled = checked === 0;
+      bulkDeleteBtn.disabled = (checked === 0);
 
       if (total === 0) {
         checkAll.checked = false;
@@ -388,6 +500,111 @@ $result = mysqli_stmt_get_result($stmt);
         box.addEventListener('change', updateBulkUI);
       });
       updateBulkUI();
+    }
+
+    // Toggle password di tabel
+    function attachPasswordToggleEvents() {
+      const buttons = tbody.querySelectorAll('.toggle-password');
+      buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const cell = btn.closest('.password-cell');
+          if (!cell) return;
+
+          const span = cell.querySelector('.password-text');
+          const icon = btn.querySelector('i');
+          const visible = span.getAttribute('data-visible') === '1';
+          const realPassword = btn.getAttribute('data-password') || '';
+
+          if (visible) {
+            span.textContent = '••••••';
+            span.setAttribute('data-visible', '0');
+            if (icon) {
+              icon.classList.remove('bi-eye-slash');
+              icon.classList.add('bi-eye');
+            }
+          } else {
+            span.textContent = realPassword;
+            span.setAttribute('data-visible', '1');
+            if (icon) {
+              icon.classList.remove('bi-eye');
+              icon.classList.add('bi-eye-slash');
+            }
+          }
+        });
+      });
+    }
+
+    // Build pagination UI ala « First • ‹ Prev • 1 • Next › • Last »
+    function buildPagination(totalRows, page, perPage) {
+      currentTotalRows = totalRows;
+      currentPage = page;
+      currentPerPage = perPage;
+
+      const totalPages = Math.max(1, Math.ceil(totalRows / perPage));
+      if (page > totalPages) page = totalPages;
+
+      let from, to, shown;
+      if (totalRows === 0) {
+        from = 0;
+        to = 0;
+        shown = 0;
+      } else {
+        from = (page - 1) * perPage + 1;
+        to = Math.min(page * perPage, totalRows);
+        shown = to - from + 1;
+      }
+
+      const pageDisplayCurrent = totalRows === 0 ? 0 : page;
+      const pageDisplayTotal = totalRows === 0 ? 0 : totalPages;
+      pageInfo.innerHTML =
+        `Menampilkan <strong>${shown}</strong> dari <strong>${totalRows}</strong> data • 
+        Halaman <strong>${pageDisplayCurrent}</strong> / <strong>${pageDisplayTotal}</strong>`;
+
+      let html = '<ul class="pagination mb-0">'; // normal size (tanpa pagination-sm)
+
+      const isFirst = (page <= 1);
+      const isLast = (page >= totalPages);
+
+      // First
+      html += `<li class="page-item${isFirst ? ' disabled' : ''}">
+                 <button class="page-link page-btn" type="button" data-page="1">&laquo; First</button>
+               </li>`;
+
+      // Prev
+      html += `<li class="page-item${isFirst ? ' disabled' : ''}">
+                 <button class="page-link page-btn" type="button" data-page="${page - 1}">&lsaquo; Prev</button>
+               </li>`;
+
+      // Current page
+      html += `<li class="page-item active">
+                 <button class="page-link" type="button" data-page="${page}">${page}</button>
+               </li>`;
+
+      // Next
+      html += `<li class="page-item${isLast ? ' disabled' : ''}">
+                 <button class="page-link page-btn" type="button" data-page="${page + 1}">Next &rsaquo;</button>
+               </li>`;
+
+      // Last
+      html += `<li class="page-item${isLast ? ' disabled' : ''}">
+                 <button class="page-link page-btn" type="button" data-page="${totalPages}">Last &raquo;</button>
+               </li>`;
+
+      html += '</ul>';
+
+      paginationWrap.innerHTML = html;
+
+      paginationWrap.querySelectorAll('.page-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const target = parseInt(btn.getAttribute('data-page') || '1', 10);
+          if (isNaN(target) || target < 1 || target === currentPage) return;
+          doSearch(currentQuery, target, currentPerPage);
+        });
+      });
+
+      if (perPageSelect) {
+        perPageSelect.value = String(perPage);
+      }
     }
 
     checkAll.addEventListener('change', () => {
@@ -429,17 +646,21 @@ $result = mysqli_stmt_get_result($stmt);
     });
 
     function setLoading() {
-      tbody.innerHTML = `<tr><td colspan="6">Sedang mencari…</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7">Sedang mencari…</td></tr>`;
     }
 
-    function doSearch(query) {
+    function doSearch(query, page, perPage) {
       setLoading();
       if (currentController) currentController.abort();
       currentController = new AbortController();
 
+      currentQuery = query || '';
       const params = new URLSearchParams({
-        q: query || ''
+        q: currentQuery,
+        page: page || 1,
+        per: perPage || currentPerPage || 10
       });
+
       fetch('ajax_user_list.php?' + params.toString(), {
           method: 'GET',
           signal: currentController.signal,
@@ -453,185 +674,164 @@ $result = mysqli_stmt_get_result($stmt);
         })
         .then(html => {
           tbody.innerHTML = html;
-          // setelah tbody diisi ulang, re-attach event checkbox
+
+          const metaRow = tbody.querySelector('.meta-row');
+          if (metaRow) {
+            const total = parseInt(metaRow.getAttribute('data-total') || '0', 10);
+            const pg = parseInt(metaRow.getAttribute('data-page') || '1', 10);
+            const pp = parseInt(metaRow.getAttribute('data-per') || String(currentPerPage), 10);
+            metaRow.parentNode.removeChild(metaRow);
+            buildPagination(
+              isNaN(total) ? 0 : total,
+              isNaN(pg) ? 1 : pg,
+              isNaN(pp) ? currentPerPage : pp
+            );
+          }
+
           attachCheckboxEvents();
+          attachPasswordToggleEvents();
         })
         .catch(e => {
           if (e.name === 'AbortError') return;
-          tbody.innerHTML = `<tr><td colspan="6">Gagal memuat data.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="7">Gagal memuat data.</td></tr>`;
           console.error(e);
         });
     }
 
     input.addEventListener('input', () => {
       clearTimeout(typingTimer);
-      typingTimer = setTimeout(() => doSearch(input.value), debounceMs);
+      typingTimer = setTimeout(() => {
+        doSearch(input.value, 1, currentPerPage);
+      }, debounceMs);
     });
 
-    // Inisialisasi pertama kali (data awal server-side)
+    if (perPageSelect) {
+      perPageSelect.addEventListener('change', () => {
+        const val = parseInt(perPageSelect.value || '10', 10);
+        if (isNaN(val) || val <= 0) return;
+        currentPerPage = val;
+        doSearch(currentQuery, 1, currentPerPage);
+      });
+    }
+
+    // Inisialisasi pertama kali (server-side data)
     attachCheckboxEvents();
+    attachPasswordToggleEvents();
+    buildPagination(currentTotalRows, currentPage, currentPerPage);
   })();
 </script>
 
 <?php include '../includes/footer.php'; ?>
 
-3. edit_user.php
+2. proses_tambah_user.php
 <?php
-include '../includes/header.php';
-include '../includes/navbar.php';
 require_once '../koneksi.php';
 
-$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-if ($id <= 0) {
-    exit("<script>alert('ID tidak valid'); window.location='data_user.php';</script>");
+$role        = isset($_POST['role']) ? trim($_POST['role']) : '';
+$username    = isset($_POST['username']) ? trim($_POST['username']) : '';
+$passwordRaw = isset($_POST['password_user']) ? $_POST['password_user'] : '';
+$id_guru     = isset($_POST['id_guru']) && $_POST['id_guru'] !== '' ? (int)$_POST['id_guru'] : null;
+
+// Validasi dasar
+$allowedRoles = ['Admin', 'Guru'];
+if (!in_array($role, $allowedRoles, true)) {
+    exit("<script>alert('Role tidak valid.'); history.back();</script>");
+}
+if ($username === '' || strlen($username) > 50) {
+    exit("<script>alert('Username wajib dan maks 50 karakter.'); history.back();</script>");
+}
+if ($passwordRaw === '') {
+    exit("<script>alert('Password wajib diisi.'); history.back();</script>");
 }
 
-$stmt = mysqli_prepare($koneksi, "SELECT id_user, id_guru, role_user, username FROM user WHERE id_user=?");
-mysqli_stmt_bind_param($stmt, 'i', $id);
+// Cek username unik
+$sqlCheck = "SELECT 1 FROM user WHERE username = ? LIMIT 1";
+$stmt = mysqli_prepare($koneksi, $sqlCheck);
+mysqli_stmt_bind_param($stmt, 's', $username);
 mysqli_stmt_execute($stmt);
-$user = mysqli_stmt_get_result($stmt)->fetch_assoc();
-if (!$user) {
-    exit("<script>alert('User tidak ditemukan'); window.location='data_user.php';</script>");
+$res = mysqli_stmt_get_result($stmt);
+if (mysqli_num_rows($res) > 0) {
+    exit("<script>alert('Username sudah digunakan.'); history.back();</script>");
 }
 
-$guruRes = mysqli_query($koneksi, "SELECT id_guru, nama_guru FROM guru ORDER BY nama_guru ASC");
-?>
-<style>
-    :root {
-        --brand: #0a4db3;
-        --brand-600: #083f93;
-        --ink: #0f172a;
-        --text: #111827;
-        --muted: #475569;
-        --ring: #cbd5e1;
-        --card: #ffffff;
-        --card-radius: 14px;
+// Insert (tanpa hash password, sesuai permintaan)
+if ($id_guru === null) {
+    $sql = "INSERT INTO user (id_guru, role_user, username, password_user) VALUES (NULL, ?, ?, ?)";
+    $stmt = mysqli_prepare($koneksi, $sql);
+    mysqli_stmt_bind_param($stmt, 'sss', $role, $username, $passwordRaw);
+} else {
+    $sql = "INSERT INTO user (id_guru, role_user, username, password_user) VALUES (?, ?, ?, ?)";
+    $stmt = mysqli_prepare($koneksi, $sql);
+    mysqli_stmt_bind_param($stmt, 'isss', $id_guru, $role, $username, $passwordRaw);
+}
+
+$ok = mysqli_stmt_execute($stmt);
+if ($ok) {
+    echo "<script>alert('User berhasil ditambahkan'); window.location.href='data_user.php';</script>";
+} else {
+    echo "<script>alert('Gagal menambahkan user: " . htmlspecialchars(mysqli_error($koneksi)) . "'); history.back();</script>";
+}
+
+3. proses_edit_user.php
+<?php
+require_once '../koneksi.php';
+
+$id_user     = isset($_POST['id_user']) ? (int)$_POST['id_user'] : 0;
+$role        = isset($_POST['role']) ? trim($_POST['role']) : '';
+$username    = isset($_POST['username']) ? trim($_POST['username']) : '';
+$passwordRaw = isset($_POST['password_user']) ? $_POST['password_user'] : '';
+$id_guru     = isset($_POST['id_guru']) && $_POST['id_guru'] !== '' ? (int)$_POST['id_guru'] : null;
+
+if ($id_user <= 0) {
+    exit("<script>alert('ID tidak valid'); history.back();</script>");
+}
+
+$allowedRoles = ['Admin', 'Guru'];
+if (!in_array($role, $allowedRoles, true)) {
+    exit("<script>alert('Role tidak valid'); history.back();</script>");
+}
+if ($username === '' || strlen($username) > 50) {
+    exit("<script>alert('Username wajib dan maks 50 karakter.'); history.back();</script>");
+}
+
+// Cek username unik (kecuali diri sendiri)
+$sqlCheck = "SELECT 1 FROM user WHERE username=? AND id_user<>? LIMIT 1";
+$stmt = mysqli_prepare($koneksi, $sqlCheck);
+mysqli_stmt_bind_param($stmt, 'si', $username, $id_user);
+mysqli_stmt_execute($stmt);
+if (mysqli_num_rows(mysqli_stmt_get_result($stmt)) > 0) {
+    exit("<script>alert('Username sudah dipakai'); history.back();</script>");
+}
+
+// Build update (tanpa hash)
+if ($passwordRaw !== '') {
+    if ($id_guru === null) {
+        $sql  = "UPDATE user SET id_guru=NULL, role_user=?, username=?, password_user=? WHERE id_user=?";
+        $stmt = mysqli_prepare($koneksi, $sql);
+        mysqli_stmt_bind_param($stmt, 'sssi', $role, $username, $passwordRaw, $id_user);
+    } else {
+        $sql  = "UPDATE user SET id_guru=?, role_user=?, username=?, password_user=? WHERE id_user=?";
+        $stmt = mysqli_prepare($koneksi, $sql);
+        mysqli_stmt_bind_param($stmt, 'isssi', $id_guru, $role, $username, $passwordRaw, $id_user);
     }
-
-    body {
-        background: #f7f8fb;
-        color: var(--text);
+} else {
+    if ($id_guru === null) {
+        $sql  = "UPDATE user SET id_guru=NULL, role_user=?, username=? WHERE id_user=?";
+        $stmt = mysqli_prepare($koneksi, $sql);
+        mysqli_stmt_bind_param($stmt, 'ssi', $role, $username, $id_user);
+    } else {
+        $sql  = "UPDATE user SET id_guru=?, role_user=?, username=? WHERE id_user=?";
+        $stmt = mysqli_prepare($koneksi, $sql);
+        mysqli_stmt_bind_param($stmt, 'issi', $id_guru, $role, $username, $id_user);
     }
+}
 
-    .form-wrapper {
-        margin-left: 260px;
-        min-height: 100vh;
-        display: grid;
-        place-items: center;
-        padding: clamp(24px, 4vw, 48px) 12px;
-    }
-
-    .form-container {
-        background: var(--card);
-        width: min(760px, 100%);
-        border: 1px solid #e8eef6;
-        border-radius: var(--card-radius);
-        box-shadow: 0 6px 20px rgba(0, 0, 0, .06);
-        padding: clamp(18px, 2.6vw, 28px);
-    }
-
-    .form-title {
-        color: var(--ink);
-    }
-
-    label {
-        font-weight: 600;
-        margin: 10px 0 6px;
-        color: var(--ink);
-    }
-
-    .hint {
-        font-size: 12px;
-        color: var(--muted);
-        margin-top: -2px;
-    }
-
-    .form-control,
-    .form-select {
-        border: 1px solid var(--ring);
-        border-radius: 10px;
-        padding: 10px 12px;
-        color: var(--ink);
-    }
-
-    .form-control:focus,
-    .form-select:focus {
-        box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
-        border-color: var(--brand);
-    }
-
-    .btn-brand {
-        background: var(--brand);
-        border-color: var(--brand);
-        color: #fff;
-        font-weight: 700;
-    }
-
-    .btn-brand:hover {
-        background: var(--brand-600);
-        border-color: var(--brand-600);
-    }
-
-    @media (max-width:900px) {
-        .form-wrapper {
-            margin-left: 0;
-        }
-    }
-</style>
-
-<div class="form-wrapper">
-    <div class="form-container">
-        <div class="d-flex align-items-center justify-content-between">
-            <h2 class="form-title h4 mb-0">Edit User</h2>
-            <a href="data_user.php" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Kembali</a>
-        </div>
-        <hr class="mt-3 mb-3">
-
-        <form action="proses_edit_user.php" method="POST" autocomplete="off" novalidate>
-            <input type="hidden" name="id_user" value="<?= (int)$user['id_user'] ?>">
-
-            <div class="row g-3">
-                <div class="col-12 col-md-4">
-                    <label for="role">Role</label>
-                    <select id="role" name="role" class="form-select" required>
-                        <option value="Admin" <?= $user['role_user'] === 'Admin' ? 'selected' : ''; ?>>Admin</option>
-                        <option value="Guru" <?= $user['role_user'] === 'Guru'  ? 'selected' : ''; ?>>Guru</option>
-                    </select>
-                </div>
-
-                <div class="col-12 col-md-8">
-                    <label for="id_guru">Pilih Guru</label>
-                    <select id="id_guru" name="id_guru" class="form-select">
-                        <option value="">-- Tanpa Guru --</option>
-                        <?php while ($g = mysqli_fetch_assoc($guruRes)): ?>
-                            <option value="<?= (int)$g['id_guru'] ?>" <?= ((int)$user['id_guru'] === (int)$g['id_guru']) ? 'selected' : ''; ?>>
-                                <?= htmlspecialchars($g['nama_guru']) ?>
-                            </option>
-                        <?php endwhile; ?>
-                    </select>
-                </div>
-
-                <div class="col-12 col-md-6">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" name="username" maxlength="50" class="form-control" required
-                        value="<?= htmlspecialchars($user['username']) ?>">
-                </div>
-
-                <div class="col-12 col-md-6">
-                    <label for="password_user">Password (opsional)</label>
-                    <input type="password" id="password_user" name="password_user" class="form-control">
-                </div>
-            </div>
-
-            <div class="d-grid d-sm-flex gap-2 mt-4">
-                <button type="submit" class="btn btn-brand px-4"><i class="bi bi-save"></i> Simpan Perubahan</button>
-                <a href="data_user.php" class="btn btn-outline-secondary px-4">Batal</a>
-            </div>
-        </form>
-    </div>
-</div>
-
-<?php include '../includes/footer.php'; ?>
+$ok = mysqli_stmt_execute($stmt);
+if ($ok) {
+    echo "<script>alert('Perubahan disimpan'); window.location.href='data_user.php';</script>";
+} else {
+    echo "<script>alert('Gagal menyimpan perubahan: " . htmlspecialchars(mysqli_error($koneksi)) . "'); history.back();</script>";
+}
 
 4. hapus_user.php
 <?php
@@ -726,254 +926,3 @@ if ($ok) {
 } else {
     redirect_with_alert('Gagal menghapus: ' . mysqli_error($koneksi));
 }
-
-5. proses_edit_user.php
-<?php
-require_once '../koneksi.php';
-
-$id_user     = isset($_POST['id_user']) ? (int)$_POST['id_user'] : 0;
-$role        = isset($_POST['role']) ? trim($_POST['role']) : '';
-$username    = isset($_POST['username']) ? trim($_POST['username']) : '';
-$passwordRaw = isset($_POST['password_user']) ? $_POST['password_user'] : '';
-$id_guru     = isset($_POST['id_guru']) && $_POST['id_guru'] !== '' ? (int)$_POST['id_guru'] : null;
-
-if ($id_user <= 0) {
-    exit("<script>alert('ID tidak valid'); history.back();</script>");
-}
-
-$allowedRoles = ['Admin', 'Guru'];
-if (!in_array($role, $allowedRoles, true)) {
-    exit("<script>alert('Role tidak valid'); history.back();</script>");
-}
-if ($username === '' || strlen($username) > 50) {
-    exit("<script>alert('Username wajib dan maks 50 karakter.'); history.back();</script>");
-}
-
-// Cek username unik (kecuali diri sendiri)
-$sqlCheck = "SELECT 1 FROM user WHERE username=? AND id_user<>? LIMIT 1";
-$stmt = mysqli_prepare($koneksi, $sqlCheck);
-mysqli_stmt_bind_param($stmt, 'si', $username, $id_user);
-mysqli_stmt_execute($stmt);
-if (mysqli_num_rows(mysqli_stmt_get_result($stmt)) > 0) {
-    exit("<script>alert('Username sudah dipakai'); history.back();</script>");
-}
-
-// Build update (tanpa hash)
-if ($passwordRaw !== '') {
-    if ($id_guru === null) {
-        $sql  = "UPDATE user SET id_guru=NULL, role_user=?, username=?, password_user=? WHERE id_user=?";
-        $stmt = mysqli_prepare($koneksi, $sql);
-        mysqli_stmt_bind_param($stmt, 'sssi', $role, $username, $passwordRaw, $id_user);
-    } else {
-        $sql  = "UPDATE user SET id_guru=?, role_user=?, username=?, password_user=? WHERE id_user=?";
-        $stmt = mysqli_prepare($koneksi, $sql);
-        mysqli_stmt_bind_param($stmt, 'isssi', $id_guru, $role, $username, $passwordRaw, $id_user);
-    }
-} else {
-    if ($id_guru === null) {
-        $sql  = "UPDATE user SET id_guru=NULL, role_user=?, username=? WHERE id_user=?";
-        $stmt = mysqli_prepare($koneksi, $sql);
-        mysqli_stmt_bind_param($stmt, 'ssi', $role, $username, $id_user);
-    } else {
-        $sql  = "UPDATE user SET id_guru=?, role_user=?, username=? WHERE id_user=?";
-        $stmt = mysqli_prepare($koneksi, $sql);
-        mysqli_stmt_bind_param($stmt, 'issi', $id_guru, $role, $username, $id_user);
-    }
-}
-
-$ok = mysqli_stmt_execute($stmt);
-if ($ok) {
-    echo "<script>alert('Perubahan disimpan'); window.location.href='data_user.php';</script>";
-} else {
-    echo "<script>alert('Gagal menyimpan perubahan: " . htmlspecialchars(mysqli_error($koneksi)) . "'); history.back();</script>";
-}
-
-6. proses_tambah_user.php
-<?php
-require_once '../koneksi.php';
-
-$role        = isset($_POST['role']) ? trim($_POST['role']) : '';
-$username    = isset($_POST['username']) ? trim($_POST['username']) : '';
-$passwordRaw = isset($_POST['password_user']) ? $_POST['password_user'] : '';
-$id_guru     = isset($_POST['id_guru']) && $_POST['id_guru'] !== '' ? (int)$_POST['id_guru'] : null;
-
-// Validasi dasar
-$allowedRoles = ['Admin', 'Guru'];
-if (!in_array($role, $allowedRoles, true)) {
-    exit("<script>alert('Role tidak valid.'); history.back();</script>");
-}
-if ($username === '' || strlen($username) > 50) {
-    exit("<script>alert('Username wajib dan maks 50 karakter.'); history.back();</script>");
-}
-if ($passwordRaw === '') {
-    exit("<script>alert('Password wajib diisi.'); history.back();</script>");
-}
-
-// Cek username unik
-$sqlCheck = "SELECT 1 FROM user WHERE username = ? LIMIT 1";
-$stmt = mysqli_prepare($koneksi, $sqlCheck);
-mysqli_stmt_bind_param($stmt, 's', $username);
-mysqli_stmt_execute($stmt);
-$res = mysqli_stmt_get_result($stmt);
-if (mysqli_num_rows($res) > 0) {
-    exit("<script>alert('Username sudah digunakan.'); history.back();</script>");
-}
-
-// Insert (tanpa hash password, sesuai permintaan)
-if ($id_guru === null) {
-    $sql = "INSERT INTO user (id_guru, role_user, username, password_user) VALUES (NULL, ?, ?, ?)";
-    $stmt = mysqli_prepare($koneksi, $sql);
-    mysqli_stmt_bind_param($stmt, 'sss', $role, $username, $passwordRaw);
-} else {
-    $sql = "INSERT INTO user (id_guru, role_user, username, password_user) VALUES (?, ?, ?, ?)";
-    $stmt = mysqli_prepare($koneksi, $sql);
-    mysqli_stmt_bind_param($stmt, 'isss', $id_guru, $role, $username, $passwordRaw);
-}
-
-$ok = mysqli_stmt_execute($stmt);
-if ($ok) {
-    echo "<script>alert('User berhasil ditambahkan'); window.location.href='data_user.php';</script>";
-} else {
-    echo "<script>alert('Gagal menambahkan user: " . htmlspecialchars(mysqli_error($koneksi)) . "'); history.back();</script>";
-}
-
-7. tambah_data_user.php
-<?php
-include '../includes/header.php';
-include '../includes/navbar.php';
-require_once '../koneksi.php';
-
-// Ambil daftar guru
-$guruRes = mysqli_query($koneksi, "SELECT id_guru, nama_guru FROM guru ORDER BY nama_guru ASC");
-?>
-<style>
-  :root {
-    --brand: #0a4db3;
-    --brand-600: #083f93;
-    --ink: #0f172a;
-    --text: #111827;
-    --muted: #475569;
-    --ring: #cbd5e1;
-    --card: #ffffff;
-    --card-radius: 14px;
-  }
-
-  body {
-    background: #f7f8fb;
-    color: var(--text);
-  }
-
-  .form-wrapper {
-    margin-left: 260px;
-    min-height: 100vh;
-    display: grid;
-    place-items: center;
-    padding: clamp(24px, 4vw, 48px) 12px;
-  }
-
-  .form-container {
-    background: var(--card);
-    width: min(720px, 100%);
-    border: 1px solid #e8eef6;
-    border-radius: var(--card-radius);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, .06);
-    padding: clamp(18px, 2.6vw, 28px);
-  }
-
-  .form-title {
-    color: var(--ink);
-  }
-
-  label {
-    font-weight: 600;
-    margin: 10px 0 6px;
-    color: var(--ink);
-  }
-
-  .hint {
-    font-size: 12px;
-    color: var(--muted);
-    margin-top: -2px;
-  }
-
-  .form-control,
-  .form-select {
-    border: 1px solid var(--ring);
-    border-radius: 10px;
-    padding: 10px 12px;
-    color: var(--ink);
-  }
-
-  .form-control:focus,
-  .form-select:focus {
-    box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
-    border-color: var(--brand);
-  }
-
-  .btn-brand {
-    background: var(--brand);
-    border-color: var(--brand);
-    color: #fff;
-    font-weight: 700;
-  }
-
-  .btn-brand:hover {
-    background: var(--brand-600);
-    border-color: var(--brand-600);
-  }
-
-  @media (max-width:900px) {
-    .form-wrapper {
-      margin-left: 0;
-    }
-  }
-</style>
-
-<div class="form-wrapper">
-  <div class="form-container">
-    <div class="d-flex align-items-center justify-content-between">
-      <h2 class="form-title h4 mb-0">Tambah User</h2>
-      <a href="data_user.php" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Kembali</a>
-    </div>
-    <hr class="mt-3 mb-3">
-
-    <form action="proses_tambah_user.php" method="POST" autocomplete="off" novalidate>
-      <div class="row g-3">
-        <div class="col-12 col-md-4">
-          <label for="role">Role</label>
-          <select id="role" name="role" class="form-select" required>
-            <option value="Admin">Admin</option>
-            <option value="Guru" selected>Guru</option>
-          </select>
-        </div>
-
-        <div class="col-12 col-md-8">
-          <label for="id_guru">Pilih Guru</label>
-          <select id="id_guru" name="id_guru" class="form-select">
-            <option value="">-- Tanpa Guru --</option>
-            <?php while ($g = mysqli_fetch_assoc($guruRes)): ?>
-              <option value="<?= (int)$g['id_guru'] ?>"><?= htmlspecialchars($g['nama_guru']) ?></option>
-            <?php endwhile; ?>
-          </select>
-        </div>
-
-        <div class="col-12 col-md-6">
-          <label for="username">Username</label>
-          <input type="text" id="username" name="username" maxlength="50" class="form-control" required>
-        </div>
-
-        <div class="col-12 col-md-6">
-          <label for="password_user">Password</label>
-          <input type="password" id="password_user" name="password_user" class="form-control" required>
-        </div>
-      </div>
-
-      <div class="d-grid d-sm-flex gap-2 mt-4">
-        <button type="submit" class="btn btn-brand px-4"><i class="bi bi-check2-circle"></i> Simpan</button>
-        <a href="data_user.php" class="btn btn-outline-secondary px-4">Batal</a>
-      </div>
-    </form>
-  </div>
-</div>
-
-<?php include '../includes/footer.php'; ?>
