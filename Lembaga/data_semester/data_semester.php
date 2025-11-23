@@ -1,4 +1,22 @@
 <?php
+// ====== CEK PARAMETER ALERT (SETELAH SIMPAN) ======
+$alertMsg = '';
+$alertClass = '';
+
+if (isset($_GET['msg'])) {
+  switch ($_GET['msg']) {
+    case 'saved':
+      $alertMsg   = 'Pengaturan semester berhasil disimpan.';
+      $alertClass = 'alert-success';
+      break;
+
+    case 'error':
+      $alertMsg   = 'Terjadi kesalahan saat menyimpan pengaturan semester.';
+      $alertClass = 'alert-danger';
+      break;
+  }
+}
+
 include '../../includes/header.php';
 ?>
 
@@ -13,6 +31,16 @@ include '../../includes/header.php';
       <div class="dk-content-box">
         <div class="container py-4">
           <h4 class="fw-bold mb-4 jus">Data Semester</h4>
+
+          <!-- ALERT NOTIFIKASI (muncul setelah klik simpan) -->
+          <?php if ($alertMsg !== ''): ?>
+            <div id="alertArea">
+              <div class="alert <?= $alertClass ?> alert-dismissible fade show mb-3" role="alert">
+                <?= htmlspecialchars($alertMsg, ENT_QUOTES, 'UTF-8'); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            </div>
+          <?php endif; ?>
 
           <!-- Form Simpan -->
           <form action="semester_proses.php" method="POST">
@@ -67,6 +95,24 @@ include '../../includes/header.php';
       </div>
     </div>
   </div>
+
+  <!-- AUTO HIDE ALERT 5 DETIK (tidak mengubah tampilan) -->
+  <script>
+    window.addEventListener('DOMContentLoaded', function () {
+      const alerts = document.querySelectorAll('#alertArea .alert');
+      if (!alerts.length) return;
+
+      setTimeout(() => {
+        alerts.forEach(a => {
+          a.style.transition = 'opacity 0.5s ease';
+          a.style.opacity = '0';
+          setTimeout(() => {
+            if (a.parentNode) a.parentNode.removeChild(a);
+          }, 600);
+        });
+      }, 5000); // 5 detik
+    });
+  </script>
 
   <?php
   include '../../includes/footer.php';

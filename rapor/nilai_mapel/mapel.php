@@ -29,6 +29,9 @@ try {
 } catch (Throwable $e) {
   // biarkan kosong jika error, tampilan tetap sama
 }
+
+// ===== FLAG NOTIFIKASI (ADD / EDIT / DELETE) =====
+$status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
 ?>
 
 <body>
@@ -44,10 +47,15 @@ try {
 
             <!-- Tombol di kanan -->
             <div class="ms-auto d-flex gap-2 action-buttons">
-              <a href="nilai_mapel_tambah.php" class="btn btn-primary btn-sm d-flex align-items-center gap-1 p-2 pe-3 fw-semibold" style="border-radius: 5px;">
+              <!-- TOMBOL TAMBAH → BUKA MODAL -->
+              <button type="button"
+                      class="btn btn-primary btn-sm d-flex align-items-center gap-1 p-2 pe-3 fw-semibold"
+                      style="border-radius: 5px;"
+                      data-bs-toggle="modal"
+                      data-bs-target="#modalTambahMapel">
                 <i class="fa-solid fa-plus fa-lg"></i>
                 Tambah
-              </a>
+              </button>
 
               <a href="nilai_mapel_import.php" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
                 <i class="fa-solid fa-file-arrow-down fa-lg"></i>
@@ -55,7 +63,7 @@ try {
               </a>
 
               <button id="exportBtn" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
-                 <i class="fa-solid fa-file-arrow-up fa-lg"></i>
+                <i class="fa-solid fa-file-arrow-up fa-lg"></i>
                 Export
               </button>
             </div>
@@ -77,6 +85,26 @@ try {
               </svg>
               Sort
             </button>
+          </div>
+
+          <!-- ALERT (di bawah search & sort) -->
+          <div id="alertArea">
+            <?php if ($status === 'add_success'): ?>
+              <div class="alert alert-success mx-3 mt-3 mb-0 alert-dismissible fade show" role="alert">
+                Data mata pelajaran berhasil <strong>ditambahkan</strong>.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            <?php elseif ($status === 'edit_success'): ?>
+              <div class="alert alert-success mx-3 mt-3 mb-0 alert-dismissible fade show" role="alert">
+                Data mata pelajaran berhasil <strong>diperbarui</strong>.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            <?php elseif ($status === 'delete_success'): ?>
+              <div class="alert alert-danger mx-3 mt-3 mb-0 alert-dismissible fade show" role="alert">
+                Data mata pelajaran berhasil <strong>dihapus</strong>.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            <?php endif; ?>
           </div>
 
           <!-- Tabel nilai Mapel ambil data mapel -->
@@ -119,6 +147,68 @@ try {
       </div>
     </div>
   </main>
+
+  <!-- ========== MODAL TAMBAH MAPEL ========== -->
+  <div class="modal fade" id="modalTambahMapel" tabindex="-1" aria-labelledby="modalTambahMapelLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 600px;">
+      <div class="modal-content" style="border-radius: 10px; overflow: hidden;">
+        <!-- Header biru -->
+        <div class="modal-header" style="background-color:#0d6efd; color:#fff;">
+          <h5 class="modal-title d-flex align-items-center" id="modalTambahMapelLabel">
+            <i class="fa fa-star me-2"></i> Tambah Nilai Mata Pelajaran
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <!-- Form di dalam modal: submit ke nilai_mapel_tambah.php -->
+        <form method="post" action="nilai_mapel_tambah.php">
+          <div class="modal-body">
+            <!-- Nama Mapel: INPUT TEKS -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Nama Mapel</label>
+              <input type="text"
+                     class="form-control"
+                     name="nama_mapel"
+                     placeholder="Contoh: Bahasa Inggris"
+                     required>
+            </div>
+
+            <!-- Jenis: DROPDOWN -->
+            <div class="mb-3">
+              <label class="form-label fw-bold">Jenis</label>
+              <select class="form-select" name="jenis_mapel" required>
+                <option value="">-- Pilih Jenis --</option>
+                <option value="Wajib">Wajib</option>
+                <option value="Paket">Paket</option>
+              </select>
+            </div>
+
+            <!-- Nilai: DROPDOWN -->
+            <div class="mb-3">
+              <label class="form-label fw-bold">Nilai</label>
+              <select class="form-select" name="nilai" required>
+                <option value="">-- Pilih Nilai --</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="D">D</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="modal-footer d-flex justify-content-between">
+            <button type="submit" class="btn btn-success">
+              <i class="fa fa-save"></i> Simpan
+            </button>
+            <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
+              <i class="fas fa-times"></i> Batal
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <!-- ========== END MODAL ========== -->
 
   <style>
     /* Tambahan CSS Responsif */
@@ -225,6 +315,19 @@ try {
         URL.revokeObjectURL(url);
       });
     })();
+
+    // ====== AUTO HIDE ALERT 5 DETIK ======
+    window.addEventListener('DOMContentLoaded', function () {
+      const alerts = document.querySelectorAll('#alertArea .alert');
+      if (!alerts.length) return;
+      setTimeout(() => {
+        alerts.forEach(a => {
+          a.style.transition = 'opacity 0.5s ease';
+          a.style.opacity = '0';
+          setTimeout(() => { if (a.parentNode) a.parentNode.remove(); }, 600);
+        });
+      }, 5000); // 5 detik
+    });
   </script>
 
   <?php include '../../includes/footer.php'; ?>
