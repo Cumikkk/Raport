@@ -39,39 +39,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ids']) && is_array($_
     $failed  = [];
 
     foreach ($ids as $id) {
-        $stmt = mysqli_prepare($koneksi, "SELECT username FROM user WHERE id_user=?");
+        // Ambil username dulu
+        $stmt = mysqli_prepare($koneksi, "SELECT username FROM user WHERE id_user = ?");
         mysqli_stmt_bind_param($stmt, 'i', $id);
         mysqli_stmt_execute($stmt);
         $res = mysqli_stmt_get_result($stmt);
+
         if (mysqli_num_rows($res) === 0) {
             $failed[] = "User dengan ID $id tidak ditemukan.";
             continue;
         }
+
         $row = mysqli_fetch_assoc($res);
         $username = $row['username'];
 
-        $stmtDel = mysqli_prepare($koneksi, "DELETE FROM user WHERE id_user=?");
+        // Hapus user
+        $stmtDel = mysqli_prepare($koneksi, "DELETE FROM user WHERE id_user = ?");
         mysqli_stmt_bind_param($stmtDel, 'i', $id);
         $ok = mysqli_stmt_execute($stmtDel);
 
         if ($ok && mysqli_stmt_affected_rows($stmtDel) > 0) {
             $deleted[] = $username;
         } else {
-            $failed[] = "Gagal menghapus user \"{$username}\".";
+            $failed[] = 'Gagal menghapus data user "' . $username . '".';
         }
     }
 
     $msgParts = [];
+
     if (!empty($deleted)) {
         if (count($deleted) === 1) {
-            $msgParts[] = 'User "' . $deleted[0] . '" terhapus.';
+            $msgParts[] = 'Data user "' . $deleted[0] . '" berhasil dihapus.';
         } else {
-            $msgParts[] = count($deleted) . ' user terhapus: ' . implode(', ', $deleted) . '.';
+            $msgParts[] = count($deleted) . ' Data user berhasil dihapus: ' . implode(', ', $deleted) . '.';
         }
     }
+
     if (!empty($failed)) {
         $msgParts[] = implode(' | ', $failed);
     }
+
     if (empty($msgParts)) {
         $msgParts[] = 'Tidak ada perubahan data.';
     }
@@ -85,12 +92,27 @@ if ($id <= 0) {
     redirect_with_status('error', 'ID tidak valid.');
 }
 
-$stmt = mysqli_prepare($koneksi, "DELETE FROM user WHERE id_user=?");
+// Ambil username dulu supaya bisa ditampilkan di alert
+$stmt = mysqli_prepare($koneksi, "SELECT username FROM user WHERE id_user = ?");
 mysqli_stmt_bind_param($stmt, 'i', $id);
-$ok = mysqli_stmt_execute($stmt);
+mysqli_stmt_execute($stmt);
+$res = mysqli_stmt_get_result($stmt);
 
-if ($ok && mysqli_stmt_affected_rows($stmt) > 0) {
-    redirect_with_status('success', 'User terhapus.');
+if (mysqli_num_rows($res) === 0) {
+    redirect_with_status('error', 'User tidak ditemukan.');
+}
+
+$row = mysqli_fetch_assoc($res);
+$username = $row['username'];
+
+// Hapus data user
+$stmtDel = mysqli_prepare($koneksi, "DELETE FROM user WHERE id_user = ?");
+mysqli_stmt_bind_param($stmtDel, 'i', $id);
+$ok = mysqli_stmt_execute($stmtDel);
+
+if ($ok && mysqli_stmt_affected_rows($stmtDel) > 0) {
+    // Pesan sukses mencantumkan nama user
+    redirect_with_status('success', 'Data user "' . $username . '" berhasil dihapus.');
 } else {
-    redirect_with_status('error', 'Gagal menghapus: ' . mysqli_error($koneksi));
+    redirect_with_status('error', 'Gagal menghapus data user "' . $username . '": ' . mysqli_error($koneksi));
 }

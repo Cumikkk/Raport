@@ -125,7 +125,7 @@ if ($totalRows === 0) {
   }
 
   .search-wrap {
-    max-width: 520px;
+    max-width: 300px;
     width: 100%;
   }
 
@@ -369,20 +369,22 @@ if ($totalRows === 0) {
   <div class="row g-3">
     <div class="col-12">
 
-      <!-- ALERT DI LUAR CARD, DI ATAS DATA USER -->
-      <?php if (isset($_GET['status'])): ?>
-        <?php if ($_GET['status'] === 'success'): ?>
-          <div class="alert alert-success">
-            <span class="close-btn">&times;</span>
-            ✅ <?= htmlspecialchars($_GET['msg'] ?? 'Operasi berhasil.', ENT_QUOTES, 'UTF-8'); ?>
-          </div>
-        <?php else: ?>
-          <div class="alert alert-danger">
-            <span class="close-btn">&times;</span>
-            ❌ <?= htmlspecialchars($_GET['msg'] ?? 'Terjadi kesalahan.', ENT_QUOTES, 'UTF-8'); ?>
-          </div>
+      <!-- CONTAINER ALERT GLOBAL (sukses/gagal umum) -->
+      <div id="globalAlertContainer">
+        <?php if (isset($_GET['status'])): ?>
+          <?php if ($_GET['status'] === 'success'): ?>
+            <div class="alert alert-success">
+              <span class="close-btn">&times;</span>
+              ✅ <?= htmlspecialchars($_GET['msg'] ?? 'Operasi berhasil.', ENT_QUOTES, 'UTF-8'); ?>
+            </div>
+          <?php else: ?>
+            <div class="alert alert-danger">
+              <span class="close-btn">&times;</span>
+              ❌ <?= htmlspecialchars($_GET['msg'] ?? 'Terjadi kesalahan.', ENT_QUOTES, 'UTF-8'); ?>
+            </div>
+          <?php endif; ?>
         <?php endif; ?>
-      <?php endif; ?>
+      </div>
 
       <div class="card shadow-sm">
 
@@ -498,7 +500,7 @@ if ($totalRows === 0) {
                           <!-- Hapus pakai modal konfirmasi -->
                           <button type="button"
                             class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-delete-single"
-                            data-href="hapus_user.php?id=<?= (int)$row['id_user'] ?>"
+                            data-href="hapus_data_user.php?id=<?= (int)$row['id_user'] ?>"
                             data-label="<?= htmlspecialchars($row['username'], ENT_QUOTES, 'UTF-8') ?>">
                             <i class="bi bi-trash"></i> Hapus
                           </button>
@@ -523,7 +525,7 @@ if ($totalRows === 0) {
           <!-- Info & Pagination -->
           <div class="mt-3 d-flex flex-column align-items-center gap-1">
             <nav id="paginationWrap" class="d-flex justify-content-center"></nav>
-            <div id="pageInfo" class="page-info-text text-muted text-center">
+            <div id="pageInfo" class="page-info-text text-muted text-center mt-2">
               Menampilkan <?= $shown ?> dari <?= $totalRows ?> data • Halaman <?= $pageDisplayCurrent ?> / <?= $pageDisplayTotal ?>
             </div>
           </div>
@@ -541,8 +543,11 @@ if ($totalRows === 0) {
           <h5 class="modal-title">Tambah User</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
         </div>
-        <form action="proses_tambah_user.php" method="POST" autocomplete="off">
+        <form action="proses_tambah_data_user.php" method="POST" autocomplete="off">
           <div class="modal-body">
+            <!-- ALERT ERROR DI DALAM MODAL TAMBAH -->
+            <div id="addUserAlert" class="alert alert-danger d-none mb-3"></div>
+
             <div class="mb-3">
               <label for="add_role" class="form-label">Role</label>
               <select id="add_role" name="role" class="form-select" required>
@@ -609,9 +614,12 @@ if ($totalRows === 0) {
           <h5 class="modal-title">Edit User</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
         </div>
-        <form action="proses_edit_user.php" method="POST" autocomplete="off">
+        <form action="proses_edit_data_user.php" method="POST" autocomplete="off">
           <input type="hidden" name="id_user" id="edit_id_user">
           <div class="modal-body">
+            <!-- ALERT ERROR DI DALAM MODAL EDIT -->
+            <div id="editUserAlert" class="alert alert-danger d-none mb-3"></div>
+
             <div class="mb-3">
               <label for="edit_role" class="form-label">Role</label>
               <select id="edit_role" name="role" class="form-select" required>
@@ -717,6 +725,10 @@ if ($totalRows === 0) {
     const confirmBodyEl = document.getElementById('confirmDeleteBody');
     const confirmBtn = document.getElementById('confirmDeleteBtn');
 
+    const addUserAlert = document.getElementById('addUserAlert');
+    const editUserAlert = document.getElementById('editUserAlert');
+    const globalAlertContainer = document.getElementById('globalAlertContainer');
+
     let typingTimer;
     const debounceMs = 250;
     let currentController = null;
@@ -731,7 +743,6 @@ if ($totalRows === 0) {
 
     function showDeleteConfirm(message, handler) {
       if (!confirmModalEl || !confirmBodyEl || !confirmBtn) {
-        // fallback kalau modal tidak ada / bootstrap belum siap
         if (confirm(message)) {
           handler();
         }
@@ -741,7 +752,6 @@ if ($totalRows === 0) {
       confirmBodyEl.textContent = message;
       pendingDeleteHandler = handler;
 
-      // reset handler dulu supaya tidak numpuk
       confirmBtn.onclick = function() {
         if (pendingDeleteHandler) {
           pendingDeleteHandler();
@@ -756,7 +766,6 @@ if ($totalRows === 0) {
         const m = bootstrap.Modal.getOrCreateInstance(confirmModalEl);
         m.show();
       } else {
-        // fallback
         if (confirm(message)) {
           handler();
         }
@@ -829,6 +838,15 @@ if ($totalRows === 0) {
       });
     }
 
+    // Tutup semua alert global (atas) – dipakai saat klik Edit / Hapus
+    function dismissGlobalAlerts() {
+      if (!globalAlertContainer) return;
+      const alerts = globalAlertContainer.querySelectorAll('.alert');
+      alerts.forEach(alert => {
+        alert.classList.add('alert-hide');
+      });
+    }
+
     // EDIT: pakai modal Bootstrap saat tombol Edit diklik
     function attachEditModalEvents() {
       const editButtons = document.querySelectorAll('.btn-edit-user');
@@ -844,6 +862,9 @@ if ($totalRows === 0) {
       editButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.preventDefault();
+
+          // Tutup alert global di atas (kalau ada)
+          dismissGlobalAlerts();
 
           const id = btn.getAttribute('data-id') || '';
           const role = btn.getAttribute('data-role') || '';
@@ -870,6 +891,10 @@ if ($totalRows === 0) {
       buttons.forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.preventDefault();
+
+          // Tutup alert global di atas (kalau ada)
+          dismissGlobalAlerts();
+
           const href = btn.getAttribute('data-href');
           const label = btn.getAttribute('data-label') || 'user ini';
 
@@ -965,7 +990,7 @@ if ($totalRows === 0) {
 
       const form = document.createElement('form');
       form.method = 'post';
-      form.action = 'hapus_user.php';
+      form.action = 'hapus_data_user.php';
 
       const csrfInput = document.createElement('input');
       csrfInput.type = 'hidden';
@@ -1042,6 +1067,109 @@ if ($totalRows === 0) {
         });
     }
 
+    // ==== Helper alert modal & global ====
+    function clearModalAlert(mode) {
+      const box = (mode === 'add') ? addUserAlert : editUserAlert;
+      if (!box) return;
+      box.textContent = '';
+      box.classList.add('d-none');
+    }
+
+    function showModalAlert(mode, message) {
+      const box = (mode === 'add') ? addUserAlert : editUserAlert;
+      if (!box) return;
+      box.textContent = message;
+      box.classList.remove('d-none');
+    }
+
+    function showTopAlert(type, message) {
+      if (!globalAlertContainer) return;
+      const isSuccess = (type === 'success');
+      globalAlertContainer.innerHTML =
+        `<div class="alert ${isSuccess ? 'alert-success' : 'alert-danger'}">
+          <span class="close-btn">&times;</span>
+          ${isSuccess ? '✅' : '❌'} ${message}
+        </div>`;
+
+      const alert = globalAlertContainer.querySelector('.alert');
+      if (!alert) return;
+      const closeBtn = alert.querySelector('.close-btn');
+      const timer = setTimeout(() => {
+        alert.classList.add('alert-hide');
+      }, 4000);
+
+      if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          alert.classList.add('alert-hide');
+          clearTimeout(timer);
+        });
+      }
+    }
+
+    // ==== Submit form via AJAX ====
+    function handleFormSubmit(form, mode) {
+      clearModalAlert(mode);
+
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const origHtml = submitBtn ? submitBtn.innerHTML : '';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML =
+          '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Menyimpan...';
+      }
+
+      fetch(form.action, {
+          method: 'POST',
+          body: new FormData(form),
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+        .then(r => {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
+        .then(data => {
+          if (!data || typeof data.success === 'undefined') {
+            throw new Error('Respon tidak valid');
+          }
+
+          if (!data.success) {
+            showModalAlert(mode, data.message || 'Terjadi kesalahan.');
+            return;
+          }
+
+          // sukses: tutup modal, refresh tabel, tampilkan alert global
+          if (typeof bootstrap !== 'undefined') {
+            const modalEl = mode === 'add' ?
+              document.getElementById('modalTambahUser') :
+              document.getElementById('modalEditUser');
+            if (modalEl) {
+              bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+            }
+          }
+
+          showTopAlert('success', data.message || 'Berhasil menyimpan data.');
+          doSearch(currentQuery, currentPage, currentPerPage);
+
+          if (mode === 'add') {
+            form.reset();
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          showModalAlert(mode, 'Gagal mengirim data ke server.');
+        })
+        .finally(() => {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = origHtml;
+          }
+        });
+    }
+
+    // ==== Event input & perPage ====
     input.addEventListener('input', () => {
       clearTimeout(typingTimer);
       typingTimer = setTimeout(() => {
@@ -1064,23 +1192,40 @@ if ($totalRows === 0) {
     attachEditModalEvents();
     attachSingleDeleteEvents();
     buildPagination(currentTotalRows, currentPage, currentPerPage);
+
+    // Intercept submit form Tambah & Edit → AJAX
+    const formAdd = document.querySelector('#modalTambahUser form');
+    if (formAdd) {
+      formAdd.addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleFormSubmit(formAdd, 'add');
+      });
+    }
+
+    const formEdit = document.querySelector('#modalEditUser form');
+    if (formEdit) {
+      formEdit.addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleFormSubmit(formEdit, 'edit');
+      });
+    }
   })();
 </script>
 
 <script>
-  // Auto-hide alert + tombol X
+  // Auto-hide alert + tombol X (alert global awal dari PHP)
   document.addEventListener('DOMContentLoaded', () => {
-    const alerts = document.querySelectorAll('.alert');
+    const alerts = document.querySelectorAll('#globalAlertContainer .alert');
     if (!alerts.length) return;
 
     alerts.forEach(alert => {
+      const closeBtn = alert.querySelector('.close-btn');
       const timer = setTimeout(() => {
         alert.classList.add('alert-hide');
       }, 4000);
 
-      const close = alert.querySelector('.close-btn');
-      if (close) {
-        close.addEventListener('click', (e) => {
+      if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
           e.preventDefault();
           alert.classList.add('alert-hide');
           clearTimeout(timer);
@@ -1091,3 +1236,41 @@ if ($totalRows === 0) {
 </script>
 
 <?php include '../includes/footer.php'; ?>
+
+<!-- Fallback lama (kalau bukan AJAX, misal JS mati) tetap buka modal berdasarkan ?modal=... -->
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const modalTarget = params.get('modal');
+      const msg = params.get('msg');
+      const id = params.get('id');
+
+      if (!modalTarget || !msg) return;
+
+      if (modalTarget === 'add') {
+        const alertBox = document.getElementById('addUserAlert');
+        if (alertBox) {
+          alertBox.textContent = msg;
+          alertBox.classList.remove('d-none');
+        }
+        const modalEl = document.getElementById('modalTambahUser');
+        if (modalEl && typeof bootstrap !== 'undefined') {
+          bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+      } else if (modalTarget === 'edit' && id) {
+        const alertBox = document.getElementById('editUserAlert');
+        if (alertBox) {
+          alertBox.textContent = msg;
+          alertBox.classList.remove('d-none');
+        }
+        const btn = document.querySelector('.btn-edit-user[data-id="' + id + '"]');
+        if (btn) {
+          btn.click();
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  });
+</script>

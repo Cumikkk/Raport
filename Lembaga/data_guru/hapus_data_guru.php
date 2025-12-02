@@ -1,4 +1,5 @@
 <?php
+// pages/guru/hapus_data_guru.php
 require_once '../../koneksi.php';
 
 // Start session untuk verifikasi CSRF
@@ -66,13 +67,13 @@ foreach ($ids as $id) {
 
     $guru = $res->fetch_assoc();
 
-    // Cek dependensi di tabel user (fk_user_relations_guru)
+    // Cek dependensi di tabel user
     $stmtU = $koneksi->prepare("SELECT COUNT(*) AS cnt FROM user WHERE id_guru = ?");
     $stmtU->bind_param('i', $id);
     $stmtU->execute();
     $cntU = (int)$stmtU->get_result()->fetch_assoc()['cnt'];
 
-    // Cek dependensi di tabel kelas (fk_kelas_relations_guru)
+    // Cek dependensi di tabel kelas
     $stmtK = $koneksi->prepare("SELECT COUNT(*) AS cnt FROM kelas WHERE id_guru = ?");
     $stmtK->bind_param('i', $id);
     $stmtK->execute();
@@ -103,7 +104,7 @@ if (!empty($deleted)) {
     if (count($deleted) === 1) {
         $params['msg'] = 'Data guru "' . $deleted[0] . '" berhasil dihapus.';
     } else {
-        $params['msg'] = count($deleted) . ' data guru berhasil dihapus: ' . implode(', ', $deleted) . '.';
+        $params['msg'] = count($deleted) . ' Data guru berhasil dihapus: ' . implode(', ', $deleted) . '.';
     }
 }
 
