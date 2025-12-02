@@ -259,7 +259,7 @@ if ($totalRows === 0) {
     font-size: 0.95rem;
   }
 
-  /* ALERT – sama seperti di halaman Data Sekolah */
+  /* ALERT – global & modal (animasi sama) */
   .alert {
     padding: 12px 14px;
     border-radius: 12px;
@@ -540,7 +540,7 @@ if ($totalRows === 0) {
     <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Tambah User</h5>
+          <h5 class="modal-title">Tambah Data User</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
         </div>
         <form action="proses_tambah_data_user.php" method="POST" autocomplete="off">
@@ -549,7 +549,7 @@ if ($totalRows === 0) {
             <div id="addUserAlert" class="alert alert-danger d-none mb-3"></div>
 
             <div class="mb-3">
-              <label for="add_role" class="form-label">Role</label>
+              <label for="add_role" class="form-label fw-semibold">Role</label>
               <select id="add_role" name="role" class="form-select" required>
                 <option value="" disabled selected>-- Pilih Role --</option>
                 <option value="Admin">Admin</option>
@@ -558,7 +558,7 @@ if ($totalRows === 0) {
             </div>
 
             <div class="mb-3">
-              <label for="add_id_guru" class="form-label">Pilih Guru</label>
+              <label for="add_id_guru" class="form-label fw-semibold">Pilih Guru</label>
               <select id="add_id_guru" name="id_guru" class="form-select" required>
                 <option value="" disabled selected>-- Pilih Guru --</option>
                 <?php foreach ($guruList as $g): ?>
@@ -570,7 +570,7 @@ if ($totalRows === 0) {
             </div>
 
             <div class="mb-3">
-              <label for="add_username" class="form-label">Username</label>
+              <label for="add_username" class="form-label fw-semibold">Username</label>
               <input
                 type="text"
                 id="add_username"
@@ -581,7 +581,7 @@ if ($totalRows === 0) {
             </div>
 
             <div class="mb-3">
-              <label for="add_password_user" class="form-label">Password</label>
+              <label for="add_password_user" class="form-label fw-semibold">Password</label>
               <input
                 type="password"
                 id="add_password_user"
@@ -611,7 +611,7 @@ if ($totalRows === 0) {
     <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Edit User</h5>
+          <h5 class="modal-title">Edit Data User</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
         </div>
         <form action="proses_edit_data_user.php" method="POST" autocomplete="off">
@@ -621,7 +621,7 @@ if ($totalRows === 0) {
             <div id="editUserAlert" class="alert alert-danger d-none mb-3"></div>
 
             <div class="mb-3">
-              <label for="edit_role" class="form-label">Role</label>
+              <label for="edit_role" class="form-label fw-semibold">Role</label>
               <select id="edit_role" name="role" class="form-select" required>
                 <option value="" disabled>-- Pilih Role --</option>
                 <option value="Admin">Admin</option>
@@ -630,7 +630,7 @@ if ($totalRows === 0) {
             </div>
 
             <div class="mb-3">
-              <label for="edit_id_guru" class="form-label">Pilih Guru</label>
+              <label for="edit_id_guru" class="form-label fw-semibold">Pilih Guru</label>
               <select id="edit_id_guru" name="id_guru" class="form-select" required>
                 <option value="" disabled>-- Pilih Guru --</option>
                 <?php foreach ($guruList as $g): ?>
@@ -642,7 +642,7 @@ if ($totalRows === 0) {
             </div>
 
             <div class="mb-3">
-              <label for="edit_username" class="form-label">Username</label>
+              <label for="edit_username" class="form-label fw-semibold">Username</label>
               <input
                 type="text"
                 id="edit_username"
@@ -653,7 +653,7 @@ if ($totalRows === 0) {
             </div>
 
             <div class="mb-3">
-              <label for="edit_password_user" class="form-label">Password (opsional)</label>
+              <label for="edit_password_user" class="form-label fw-semibold">Password (opsional)</label>
               <input
                 type="password"
                 id="edit_password_user"
@@ -1071,15 +1071,45 @@ if ($totalRows === 0) {
     function clearModalAlert(mode) {
       const box = (mode === 'add') ? addUserAlert : editUserAlert;
       if (!box) return;
-      box.textContent = '';
+      box.innerHTML = '';
       box.classList.add('d-none');
+      box.classList.remove('alert-hide');
     }
 
     function showModalAlert(mode, message) {
       const box = (mode === 'add') ? addUserAlert : editUserAlert;
       if (!box) return;
-      box.textContent = message;
-      box.classList.remove('d-none');
+
+      // reset dulu
+      box.classList.remove('d-none', 'alert-hide');
+      box.innerHTML = `<span class="close-btn">&times;</span> ${message}`;
+
+      const closeBtn = box.querySelector('.close-btn');
+      let closed = false;
+
+      const hide = () => {
+        if (closed) return;
+        closed = true;
+        box.classList.add('alert-hide');
+        setTimeout(() => {
+          box.classList.add('d-none');
+          box.innerHTML = '';
+          box.classList.remove('alert-hide');
+        }, 400); // sinkron dengan transition CSS
+      };
+
+      // auto-hide 4 detik (sama dengan alert luar)
+      const timer = setTimeout(hide, 4000);
+
+      if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          clearTimeout(timer);
+          hide();
+        }, {
+          once: true
+        });
+      }
     }
 
     function showTopAlert(type, message) {
@@ -1213,9 +1243,11 @@ if ($totalRows === 0) {
 </script>
 
 <script>
-  // Auto-hide alert + tombol X (alert global awal dari PHP)
+  // Auto-hide alert global + tombol X
   document.addEventListener('DOMContentLoaded', () => {
-    const alerts = document.querySelectorAll('#globalAlertContainer .alert');
+    const container = document.getElementById('globalAlertContainer');
+    if (!container) return;
+    const alerts = container.querySelectorAll('.alert');
     if (!alerts.length) return;
 
     alerts.forEach(alert => {

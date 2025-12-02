@@ -1,235 +1,1384 @@
 <?php
+// pages/ekstra/data_ekstra.php
+require_once '../../koneksi.php';
 include '../../includes/header.php';
-include '../../koneksi.php';
+
+// Session + CSRF untuk bulk delete
+if (session_status() === PHP_SESSION_NONE) {
+  session_start();
+}
+if (empty($_SESSION['csrf'])) {
+  $_SESSION['csrf'] = bin2hex(random_bytes(32));
+}
+$csrf = $_SESSION['csrf'];
+
+// Search & pagination awal (server-side sebelum AJAX)
+$search = isset($_GET['q']) ? trim($_GET['q']) : '';
+$like   = "%{$search}%";
+
+$allowedPer = [10, 20, 50, 100];
+$perPage    = isset($_GET['per']) ? (int)$_GET['per'] : 10;
+if (!in_array($perPage, $allowedPer, true)) {
+  $perPage = 10;
+}
+
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($page < 1) $page = 1;
+
+// Hitung total data
+if ($search !== '') {
+  $countSql = "SELECT COUNT(*) AS total FROM ekstrakurikuler WHERE nama_ekstrakurikuler LIKE ?";
+  $stmtCount = mysqli_prepare($koneksi, $countSql);
+  mysqli_stmt_bind_param($stmtCount, 's', $like);
+} else {
+  $countSql = "SELECT COUNT(*) AS total FROM ekstrakurikuler";
+  $stmtCount = mysqli_prepare($koneksi, $countSql);
+}
+mysqli_stmt_execute($stmtCount);
+$resCount  = mysqli_stmt_get_result($stmtCount);
+$rowCount  = mysqli_fetch_assoc($resCount);
+$totalRows = (int)($rowCount['total'] ?? 0);
+
+$totalPages = max(1, (int)ceil($totalRows / $perPage));
+if ($page > $totalPages) {
+  $page = $totalPages;
+}
+$offset = ($page - 1) * $perPage;
+
+// Ambil data ekstrakurikuler untuk tampilan awal
+if ($search !== '') {
+  $sql = "
+    SELECT id_ekstrakurikuler, nama_ekstrakurikuler
+    FROM ekstrakurikuler
+    WHERE nama_ekstrakurikuler LIKE ?
+    ORDER BY nama_ekstrakurikuler ASC
+    LIMIT ? OFFSET ?
+  ";
+  $stmt = mysqli_prepare($koneksi, $sql);
+  mysqli_stmt_bind_param($stmt, 'sii', $like, $perPage, $offset);
+} else {
+  $sql = "
+    SELECT id_ekstrakurikuler, nama_ekstrakurikuler
+    FROM ekstrakurikuler
+    ORDER BY nama_ekstrakurikuler ASC
+    LIMIT ? OFFSET ?
+  ";
+  $stmt = mysqli_prepare($koneksi, $sql);
+  mysqli_stmt_bind_param($stmt, 'ii', $perPage, $offset);
+}
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
+
+// Info range
+if ($totalRows === 0) {
+  $from = 0;
+  $to   = 0;
+  $shown = 0;
+  $pageDisplayCurrent = 0;
+  $pageDisplayTotal   = 0;
+} else {
+  $from = $offset + 1;
+  $to   = min($offset + $perPage, $totalRows);
+  $shown = $to - $from + 1;
+  $pageDisplayCurrent = $page;
+  $pageDisplayTotal   = $totalPages;
+}
 ?>
 
 <body>
   <?php include '../../includes/navbar.php'; ?>
 
+  <style>
+    :root {
+      --brand: #0a4db3;
+      --brand-600: #083f93;
+      --ink: #0f172a;
+      --text: #111827;
+      --muted: #475569;
+      --ring: #cbd5e1;
+      --card: #ffffff;
+      --thead: #0a4db3;
+      --thead-text: #ffffff;
+      --card-radius: 14px;
+      --success: #16a34a;
+      --warn: #f59e0b;
+      --danger: #dc2626;
+    }
+
+    .content {
+      padding: clamp(12px, 2vw, 20px);
+      color: var(--text);
+    }
+
+    .card {
+      border-radius: var(--card-radius);
+      border: 1px solid #e8eef6;
+      background: var(--card);
+    }
+
+    .page-title {
+      color: var(--ink);
+    }
+
+    .top-bar {
+      gap: 12px;
+    }
+
+    .search-wrap {
+      max-width: 300px;
+      width: 100%;
+    }
+
+    .searchbox {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      border: 1px solid var(--ring);
+      border-radius: 10px;
+      background: #fff;
+      padding: 6px 10px;
+    }
+
+    .searchbox .icon {
+      color: var(--muted);
+    }
+
+    .searchbox input {
+      border: none;
+      outline: none;
+      width: 100%;
+      font-size: 14px;
+      color: var(--ink);
+    }
+
+    .searchbox input::placeholder {
+      color: #9aa3af;
+    }
+
+    .table thead th {
+      white-space: nowrap;
+      background: var(--thead);
+      color: var(--thead-text);
+    }
+
+    .table td,
+    .table th {
+      vertical-align: middle;
+      color: var(--text);
+    }
+
+    .highlight-row {
+      background-color: #d4edda !important;
+    }
+
+    .btn-brand {
+      background: #0a4db3 !important;
+      border-color: #0a4db3 !important;
+      color: #fff !important;
+      font-weight: 700;
+    }
+
+    .btn-brand:hover {
+      background: #083f93 !important;
+      border-color: #083f93 !important;
+    }
+
+    .btn-warning {
+      background: #f0ad4e !important;
+      border-color: #eea236 !important;
+      color: #fff !important;
+    }
+
+    .btn-warning:hover {
+      background: #d98d26 !important;
+      border-color: #c77e20 !important;
+      color: #fff !important;
+    }
+
+    .btn-danger {
+      background: #d9534f !important;
+      border-color: #d43f3a !important;
+      color: #fff !important;
+    }
+
+    .btn-danger:hover {
+      background: #c0392b !important;
+      border-color: #a93226 !important;
+      color: #fff !important;
+    }
+
+    .btn-outline-secondary {
+      border-color: #6c757d !important;
+      color: #6c757d !important;
+      background: transparent !important;
+    }
+
+    .btn-outline-secondary:hover {
+      background: #e9ecef !important;
+      color: #333 !important;
+    }
+
+    #perPage {
+      border: 1px solid var(--ring);
+      border-radius: 10px;
+      padding: 6px 30px;
+      font-size: 14px;
+      color: var(--ink);
+      background-color: #fff;
+    }
+
+    #perPage:focus {
+      box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
+      border-color: var(--brand);
+    }
+
+    .page-info-text strong {
+      font-size: 0.95rem;
+    }
+
+    /* ALERT */
+    .alert {
+      padding: 12px 14px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      transition:
+        opacity 0.4s ease,
+        transform 0.4s ease,
+        max-height 0.4s ease,
+        margin 0.4s ease,
+        padding-top 0.4s ease,
+        padding-bottom 0.4s ease;
+      max-height: 200px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .alert-success {
+      background: #e8f8ee;
+      border: 1px solid #c8efd9;
+      color: #166534;
+    }
+
+    .alert-danger {
+      background: #fdecec;
+      border: 1px solid #f5c2c2;
+      color: #991b1b;
+    }
+
+    .alert-hide {
+      opacity: 0;
+      transform: translateY(-4px);
+      max-height: 0;
+      margin: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+
+    .alert .close-btn {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      opacity: 0.6;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .alert .close-btn:hover {
+      opacity: 1;
+    }
+
+    @media (max-width: 520px) {
+      table.table thead {
+        display: none;
+      }
+
+      table.table tbody tr {
+        display: block;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, .04);
+      }
+
+      table.table tbody td {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px !important;
+        border: 0 !important;
+        border-bottom: 1px dashed #edf2f7 !important;
+        color: var(--ink);
+      }
+
+      table.table tbody td:last-child {
+        border-bottom: 0 !important;
+        display: block;
+      }
+
+      table.table tbody td::before {
+        content: attr(data-label);
+        font-weight: 700;
+        color: var(--ink);
+      }
+
+      .table .btn {
+        width: 100%;
+        margin-top: 6px;
+      }
+
+      .search-perpage-row {
+        flex-direction: column;
+        align-items: stretch !important;
+      }
+    }
+
+    .searchbox:focus-within {
+      box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
+    }
+  </style>
+
   <main class="content">
-    <div class="cards row" style="margin-top: -50px;">
+    <div class="row g-3">
       <div class="col-12">
-        <div class="card shadow-sm" style="border-radius: 15px;">
-          <div class="mt-0 d-flex align-items-center flex-wrap mb-0 p-3 top-bar">
-            <!-- Judul di kiri -->
-            <h5 class="mb-1 fw-semibold fs-4" style=" text-align: center">Data Ekstrakurikuler</h5>
 
-            <!-- Tombol di kanan -->
-            <div class="ms-auto d-flex gap-2 action-buttons">
-              <a href="data_ekstra_tambah.php" class="btn btn-primary btn-sm d-flex align-items-center gap-1 p-2 pe-3 fw-semibold" style="border-radius: 5px;" data-bs-toggle="modal" data-bs-target="#tambahEkstraModal">
-                <i class="fa-solid fa-plus fa-lg"></i>
-                Tambah
-              </a>
+        <!-- CONTAINER ALERT UNTUK AJAX -->
+        <div id="ajaxAlertContainer"></div>
 
-              <a href="data_ekstra_import.php" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
-                <i class="fa-solid fa-file-arrow-down fa-lg"></i>
-                <span>Import</span>
-              </a>
-
-              <button id="exportBtn" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
-                <i class="fa-solid fa-file-arrow-up fa-lg"></i>
-                Export
-              </button>
-            </div>
+        <!-- ALERT GLOBAL DARI REDIRECT (hapus, dll) -->
+        <?php if (isset($_GET['msg']) && $_GET['msg'] !== ''): ?>
+          <div class="alert alert-success alert-page">
+            <span class="close-btn">&times;</span>
+            ✅ <?= htmlspecialchars($_GET['msg'], ENT_QUOTES, 'UTF-8'); ?>
           </div>
+        <?php endif; ?>
 
-          <!-- Search  -->
-          <div class="ms-3 me-3 bg-white d-flex justify-content-center align-items-center flex-wrap p-2 gap-2">
-            <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search" style="width: 200px;">
+        <?php if (isset($_GET['err']) && $_GET['err'] !== ''): ?>
+          <div class="alert alert-danger alert-page">
+            <span class="close-btn">&times;</span>
+            ❌ <?= htmlspecialchars($_GET['err'], ENT_QUOTES, 'UTF-8'); ?>
           </div>
-          <!-- Modal Tambah Ekstrakurikuler -->
-          <div class="modal fade" id="tambahEkstraModal" tabindex="-1" aria-labelledby="tambahEkstraLabel" aria-hidden="true">
-            <div class="modal-dialog">
-              <div class="modal-content shadow-lg border-0">
+        <?php endif; ?>
 
-                <!-- HEADER -->
-                <div class="modal-header bg-primary text-white">
-                  <h5 class="modal-title fw-bold" id="tambahEkstraLabel">
-                    <i class="fa fa-book"></i> Tambah Ekstrakurikuler
-                  </h5>
+        <div class="card shadow-sm">
+
+          <!-- TOP BAR -->
+          <div class="top-bar p-3 p-md-4">
+            <div class="d-flex flex-column gap-3 w-100">
+              <div>
+                <h5 class="page-title mb-0 fw-bold fs-4">Data Ekstrakurikuler</h5>
+              </div>
+
+              <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-2">
+                <!-- Search + per page -->
+                <div class="d-flex search-perpage-row align-items-md-center gap-2 flex-grow-1">
+                  <div class="search-wrap flex-grow-1">
+                    <div class="searchbox" role="search" aria-label="Pencarian ekstrakurikuler">
+                      <i class="bi bi-search icon"></i>
+                      <input type="text" id="searchInput" placeholder="Ketik untuk mencari" autofocus>
+                    </div>
+                  </div>
+
+                  <div class="d-flex align-items-center gap-2">
+                    <select id="perPage" class="form-select form-select-sm" style="width:auto;">
+                      <?php foreach ($allowedPer as $opt): ?>
+                        <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>>
+                          <?= $opt ?>/hal
+                        </option>
+                      <?php endforeach; ?>
+                    </select>
+                  </div>
                 </div>
 
-                <!-- FORM -->
-                <form action="ekstra_tambah_proses.php" method="POST">
-                  <div class="modal-body">
-                    <div class="mb-3">
-                      <label class="form-label fw-semibold">Nama Ekstrakurikuler</label>
-                      <input type="text" name="nama_ekstra" class="form-control" placeholder="Nama Ekstrakurikuler" required>
-                    </div>
-                  </div>
+                <!-- Tombol Tambah / Import / Export -->
+                <div class="d-flex justify-content-md-end flex-wrap gap-2">
+                  <button type="button"
+                    class="btn btn-brand btn-sm d-inline-flex align-items-center gap-2 px-3"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalTambahEkstra">
+                    <i class="fa-solid fa-plus fa-lg"></i> Tambah
+                  </button>
 
-                  <div class="modal-footer">
-                    <div class="d-flex w-100 gap-2">
-                      <button type="submit" class="btn btn-success w-50">
-                        <i class="fa fa-save"></i>
-                        Simpan</button>
-                      <button type="button" class="btn btn-danger w-50" data-bs-dismiss="modal">
-                        <i class="fa fa-times"></i>
-                        Batal</button>
-                    </div>
-                  </div>
-                </form>
+                  <button type="button"
+                    class="btn btn-success btn-sm d-inline-flex align-items-center gap-2 px-3"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalImportEkstra">
+                    <i class="fa-solid fa-file-arrow-down fa-lg"></i> Import
+                  </button>
 
+                  <button id="exportBtn"
+                    class="btn btn-success btn-sm d-inline-flex align-items-center gap-2 px-3"
+                    type="button">
+                    <i class="fa-solid fa-file-arrow-up fa-lg"></i> Export
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
-
-          <!-- Tabel Data Mapel -->
-          <div class="card-body">
+          <div class="card-body pt-0">
             <div class="table-responsive">
-              <table class="table table-bordered table-striped align-middle" id ="dataTable">
-                <thead style="background-color:#1d52a2" class="text-center text-white">
+              <table class="table table-striped table-bordered align-middle mb-0">
+                <thead class="text-center">
                   <tr>
-                    <th>No</th>
+                    <th style="width:50px;" class="text-center">
+                      <input type="checkbox" id="checkAll" title="Pilih Semua">
+                    </th>
+                    <th style="width:70px;">No</th>
                     <th>Nama Ekstrakurikuler</th>
-                    <th>Aksi</th>
+                    <th style="width:200px;">Aksi</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody id="ekstraTbody" class="text-center">
                   <?php
-                  $no = 0;
-                  $query = "SELECT * FROM ekstrakurikuler ORDER BY id_ekstrakurikuler ASC";
-                  $result = mysqli_query($koneksi, $query);
-                  if (mysqli_num_rows($result) > 0) {
-                    while ($row = mysqli_fetch_assoc($result)) {
-                      $no++;
-                      echo "
-                        <tr>
-                          <td>{$no}</td>
-                          <td>{$row['nama_ekstrakurikuler']}</td>
-                          <td class='text-center'>
-                            <button type='button' class='btn btn-warning btn-sm'
-                              onclick='editEkstra({$row['id_ekstrakurikuler']}, \"{$row['nama_ekstrakurikuler']}\")'>
-                              <i class='bi bi-pencil-square'></i> Edit
+                  if ($totalRows === 0):
+                  ?>
+                    <tr>
+                      <td colspan="4">Belum ada data.</td>
+                    </tr>
+                    <?php
+                  else:
+                    $no = $offset + 1;
+                    $rowClass = ($search !== '') ? 'highlight-row' : '';
+                    while ($row = mysqli_fetch_assoc($result)):
+                      $id  = (int)$row['id_ekstrakurikuler'];
+                      $nama = htmlspecialchars($row['nama_ekstrakurikuler'], ENT_QUOTES, 'UTF-8');
+                    ?>
+                      <tr class="<?= $rowClass; ?>">
+                        <td class="text-center" data-label="Pilih">
+                          <input type="checkbox" class="row-check" value="<?= $id ?>">
+                        </td>
+                        <td data-label="No"><?= $no++; ?></td>
+                        <td data-label="Nama Ekstrakurikuler"><?= $nama ?></td>
+                        <td data-label="Aksi">
+                          <div class="d-flex gap-2 justify-content-center flex-wrap">
+                            <!-- Edit pakai modal -->
+                            <button type="button"
+                              class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-edit-ekstra"
+                              data-id="<?= $id ?>"
+                              data-nama="<?= $nama ?>">
+                              <i class="bi bi-pencil-square"></i> Edit
                             </button>
 
-                            <a href='hapus_ekstra.php?id={$row['id_ekstrakurikuler']}' class='btn btn-danger btn-sm'
-                              onclick=\"return confirm('Yakin ingin menghapus data ini?');\">
-                              <i class='bi bi-trash'></i> Del
-                            </a>
-                          </td>
-                        </tr>
-                        ";
-                    }
-                  } else {
-                    echo "<tr><td colspan='3' class='text-center'>Belum ada data</td></tr>";
-                  }
+                            <!-- Hapus pakai modal konfirmasi -->
+                            <button type="button"
+                              class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-delete-single"
+                              data-id="<?= $id ?>"
+                              data-label="<?= $nama ?>">
+                              <i class="bi bi-trash"></i> Hapus
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                  <?php
+                    endwhile;
+                  endif;
                   ?>
                 </tbody>
               </table>
             </div>
-          </div>
 
-          <!-- Modal Edit Ekstrakurikuler -->
-          <div class="modal fade" id="editEkstraModal" tabindex="-1" aria-labelledby="editEkstraLabel" aria-hidden="true">
-            <div class="modal-dialog">
-              <div class="modal-content shadow-lg border-0">
-                <div class="modal-header bg-warning text-dark">
-                  <h5 class="modal-title fw-bold" id="editEkstraLabel">
-                    <i class="fa fa-edit"></i> Edit Ekstrakurikuler
-                  </h5>
-                </div>
+            <!-- HAPUS TERPILIH -->
+            <div class="mt-3 d-flex justify-content-start">
+              <button type="button" id="bulkDeleteBtn"
+                class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1"
+                disabled>
+                <i class="bi bi-trash3"></i> <span>Hapus Terpilih</span>
+              </button>
+            </div>
 
-                <form action="ekstra_edit_proses.php" method="POST">
-                  <div class="modal-body">
-                    <input type="hidden" name="id" id="edit_id">
-                    <div class="mb-3">
-                      <label class="form-label fw-semibold">Nama Ekstrakurikuler</label>
-                      <input type="text" name="nama_ekstra" id="edit_nama_ekstra" class="form-control" required>
-                    </div>
-                  </div>
-
-                  <div class="modal-footer">
-                    <div class="d-flex w-100 gap-2">
-                      <button type="submit" class="btn btn-success w-50">
-                        <i class="fa fa-save"></i>
-                        Update</button>
-                      <button type="button" class="btn btn-danger w-50" data-bs-dismiss="modal">
-                        <i class="fa fa-times"></i>
-                        Batal</button>
-                    </div>
-                  </div>
-                </form>
+            <!-- Info & Pagination -->
+            <div class="mt-3 d-flex flex-column align-items-center gap-1">
+              <nav id="paginationWrap" class="d-flex justify-content-center"></nav>
+              <div id="pageInfo" class="page-info-text text-muted text-center mt-2">
+                Menampilkan <?= $shown ?> dari <?= $totalRows ?> data • Halaman <?= $pageDisplayCurrent ?> / <?= $pageDisplayTotal ?>
               </div>
             </div>
           </div>
 
+        </div><!-- /.card -->
+      </div><!-- /.col-12 -->
+    </div><!-- /.row -->
+  </main>
 
+  <!-- MODAL TAMBAH EKSTRA -->
+  <div class="modal fade" id="modalTambahEkstra" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Tambah Data Ekstrakurikuler</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+        </div>
+        <form id="formTambahEkstra" action="proses_tambah_data_ekstra.php" method="POST" autocomplete="off">
+          <div class="modal-body">
 
+            <!-- ALERT ERROR DI DALAM MODAL (AJAX / FALLBACK) -->
+            <div id="addEkstraAlert" class="alert alert-danger mb-2" style="display:none;">
+              <span class="close-btn">&times;</span>
+              <span class="alert-message"></span>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold" for="add_nama_ekstra">Nama Ekstrakurikuler</label>
+              <input
+                type="text"
+                id="add_nama_ekstra"
+                name="nama_ekstra"
+                class="form-control"
+                maxlength="100"
+                required
+                placeholder="Nama Ekstrakurikuler">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button"
+              class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
+              data-bs-dismiss="modal">
+              <i class="bi bi-x-lg"></i> Batal
+            </button>
+            <button type="submit"
+              id="btnSubmitTambahEkstra"
+              class="btn btn-brand d-inline-flex align-items-center gap-2">
+              <i class="bi bi-check2-circle"></i> Simpan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL EDIT EKSTRA -->
+  <div class="modal fade" id="modalEditEkstra" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Data Ekstrakurikuler</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+        </div>
+        <form id="formEditEkstra" action="proses_edit_data_ekstra.php" method="POST" autocomplete="off">
+          <input type="hidden" name="id_ekstra" id="edit_id_ekstra">
+          <div class="modal-body">
+
+            <!-- ALERT ERROR DI DALAM MODAL (AJAX / FALLBACK) -->
+            <div id="editEkstraAlert" class="alert alert-danger mb-2" style="display:none;">
+              <span class="close-btn">&times;</span>
+              <span class="alert-message"></span>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold" for="edit_nama_ekstra">Nama Ekstrakurikuler</label>
+              <input
+                type="text"
+                id="edit_nama_ekstra"
+                name="nama_ekstra"
+                class="form-control"
+                maxlength="100"
+                required>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button"
+              class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
+              data-bs-dismiss="modal">
+              <i class="bi bi-x-lg"></i> Batal
+            </button>
+            <button type="submit"
+              class="btn btn-brand d-inline-flex align-items-center gap-2">
+              <i class="bi bi-save"></i> Simpan Perubahan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL IMPORT EKSTRA -->
+  <div class="modal fade" id="modalImportEkstra" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Import Data Ekstrakurikuler</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+        </div>
+        <form id="formImportEkstra" action="proses_import_data_ekstra.php" method="POST" enctype="multipart/form-data" autocomplete="off">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="excelFileEkstra" class="form-label">Pilih File Excel (.xlsx / .xls)</label>
+              <div class="position-relative" style="display:flex;align-items:center;">
+                <input
+                  type="file"
+                  class="form-control"
+                  id="excelFileEkstra"
+                  name="excel_file"
+                  accept=".xlsx,.xls"
+                  style="padding-right:35px;"
+                  required
+                  onchange="toggleClearButtonEkstraImport()">
+                <button
+                  type="button"
+                  id="clearFileBtnEkstraImport"
+                  onclick="clearFileEkstraImport()"
+                  title="Hapus file"
+                  style="
+                    position:absolute;
+                    right:10px;
+                    background:none;
+                    border:none;
+                    color:#6c757d;
+                    font-size:20px;
+                    line-height:1;
+                    display:none;
+                    cursor:pointer;
+                  ">
+                  &times;
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer d-flex justify-content-between">
+            <button type="button"
+              class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
+              data-bs-dismiss="modal">
+              <i class="fa fa-times"></i> Batal
+            </button>
+            <button type="submit"
+              id="btnSubmitImportEkstra"
+              class="btn btn-warning d-inline-flex align-items-center gap-2">
+              <i class="fas fa-upload"></i> Upload
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL KONFIRMASI HAPUS (single & bulk) -->
+  <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-exclamation-triangle text-danger me-2"></i> Konfirmasi Hapus
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+        </div>
+        <div class="modal-body">
+          <p id="confirmDeleteBody" class="mb-0">Yakin ingin menghapus data ini?</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button"
+            class="btn btn-outline-secondary"
+            data-bs-dismiss="modal">
+            Batal
+          </button>
+          <button type="button"
+            class="btn btn-danger d-inline-flex align-items-center gap-2"
+            id="confirmDeleteBtn">
+            <i class="bi bi-trash"></i> Hapus
+          </button>
         </div>
       </div>
     </div>
-  </main>
+  </div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      const searchInput = document.getElementById('searchInput');
-      const table = document.getElementById('dataTable');
-      const rows = table.querySelectorAll('tbody tr');
+    // helper import modal
+    function toggleClearButtonEkstraImport() {
+      const fileInput = document.getElementById('excelFileEkstra');
+      const clearBtn = document.getElementById('clearFileBtnEkstraImport');
+      if (!fileInput || !clearBtn) return;
+      clearBtn.style.display = fileInput.files.length > 0 ? 'block' : 'none';
+    }
 
-      searchInput.addEventListener('input', function() {
-        const searchText = this.value.toLowerCase();
-        let visibleCount = 0;
-
-        rows.forEach(row => {
-          const rowText = row.textContent.toLowerCase();
-          if (rowText.includes(searchText)) {
-            row.style.display = '';
-            visibleCount++;
-          } else {
-            row.style.display = 'none';
-          }
-        });
-
-        // Tambah pesan "tidak ada data"
-        let noData = document.getElementById('noDataRow');
-        if (!noData) {
-          noData = document.createElement('tr');
-          noData.id = 'noDataRow';
-          noData.innerHTML = `<td colspan="${table.querySelectorAll('thead th').length}" class="text-center text-muted">Tidak ada data ditemukan</td>`;
-          table.querySelector('tbody').appendChild(noData);
-        }
-        noData.style.display = visibleCount === 0 ? '' : 'none';
-      });
-    });
-
-    function editEkstra(id, nama) {
-      // Isi field modal
-      document.getElementById('edit_id').value = id;
-      document.getElementById('edit_nama_ekstra').value = nama;
-
-      // Buka modal edit
-      const modal = new bootstrap.Modal(document.getElementById('editEkstraModal'));
-      modal.show();
+    function clearFileEkstraImport() {
+      const fileInput = document.getElementById('excelFileEkstra');
+      const clearBtn = document.getElementById('clearFileBtnEkstraImport');
+      if (!fileInput || !clearBtn) return;
+      fileInput.value = '';
+      clearBtn.style.display = 'none';
     }
   </script>
 
+  <script>
+    (function() {
+      const input = document.getElementById('searchInput');
+      const tbody = document.getElementById('ekstraTbody');
 
-  <style>
-    /* Tambahan CSS Responsif */
-    @media (max-width: 768px) {
-      .top-bar {
-        flex-direction: column !important;
-        align-items: flex-center !important;
+      const checkAll = document.getElementById('checkAll');
+      const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+      const perPageSelect = document.getElementById('perPage');
+      const paginationWrap = document.getElementById('paginationWrap');
+      const pageInfo = document.getElementById('pageInfo');
+      const csrfToken = '<?= htmlspecialchars($csrf, ENT_QUOTES, "UTF-8"); ?>';
+
+      const confirmModalEl = document.getElementById('confirmDeleteModal');
+      const confirmBodyEl = document.getElementById('confirmDeleteBody');
+      const confirmBtn = document.getElementById('confirmDeleteBtn');
+
+      let typingTimer;
+      const debounceMs = 250;
+      let currentController = null;
+
+      let currentQuery = '<?= htmlspecialchars($search, ENT_QUOTES, "UTF-8"); ?>';
+      let currentPage = <?= (int)$page ?>;
+      let currentPerPage = <?= (int)$perPage ?>;
+      let currentTotalRows = <?= (int)$totalRows ?>;
+
+      let pendingDeleteHandler = null;
+      const MODAL_ALERT_MS = 4000;
+
+      function showGlobalAlert(kind, message) {
+        const container = document.getElementById('ajaxAlertContainer');
+        if (!container) return;
+
+        const icon = kind === 'success' ? '✅ ' : '❌ ';
+        const cls = kind === 'success' ? 'alert-success' : 'alert-danger';
+
+        container.innerHTML = `
+          <div class="alert ${cls} alert-page">
+            <span class="close-btn">&times;</span>
+            ${icon}${message}
+          </div>
+        `;
+
+        const alertEl = container.querySelector('.alert');
+        const closeBtn = container.querySelector('.close-btn');
+
+        let timer = setTimeout(() => {
+          alertEl.classList.add('alert-hide');
+        }, 4000);
+
+        if (closeBtn) {
+          closeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            alertEl.classList.add('alert-hide');
+            clearTimeout(timer);
+          });
+        }
       }
 
-      .action-buttons {
-        margin-top: 10px;
-        width: 100%;
-        justify-content: center !important;
-        flex-wrap: wrap;
+      // === helper: alert di dalam modal (auto-hide + tombol X + transisi) ===
+      function showModalAlert(alertEl, message) {
+        if (!alertEl) return;
+
+        const msgSpan = alertEl.querySelector('.alert-message');
+        if (msgSpan) {
+          msgSpan.textContent = message;
+        } else {
+          alertEl.textContent = message;
+        }
+
+        // tampilkan dulu
+        alertEl.style.display = 'block';
+        alertEl.classList.remove('alert-hide');
+
+        // clear timer sebelumnya kalau ada
+        if (alertEl.dataset.timerId) {
+          clearTimeout(Number(alertEl.dataset.timerId));
+        }
+
+        // Pasang handler tombol X sekali saja
+        const closeBtn = alertEl.querySelector('.close-btn');
+        if (closeBtn && !closeBtn.dataset.bound) {
+          closeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            alertEl.classList.add('alert-hide');
+
+            // sembunyikan setelah transisi (0.4s)
+            setTimeout(() => {
+              alertEl.style.display = 'none';
+            }, 400);
+
+            if (alertEl.dataset.timerId) {
+              clearTimeout(Number(alertEl.dataset.timerId));
+              alertEl.dataset.timerId = '';
+            }
+          });
+          closeBtn.dataset.bound = '1';
+        }
+
+        // Timer auto-hide: pakai transisi dulu, lalu display:none
+        const tid = setTimeout(() => {
+          alertEl.classList.add('alert-hide');
+          setTimeout(() => {
+            alertEl.style.display = 'none';
+          }, 400);
+        }, MODAL_ALERT_MS);
+
+        alertEl.dataset.timerId = String(tid);
       }
 
-      .h5 {
-        justify-content: center;
+      function showDeleteConfirm(message, handler) {
+        if (!confirmModalEl || !confirmBodyEl || !confirmBtn) {
+          if (confirm(message)) {
+            handler();
+          }
+          return;
+        }
+
+        confirmBodyEl.textContent = message;
+        pendingDeleteHandler = handler;
+
+        confirmBtn.onclick = function() {
+          if (pendingDeleteHandler) {
+            pendingDeleteHandler();
+          }
+          if (typeof bootstrap !== 'undefined') {
+            const m = bootstrap.Modal.getOrCreateInstance(confirmModalEl);
+            m.hide();
+          }
+        };
+
+        if (typeof bootstrap !== 'undefined') {
+          const m = bootstrap.Modal.getOrCreateInstance(confirmModalEl);
+          m.show();
+        } else {
+          if (confirm(message)) {
+            handler();
+          }
+        }
       }
 
-      .action-buttons a,
-      .action-buttons button {
-        width: auto;
+      function getRowCheckboxes() {
+        return Array.from(document.querySelectorAll('.row-check'));
       }
-    }
-  </style>
+
+      function updateBulkUI() {
+        const boxes = getRowCheckboxes();
+        const total = boxes.length;
+        const checked = boxes.filter(b => b.checked).length;
+
+        bulkDeleteBtn.disabled = (checked === 0);
+
+        if (total === 0) {
+          checkAll.checked = false;
+          checkAll.indeterminate = false;
+        } else if (checked === 0) {
+          checkAll.checked = false;
+          checkAll.indeterminate = false;
+        } else if (checked === total) {
+          checkAll.checked = true;
+          checkAll.indeterminate = false;
+        } else {
+          checkAll.checked = false;
+          checkAll.indeterminate = true;
+        }
+      }
+
+      function attachCheckboxEvents() {
+        const boxes = getRowCheckboxes();
+        boxes.forEach(box => {
+          box.addEventListener('change', updateBulkUI);
+        });
+        updateBulkUI();
+      }
+
+      // EDIT: isi modal edit ekstra
+      function attachEditModalEvents() {
+        const editButtons = document.querySelectorAll('.btn-edit-ekstra');
+        const modalEl = document.getElementById('modalEditEkstra');
+        if (!modalEl) return;
+
+        const inputId = document.getElementById('edit_id_ekstra');
+        const inputNama = document.getElementById('edit_nama_ekstra');
+        const editAlert = document.getElementById('editEkstraAlert');
+
+        editButtons.forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+
+            const id = btn.getAttribute('data-id') || '';
+            const nama = btn.getAttribute('data-nama') || '';
+
+            if (inputId) inputId.value = id;
+            if (inputNama) inputNama.value = nama;
+
+            if (editAlert) {
+              editAlert.style.display = 'none';
+              editAlert.classList.remove('alert-hide');
+              const msgSpan = editAlert.querySelector('.alert-message');
+              if (msgSpan) msgSpan.textContent = '';
+              if (editAlert.dataset.timerId) {
+                clearTimeout(Number(editAlert.dataset.timerId));
+                editAlert.dataset.timerId = '';
+              }
+            }
+
+            if (typeof bootstrap !== 'undefined') {
+              const editModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+              editModal.show();
+            }
+          });
+        });
+      }
+
+      // HAPUS SATU EKSTRA
+      function attachSingleDeleteEvents() {
+        const buttons = document.querySelectorAll('.btn-delete-single');
+        buttons.forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const id = btn.getAttribute('data-id');
+            const label = btn.getAttribute('data-label') || 'ekstrakurikuler ini';
+
+            if (!id) return;
+
+            showDeleteConfirm(`Yakin ingin menghapus ekstrakurikuler "${label}"?`, () => {
+              const form = document.createElement('form');
+              form.method = 'post';
+              form.action = 'hapus_data_ekstra.php';
+
+              const csrfInput = document.createElement('input');
+              csrfInput.type = 'hidden';
+              csrfInput.name = 'csrf';
+              csrfInput.value = csrfToken;
+              form.appendChild(csrfInput);
+
+              const idInput = document.createElement('input');
+              idInput.type = 'hidden';
+              idInput.name = 'id';
+              idInput.value = id;
+              form.appendChild(idInput);
+
+              document.body.appendChild(form);
+              form.submit();
+            });
+          });
+        });
+      }
+
+      function buildPagination(totalRows, page, perPage) {
+        currentTotalRows = totalRows;
+        currentPage = page;
+        currentPerPage = perPage;
+
+        const totalPages = Math.max(1, Math.ceil(totalRows / perPage));
+        if (page > totalPages) page = totalPages;
+
+        let from, to, shown;
+        if (totalRows === 0) {
+          from = 0;
+          to = 0;
+          shown = 0;
+        } else {
+          from = (page - 1) * perPage + 1;
+          to = Math.min(page * perPage, totalRows);
+          shown = to - from + 1;
+        }
+
+        const pageDisplayCurrent = totalRows === 0 ? 0 : page;
+        const pageDisplayTotal = totalRows === 0 ? 0 : totalPages;
+        pageInfo.innerHTML =
+          `Menampilkan <strong>${shown}</strong> dari <strong>${totalRows}</strong> data • 
+          Halaman <strong>${pageDisplayCurrent}</strong> / <strong>${pageDisplayTotal}</strong>`;
+
+        let html = '<ul class="pagination mb-0">';
+
+        const isFirst = (page <= 1);
+        const isLast = (page >= totalPages);
+
+        html += `<li class="page-item${isFirst ? ' disabled' : ''}">
+                   <button class="page-link page-btn" type="button" data-page="1">&laquo; First</button>
+                 </li>`;
+
+        html += `<li class="page-item${isFirst ? ' disabled' : ''}">
+                   <button class="page-link page-btn" type="button" data-page="${page - 1}">&lsaquo; Prev</button>
+                 </li>`;
+
+        html += `<li class="page-item active">
+                   <button class="page-link" type="button" data-page="${page}">${page}</button>
+                 </li>`;
+
+        html += `<li class="page-item${isLast ? ' disabled' : ''}">
+                   <button class="page-link page-btn" type="button" data-page="${page + 1}">Next &rsaquo;</button>
+                 </li>`;
+
+        html += `<li class="page-item${isLast ? ' disabled' : ''}">
+                   <button class="page-link page-btn" type="button" data-page="${totalPages}">Last &raquo;</button>
+                 </li>`;
+
+        html += '</ul>';
+
+        paginationWrap.innerHTML = html;
+
+        paginationWrap.querySelectorAll('.page-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const target = parseInt(btn.getAttribute('data-page') || '1', 10);
+            if (isNaN(target) || target < 1 || target === currentPage) return;
+            doSearch(currentQuery, target, currentPerPage);
+          });
+        });
+
+        if (perPageSelect) {
+          perPageSelect.value = String(perPage);
+        }
+      }
+
+      checkAll.addEventListener('change', () => {
+        const boxes = getRowCheckboxes();
+        boxes.forEach(b => {
+          b.checked = checkAll.checked;
+        });
+        updateBulkUI();
+      });
+
+      // HAPUS TERPILIH
+      bulkDeleteBtn.addEventListener('click', () => {
+        const boxes = getRowCheckboxes().filter(b => b.checked);
+        if (boxes.length === 0) return;
+
+        const count = boxes.length;
+
+        const form = document.createElement('form');
+        form.method = 'post';
+        form.action = 'hapus_data_ekstra.php';
+
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+
+        boxes.forEach(box => {
+          const inp = document.createElement('input');
+          inp.type = 'hidden';
+          inp.name = 'ids[]';
+          inp.value = box.value;
+          form.appendChild(inp);
+        });
+
+        showDeleteConfirm(`Yakin ingin menghapus ${count} data ekstrakurikuler terpilih?`, () => {
+          document.body.appendChild(form);
+          form.submit();
+        });
+      });
+
+      function setLoading() {
+        tbody.innerHTML = `<tr><td colspan="4">Sedang mencari…</td></tr>`;
+      }
+
+      function doSearch(query, page, perPage) {
+        setLoading();
+        if (currentController) currentController.abort();
+        currentController = new AbortController();
+
+        currentQuery = query || '';
+        const params = new URLSearchParams({
+          q: currentQuery,
+          page: page || 1,
+          per: perPage || currentPerPage || 10
+        });
+
+        fetch('ajax_ekstra_list.php?' + params.toString(), {
+            method: 'GET',
+            signal: currentController.signal,
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          })
+          .then(r => {
+            if (!r.ok) throw new Error(r.status);
+            return r.text();
+          })
+          .then(html => {
+            tbody.innerHTML = html;
+
+            const metaRow = tbody.querySelector('.meta-row');
+            if (metaRow) {
+              const total = parseInt(metaRow.getAttribute('data-total') || '0', 10);
+              const pg = parseInt(metaRow.getAttribute('data-page') || '1', 10);
+              const pp = parseInt(metaRow.getAttribute('data-per') || String(currentPerPage), 10);
+              metaRow.parentNode.removeChild(metaRow);
+              buildPagination(
+                isNaN(total) ? 0 : total,
+                isNaN(pg) ? 1 : pg,
+                isNaN(pp) ? currentPerPage : pp
+              );
+            }
+
+            attachCheckboxEvents();
+            attachEditModalEvents();
+            attachSingleDeleteEvents();
+          })
+          .catch(e => {
+            if (e.name === 'AbortError') return;
+            tbody.innerHTML = `<tr><td colspan="4">Gagal memuat data.</td></tr>`;
+            console.error(e);
+          });
+      }
+
+      input.addEventListener('input', () => {
+        clearTimeout(typingTimer);
+        typingTimer = setTimeout(() => {
+          doSearch(input.value, 1, currentPerPage);
+        }, debounceMs);
+      });
+
+      if (perPageSelect) {
+        perPageSelect.addEventListener('change', () => {
+          const val = parseInt(perPageSelect.value || '10', 10);
+          if (isNaN(val) || val <= 0) return;
+          currentPerPage = val;
+          doSearch(currentQuery, 1, currentPerPage);
+        });
+      }
+
+      // ===== AJAX SUBMIT: TAMBAH EKSTRA =====
+      const formTambah = document.getElementById('formTambahEkstra');
+      const addAlert = document.getElementById('addEkstraAlert');
+      const modalTambahEl = document.getElementById('modalTambahEkstra');
+
+      if (formTambah) {
+        formTambah.addEventListener('submit', (e) => {
+          e.preventDefault();
+
+          if (!formTambah.checkValidity()) {
+            formTambah.reportValidity();
+            return;
+          }
+
+          if (addAlert) {
+            addAlert.style.display = 'none';
+            addAlert.classList.remove('alert-hide');
+            const msgSpan = addAlert.querySelector('.alert-message');
+            if (msgSpan) msgSpan.textContent = '';
+            if (addAlert.dataset.timerId) {
+              clearTimeout(Number(addAlert.dataset.timerId));
+              addAlert.dataset.timerId = '';
+            }
+          }
+
+          const fd = new FormData(formTambah);
+
+          fetch('proses_tambah_data_ekstra.php', {
+              method: 'POST',
+              body: fd,
+              headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+              }
+            })
+            .then(r => r.json())
+            .then(data => {
+              if (!data || typeof data !== 'object') {
+                throw new Error('Respon tidak valid');
+              }
+
+              if (data.success) {
+                if (typeof bootstrap !== 'undefined' && modalTambahEl) {
+                  const m = bootstrap.Modal.getOrCreateInstance(modalTambahEl);
+                  m.hide();
+                }
+                formTambah.reset();
+                showGlobalAlert('success', data.message || 'Data ekstrakurikuler berhasil disimpan.');
+                doSearch(currentQuery, currentPage, currentPerPage);
+              } else {
+                const msg = (data.errors && data.errors.length) ?
+                  data.errors.join(' ') :
+                  (data.message || 'Terjadi kesalahan.');
+                if (addAlert) {
+                  showModalAlert(addAlert, msg);
+                }
+              }
+            })
+            .catch(err => {
+              console.error(err);
+              if (addAlert) {
+                showModalAlert(addAlert, 'Terjadi kesalahan jaringan. Silakan coba lagi.');
+              }
+            });
+        });
+      }
+
+      // ===== AJAX SUBMIT: EDIT EKSTRA =====
+      const formEdit = document.getElementById('formEditEkstra');
+      const editAlert = document.getElementById('editEkstraAlert');
+      const modalEditEl = document.getElementById('modalEditEkstra');
+
+      if (formEdit) {
+        formEdit.addEventListener('submit', (e) => {
+          e.preventDefault();
+
+          if (!formEdit.checkValidity()) {
+            formEdit.reportValidity();
+            return;
+          }
+
+          if (editAlert) {
+            editAlert.style.display = 'none';
+            editAlert.classList.remove('alert-hide');
+            const msgSpan = editAlert.querySelector('.alert-message');
+            if (msgSpan) msgSpan.textContent = '';
+            if (editAlert.dataset.timerId) {
+              clearTimeout(Number(editAlert.dataset.timerId));
+              editAlert.dataset.timerId = '';
+            }
+          }
+
+          const fd = new FormData(formEdit);
+
+          fetch('proses_edit_data_ekstra.php', {
+              method: 'POST',
+              body: fd,
+              headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+              }
+            })
+            .then(r => r.json())
+            .then(data => {
+              if (!data || typeof data !== 'object') {
+                throw new Error('Respon tidak valid');
+              }
+
+              if (data.success) {
+                if (typeof bootstrap !== 'undefined' && modalEditEl) {
+                  const m = bootstrap.Modal.getOrCreateInstance(modalEditEl);
+                  m.hide();
+                }
+                showGlobalAlert('success', data.message || 'Data ekstrakurikuler berhasil diperbarui.');
+                doSearch(currentQuery, currentPage, currentPerPage);
+              } else {
+                const msg = (data.errors && data.errors.length) ?
+                  data.errors.join(' ') :
+                  (data.message || 'Terjadi kesalahan.');
+                if (editAlert) {
+                  showModalAlert(editAlert, msg);
+                }
+              }
+            })
+            .catch(err => {
+              console.error(err);
+              if (editAlert) {
+                showModalAlert(editAlert, 'Terjadi kesalahan jaringan. Silakan coba lagi.');
+              }
+            });
+        });
+      }
+
+      // Inisialisasi pertama kali
+      attachCheckboxEvents();
+      attachEditModalEvents();
+      attachSingleDeleteEvents();
+      buildPagination(currentTotalRows, currentPage, currentPerPage);
+    })();
+  </script>
+
+  <script>
+    // Auto-hide alert global + tombol X (hanya .alert-page)
+    document.addEventListener('DOMContentLoaded', () => {
+      const alerts = document.querySelectorAll('.alert-page');
+      if (!alerts.length) return;
+
+      alerts.forEach(alert => {
+        const timer = setTimeout(() => {
+          alert.classList.add('alert-hide');
+        }, 4000);
+
+        const close = alert.querySelector('.close-btn');
+        if (close) {
+          close.addEventListener('click', (e) => {
+            e.preventDefault();
+            alert.classList.add('alert-hide');
+            clearTimeout(timer);
+          });
+        }
+      });
+    });
+  </script>
+
+  <script>
+    // Fallback: kalau non-AJAX pakai ?add_err / ?edit_err → tetap tampil di modal + auto-hide + tombol X + transisi
+    document.addEventListener('DOMContentLoaded', () => {
+      <?php if (isset($_GET['add_err']) && $_GET['add_err'] !== ''): ?>
+          (function() {
+            const alertEl = document.getElementById('addEkstraAlert');
+            if (alertEl) {
+              const msgSpan = alertEl.querySelector('.alert-message');
+              if (msgSpan) {
+                msgSpan.textContent = '<?= htmlspecialchars($_GET['add_err'], ENT_QUOTES, 'UTF-8'); ?>';
+              } else {
+                alertEl.textContent = '<?= htmlspecialchars($_GET['add_err'], ENT_QUOTES, 'UTF-8'); ?>';
+              }
+              alertEl.style.display = 'block';
+              alertEl.classList.remove('alert-hide');
+
+              const timer = setTimeout(() => {
+                alertEl.classList.add('alert-hide');
+                setTimeout(() => {
+                  alertEl.style.display = 'none';
+                }, 400);
+              }, 4000);
+
+              const closeBtn = alertEl.querySelector('.close-btn');
+              if (closeBtn) {
+                closeBtn.addEventListener('click', (e) => {
+                  e.preventDefault();
+                  alertEl.classList.add('alert-hide');
+                  setTimeout(() => {
+                    alertEl.style.display = 'none';
+                  }, 400);
+                  clearTimeout(timer);
+                });
+              }
+            }
+            const modalEl = document.getElementById('modalTambahEkstra');
+            if (typeof bootstrap !== 'undefined' && modalEl) {
+              const m = bootstrap.Modal.getOrCreateInstance(modalEl);
+              m.show();
+            }
+          })();
+      <?php endif; ?>
+
+      <?php if (isset($_GET['edit_err'], $_GET['edit_id']) && $_GET['edit_err'] !== ''): ?>
+          (function() {
+            const alertEl = document.getElementById('editEkstraAlert');
+            if (alertEl) {
+              const msgSpan = alertEl.querySelector('.alert-message');
+              if (msgSpan) {
+                msgSpan.textContent = '<?= htmlspecialchars($_GET['edit_err'], ENT_QUOTES, 'UTF-8'); ?>';
+              } else {
+                alertEl.textContent = '<?= htmlspecialchars($_GET['edit_err'], ENT_QUOTES, 'UTF-8'); ?>';
+              }
+              alertEl.style.display = 'block';
+              alertEl.classList.remove('alert-hide');
+
+              const timer = setTimeout(() => {
+                alertEl.classList.add('alert-hide');
+                setTimeout(() => {
+                  alertEl.style.display = 'none';
+                }, 400);
+              }, 4000);
+
+              const closeBtn = alertEl.querySelector('.close-btn');
+              if (closeBtn) {
+                closeBtn.addEventListener('click', (e) => {
+                  e.preventDefault();
+                  alertEl.classList.add('alert-hide');
+                  setTimeout(() => {
+                    alertEl.style.display = 'none';
+                  }, 400);
+                  clearTimeout(timer);
+                });
+              }
+            }
+
+            // buka modal edit + isi data via klik tombol edit terkait
+            const btn = document.querySelector('.btn-edit-ekstra[data-id="<?= (int)$_GET['edit_id']; ?>"]');
+            if (btn) {
+              btn.click();
+            } else {
+              const modalEl = document.getElementById('modalEditEkstra');
+              if (typeof bootstrap !== 'undefined' && modalEl) {
+                const m = bootstrap.Modal.getOrCreateInstance(modalEl);
+                m.show();
+              }
+            }
+          })();
+      <?php endif; ?>
+    });
+  </script>
 
   <?php include '../../includes/footer.php'; ?>

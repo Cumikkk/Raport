@@ -397,7 +397,7 @@ if ($totalRows === 0) {
                     class="btn btn-brand btn-sm d-inline-flex align-items-center gap-2 px-3"
                     data-bs-toggle="modal"
                     data-bs-target="#modalTambahGuru">
-                    <i class="fa-solid fa-plus fa-lg"></i> Tambah
+                    <i class="bi bi-person-plus"></i> Tambah Guru
                   </button>
 
                   <button type="button"
@@ -508,7 +508,7 @@ if ($totalRows === 0) {
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Tambah Guru</h5>
+          <h5 class="modal-title">Tambah Data Guru</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
         </div>
         <!-- HAPUS novalidate supaya required HTML jalan -->
