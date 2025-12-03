@@ -43,6 +43,56 @@ if ($resMap) $mapel_nama = $resMap['nama_mata_pelajaran'];
 $qMap->close();
 
 /* ============================
+ * INLINE SAVE (MODE EDIT)
+ * ============================ */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mode']) && $_POST['mode'] === 'save_inline') {
+  $dataNilai = isset($_POST['nilai']) && is_array($_POST['nilai']) ? $_POST['nilai'] : [];
+
+  // daftar kolom di tabel nilai_mata_pelajaran
+  $cols = [
+    'tp1_lm1','tp2_lm1','tp3_lm1','tp4_lm1','sumatif_lm1',
+    'tp1_lm2','tp2_lm2','tp3_lm2','tp4_lm2','sumatif_lm2',
+    'tp1_lm3','tp2_lm3','tp3_lm3','tp4_lm3','sumatif_lm3',
+    'tp1_lm4','tp2_lm4','tp3_lm4','tp4_lm4','sumatif_lm4',
+    'sumatif_tengah_semester'
+  ];
+
+  if (!empty($dataNilai)) {
+    // buat query UPDATE dengan NULLIF supaya input kosong jadi NULL
+    $setParts = [];
+    foreach ($cols as $c) {
+      $setParts[] = "$c = NULLIF(?, '')";
+    }
+    $sqlUpd = "
+      UPDATE nilai_mata_pelajaran SET
+        ".implode(', ', $setParts)."
+      WHERE id_siswa = ? AND id_mata_pelajaran = ? AND id_semester = ?
+    ";
+    $stmtUpd = $koneksi->prepare($sqlUpd);
+
+    $types = str_repeat('s', count($cols)).'iii';
+
+    foreach ($dataNilai as $id_siswa => $kolom) {
+      // siapkan parameter sesuai urutan kolom
+      $params = [];
+      foreach ($cols as $c) {
+        $params[] = isset($kolom[$c]) ? trim((string)$kolom[$c]) : '';
+      }
+      $params[] = (int)$id_siswa;
+      $params[] = $id_mapel;
+      $params[] = $id_semester;
+
+      $stmtUpd->bind_param($types, ...$params);
+      $stmtUpd->execute();
+    }
+    $stmtUpd->close();
+  }
+
+  header("Location: nilai_mapel.php?id={$id_mapel}&id_semester={$id_semester}&msg=edit_success");
+  exit;
+}
+
+/* ============================
  * FLAG NOTIFIKASI (ADD / EDIT / DELETE / IMPORT)
  * ============================ */
 
@@ -216,24 +266,34 @@ $q->close();
             </button>
           </div>
 
-          <div class="d-flex align-items-center gap-2">
-            <!-- Tambah -->
-            <a href="tambah_nilai.php?id=<?= urlencode($id_mapel); ?>&id_semester=<?= urlencode($id_semester); ?>"
-              class="btn btn-primary btn-sm d-flex align-items-center gap-2">
-              <i class="fa-solid fa-plus"></i><span>Tambah</span>
-            </a>
+          <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div class="d-flex align-items-center gap-2">
+              <!-- MODE EDIT SWITCH -->
+              <span class="fw-semibold mb-0">Mode Edit</span>
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="modeEditToggle">
+              </div>
+            </div>
 
-            <!-- Import -->
-            <a href="import_nilai.php?id=<?= urlencode($id_mapel); ?>&id_semester=<?= urlencode($id_semester); ?>"
-              class="btn btn-success btn-sm d-flex align-items-center gap-2">
-              <i class="fa-solid fa-download"></i><span>Import</span>
-            </a>
+            <div class="d-flex align-items-center gap-2">
+              <!-- Tambah -->
+              <a href="tambah_nilai.php?id=<?= urlencode($id_mapel); ?>&id_semester=<?= urlencode($id_semester); ?>"
+                class="btn btn-primary btn-sm d-flex align-items-center gap-2">
+                <i class="fa-solid fa-plus"></i><span>Tambah</span>
+              </a>
 
-            <!-- Export -->
-            <a href="nilai_mapel_export2.php?id=<?= urlencode($id_mapel) ?>&id_semester=<?= urlencode($id_semester) ?>"
-              class="btn btn-success btn-sm d-flex align-items-center gap-2">
-              <i class="fa-solid fa-file-excel"></i><span>Export</span>
-            </a>
+              <!-- Import -->
+              <a href="import_nilai.php?id=<?= urlencode($id_mapel); ?>&id_semester=<?= urlencode($id_semester); ?>"
+                class="btn btn-success btn-sm d-flex align-items-center gap-2">
+                <i class="fa-solid fa-download"></i><span>Import</span>
+              </a>
+
+              <!-- Export -->
+              <a href="nilai_mapel_export2.php?id=<?= urlencode($id_mapel) ?>&id_semester=<?= urlencode($id_semester) ?>"
+                class="btn btn-success btn-sm d-flex align-items-center gap-2">
+                <i class="fa-solid fa-file-excel"></i><span>Export</span>
+              </a>
+            </div>
           </div>
         </div>
 
@@ -315,31 +375,41 @@ $q->close();
                       <td><input type="checkbox" class="row-check" name="ids[]" value="<?= $r['id_siswa'] ?>"></td>
                       <td><?= $no++; ?></td>
                       <td><?= safe($r['nama_siswa']); ?></td>
-                      <td><?= safe($r['tp1_lm1']); ?></td>
-                      <td><?= safe($r['tp2_lm1']); ?></td>
-                      <td><?= safe($r['tp3_lm1']); ?></td>
-                      <td><?= safe($r['tp4_lm1']); ?></td>
-                      <td><?= safe($r['tp1_lm2']); ?></td>
-                      <td><?= safe($r['tp2_lm2']); ?></td>
-                      <td><?= safe($r['tp3_lm2']); ?></td>
-                      <td><?= safe($r['tp4_lm2']); ?></td>
-                      <td><?= safe($r['tp1_lm3']); ?></td>
-                      <td><?= safe($r['tp2_lm3']); ?></td>
-                      <td><?= safe($r['tp3_lm3']); ?></td>
-                      <td><?= safe($r['tp4_lm3']); ?></td>
-                      <td><?= safe($r['tp1_lm4']); ?></td>
-                      <td><?= safe($r['tp2_lm4']); ?></td>
-                      <td><?= safe($r['tp3_lm4']); ?></td>
-                      <td><?= safe($r['tp4_lm4']); ?></td>
-                      <td><?= safe($r['sumatif_lm1']); ?></td>
-                      <td><?= safe($r['sumatif_lm2']); ?></td>
-                      <td><?= safe($r['sumatif_lm3']); ?></td>
-                      <td><?= safe($r['sumatif_lm4']); ?></td>
-                      <td><?= safe($r['sumatif_tengah_semester']); ?></td>
+
+                      <!-- LM1 -->
+                      <td><input class="form-control form-control-sm nilai-input" type="text" name="nilai[<?= $r['id_siswa'] ?>][tp1_lm1]" value="<?= safe($r['tp1_lm1']); ?>" disabled></td>
+                      <td><input class="form-control form-control-sm nilai-input" type="text" name="nilai[<?= $r['id_siswa'] ?>][tp2_lm1]" value="<?= safe($r['tp2_lm1']); ?>" disabled></td>
+                      <td><input class="form-control form-control-sm nilai-input" type="text" name="nilai[<?= $r['id_siswa'] ?>][tp3_lm1]" value="<?= safe($r['tp3_lm1']); ?>" disabled></td>
+                      <td><input class="form-control form-control-sm nilai-input" type="text" name="nilai[<?= $r['id_siswa'] ?>][tp4_lm1]" value="<?= safe($r['tp4_lm1']); ?>" disabled></td>
+
+                      <!-- LM2 -->
+                      <td><input class="form-control form-control-sm nilai-input" type="text" name="nilai[<?= $r['id_siswa'] ?>][tp1_lm2]" value="<?= safe($r['tp1_lm2']); ?>" disabled></td>
+                      <td><input class="form-control form-control-sm nilai-input" type="text" name="nilai[<?= $r['id_siswa'] ?>][tp2_lm2]" value="<?= safe($r['tp2_lm2']); ?>" disabled></td>
+                      <td><input class="form-control form-control-sm nilai-input" type="text" name="nilai[<?= $r['id_siswa'] ?>][tp3_lm2]" value="<?= safe($r['tp3_lm2']); ?>" disabled></td>
+                      <td><input class="form-control form-control-sm nilai-input" type="text" name="nilai[<?= $r['id_siswa'] ?>][tp4_lm2]" value="<?= safe($r['tp4_lm2']); ?>" disabled></td>
+
+                      <!-- LM3 -->
+                      <td><input class="form-control form-control-sm nilai-input" type="text" name="nilai[<?= $r['id_siswa'] ?>][tp1_lm3]" value="<?= safe($r['tp1_lm3']); ?>" disabled></td>
+                      <td><input class="form-control form-control-sm nilai-input" type="text" name="nilai[<?= $r['id_siswa'] ?>][tp2_lm3]" value="<?= safe($r['tp2_lm3']); ?>" disabled></td>
+                      <td><input class="form-control form-control-sm nilai-input" type="text" name="nilai[<?= $r['id_siswa'] ?>][tp3_lm3]" value="<?= safe($r['tp3_lm3']); ?>" disabled></td>
+                      <td><input class="form-control form-control-sm nilai-input" type="text" name="nilai[<?= $r['id_siswa'] ?>][tp4_lm3]" value="<?= safe($r['tp4_lm3']); ?>" disabled></td>
+
+                      <!-- LM4 -->
+                      <td><input class="form-control form-control-sm nilai-input" type="text" name="nilai[<?= $r['id_siswa'] ?>][tp1_lm4]" value="<?= safe($r['tp1_lm4']); ?>" disabled></td>
+                      <td><input class="form-control form-control-sm nilai-input" type="text" name="nilai[<?= $r['id_siswa'] ?>][tp2_lm4]" value="<?= safe($r['tp2_lm4']); ?>" disabled></td>
+                      <td><input class="form-control form-control-sm nilai-input" type="text" name="nilai[<?= $r['id_siswa'] ?>][tp3_lm4]" value="<?= safe($r['tp3_lm4']); ?>" disabled></td>
+                      <td><input class="form-control form-control-sm nilai-input" type="text" name="nilai[<?= $r['id_siswa'] ?>][tp4_lm4]" value="<?= safe($r['tp4_lm4']); ?>" disabled></td>
+
+                      <!-- SUMATIF LM -->
+                      <td><input class="form-control form-control-sm nilai-input" type="text" name="nilai[<?= $r['id_siswa'] ?>][sumatif_lm1]" value="<?= safe($r['sumatif_lm1']); ?>" disabled></td>
+                      <td><input class="form-control form-control-sm nilai-input" type="text" name="nilai[<?= $r['id_siswa'] ?>][sumatif_lm2]" value="<?= safe($r['sumatif_lm2']); ?>" disabled></td>
+                      <td><input class="form-control form-control-sm nilai-input" type="text" name="nilai[<?= $r['id_siswa'] ?>][sumatif_lm3]" value="<?= safe($r['sumatif_lm3']); ?>" disabled></td>
+                      <td><input class="form-control form-control-sm nilai-input" type="text" name="nilai[<?= $r['id_siswa'] ?>][sumatif_lm4]" value="<?= safe($r['sumatif_lm4']); ?>" disabled></td>
+
+                      <!-- SUMATIF TENGAH SEMESTER -->
+                      <td><input class="form-control form-control-sm nilai-input" type="text" name="nilai[<?= $r['id_siswa'] ?>][sumatif_tengah_semester]" value="<?= safe($r['sumatif_tengah_semester']); ?>" disabled></td>
+
                       <td>
-                        <a class="btn btn-warning btn-sm px-2 py-1" href="edit_nilai.php?id=<?= urlencode($id_mapel) ?>&id_semester=<?= urlencode($id_semester) ?>&id_siswa=<?= urlencode($r['id_siswa']) ?>">
-                          <i class="bi bi-pencil-square"></i> Edit
-                        </a>
                         <a href="hapus_nilai.php?id_siswa=<?= urlencode($r['id_siswa']); ?>&id_mapel=<?= urlencode($id_mapel); ?>&id_semester=<?= urlencode($id_semester); ?>"
                            class="btn btn-danger btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-2 py-1"
                            onclick="return confirm('Yakin ingin menghapus nilai siswa ini?');">
@@ -353,10 +423,15 @@ $q->close();
             </form>
           </div>
 
-          <!-- Tombol Hapus Terpilih -->
-          <div class="mt-2 d-flex justify-content-start">
-            <button id="deleteSelected" class="btn btn-danger btn-sm me-2" disabled>
-              <i class="bi bi-trash"></i> Hapus Terpilih
+          <!-- BAR BAWAH: HAPUS TERPILIH & SIMPAN (KANAN) -->
+          <div class="mt-2 d-flex justify-content-between align-items-center">
+            <div>
+              <button id="deleteSelected" class="btn btn-danger btn-sm me-2" disabled>
+                <i class="bi bi-trash"></i> Hapus Terpilih
+              </button>
+            </div>
+            <button type="button" id="saveAllBtn" class="btn btn-secondary btn-sm" disabled>
+              <i class="bi bi-save"></i> Simpan
             </button>
           </div>
 
@@ -464,11 +539,13 @@ $q->close();
   });
 </script>
 
-<!-- SCRIPT CHECKBOX / BULK -->
+<!-- SCRIPT CHECKBOX / BULK + MODE EDIT + SIMPAN -->
 <script>
   const selectAll = document.getElementById('selectAll');
   const deleteBtn = document.getElementById('deleteSelected');
   const bulkForm  = document.getElementById('bulkForm');
+  const modeToggle = document.getElementById('modeEditToggle');
+  const saveAllBtn = document.getElementById('saveAllBtn');
 
   function toggleDeleteButton() {
     const any = [...document.querySelectorAll('.row-check')].some(c => c.checked);
@@ -498,6 +575,43 @@ $q->close();
       if (confirm('Yakin ingin menghapus nilai terpilih?')) {
         bulkForm.submit();
       }
+    });
+  }
+
+  // === MODE EDIT: enable/disable semua input nilai + tombol Simpan ===
+  function setEditMode(on) {
+    const inputs = document.querySelectorAll('.nilai-input');
+    inputs.forEach(inp => inp.disabled = !on);
+    if (saveAllBtn) {
+      saveAllBtn.disabled = !on;
+      saveAllBtn.classList.toggle('btn-success', on);
+      saveAllBtn.classList.toggle('btn-secondary', !on);
+    }
+  }
+
+  if (modeToggle) {
+    modeToggle.addEventListener('change', function () {
+      setEditMode(this.checked);
+    });
+  }
+  // default: non-edit
+  setEditMode(false);
+
+  // === SIMPAN: kirim form dengan mode=save_inline ===
+  if (saveAllBtn) {
+    saveAllBtn.addEventListener('click', function () {
+      if (this.disabled) return;
+      const form = bulkForm;
+      if (!form) return;
+      let modeInput = form.querySelector('input[name="mode"]');
+      if (!modeInput) {
+        modeInput = document.createElement('input');
+        modeInput.type = 'hidden';
+        modeInput.name = 'mode';
+        form.appendChild(modeInput);
+      }
+      modeInput.value = 'save_inline';
+      form.submit();
     });
   }
 </script>
