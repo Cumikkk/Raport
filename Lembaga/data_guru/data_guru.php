@@ -172,6 +172,45 @@ if ($totalRows === 0) {
       background-color: #d4edda !important;
     }
 
+    /* TRANSISI TABEL + OVERLAY LOADING */
+    #guruTbody {
+      transition:
+        opacity 0.25s ease,
+        transform 0.25s ease;
+    }
+
+    #guruTbody.tbody-loading {
+      opacity: 0.4;
+      transform: scale(0.995);
+    }
+
+    #guruTbody.tbody-loaded {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    #guruTableWrap {
+      position: relative;
+    }
+
+    .table-loading-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.7);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      z-index: 2;
+    }
+
+    .table-loading-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
     .btn-brand {
       background: #0a4db3 !important;
       border-color: #0a4db3 !important;
@@ -418,7 +457,13 @@ if ($totalRows === 0) {
           </div>
 
           <div class="card-body pt-0">
-            <div class="table-responsive">
+            <div class="table-responsive" id="guruTableWrap">
+              <!-- OVERLAY LOADING -->
+              <div class="table-loading-overlay" id="tableLoadingOverlay">
+                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                <span style="font-size:13px;">Sedang memuat data…</span>
+              </div>
+
               <table class="table table-striped table-bordered align-middle mb-0">
                 <thead class="text-center">
                   <tr>
@@ -431,7 +476,7 @@ if ($totalRows === 0) {
                     <th style="width:200px;">Aksi</th>
                   </tr>
                 </thead>
-                <tbody id="guruTbody" class="text-center">
+                <tbody id="guruTbody" class="text-center tbody-loaded">
                   <?php
                   if ($totalRows === 0):
                   ?>
@@ -600,17 +645,71 @@ if ($totalRows === 0) {
 
   <!-- MODAL IMPORT GURU -->
   <div class="modal fade" id="modalImportGuru" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Import Data Guru</h5>
+        <div class="modal-header border-0 pb-0">
+          <div>
+            <h5 class="modal-title fw-semibold">Import Data Guru</h5>
+            <p class="mb-0 text-muted" style="font-size: 13px;">
+              Gunakan template resmi agar susunan kolom sesuai dengan sistem.
+            </p>
+          </div>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
         </div>
-        <form id="formImportGuru" action="proses_import_data_guru.php" method="POST" enctype="multipart/form-data" autocomplete="off">
-          <div class="modal-body">
-            <div class="mb-3">
-              <label for="excelFile" class="form-label">Pilih File Excel (.xlsx / .xls)</label>
-              <div class="position-relative" style="display:flex;align-items:center;">
+
+        <form id="formImportGuru"
+          action="proses_import_data_guru.php"
+          method="POST"
+          enctype="multipart/form-data"
+          autocomplete="off">
+          <div class="modal-body pt-3">
+
+            <!-- Info box langkah-langkah -->
+            <div class="mb-3 p-3 rounded-3" style="background:#f9fafb;border:1px solid #e5e7eb;">
+              <div class="d-flex align-items-start gap-2">
+                <div class="mt-1">
+                  <i class="fa-solid fa-circle-info" style="color:#0a4db3;"></i>
+                </div>
+                <div style="font-size:13px;">
+                  <strong>Langkah import data guru:</strong>
+                  <ol class="mb-1 ps-3" style="padding-left:18px;">
+                    <li>Download template Excel terlebih dahulu.</li>
+                    <li>Isi data guru sesuai kolom yang tersedia.</li>
+                    <li>Upload kembali file Excel tersebut di form ini.</li>
+                  </ol>
+                  <span class="text-muted">
+                    Struktur kolom template:
+                    <strong>A: nomer</strong>,
+                    <strong>B: nama guru</strong>,
+                    <strong>C: jabatan</strong>
+                    (<em>hanya “Kepala Sekolah” atau “Guru”</em>).
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Baris: tombol download template -->
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+              <span class="text-muted" style="font-size:13px;">
+                Klik tombol di samping untuk mengunduh template Excel.
+              </span>
+              <a
+                href="../../assets/templates/template_data_guru.xlsx"
+                class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2"
+                download>
+                <i class="fa-solid fa-file-excel"></i>
+                <span>Download Template</span>
+              </a>
+            </div>
+
+            <hr class="my-2">
+
+            <!-- Input file -->
+            <div class="mb-2">
+              <label for="excelFile" class="form-label fw-semibold mb-1">
+                Upload File Excel
+              </label>
+              <div class="position-relative d-flex align-items-center">
                 <input
                   type="file"
                   class="form-control"
@@ -620,6 +719,7 @@ if ($totalRows === 0) {
                   style="padding-right:35px;"
                   required
                   onchange="toggleClearButtonGuruImport()">
+
                 <button
                   type="button"
                   id="clearFileBtnGuruImport"
@@ -639,8 +739,14 @@ if ($totalRows === 0) {
                   &times;
                 </button>
               </div>
+              <small class="text-muted d-block mt-1" style="font-size:12px;">
+                Format yang didukung: <strong>.xlsx</strong> atau <strong>.xls</strong>.
+                Pastikan tidak mengubah urutan kolom di template.
+              </small>
             </div>
-          </div>
+
+          </div><!-- /.modal-body -->
+
           <div class="modal-footer d-flex justify-content-between">
             <button type="button"
               class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
@@ -650,7 +756,7 @@ if ($totalRows === 0) {
             <button type="submit"
               id="btnSubmitImportGuru"
               class="btn btn-warning d-inline-flex align-items-center gap-2">
-              <i class="fas fa-upload"></i> Upload
+              <i class="fas fa-upload"></i> Upload &amp; Proses
             </button>
           </div>
         </form>
@@ -709,6 +815,8 @@ if ($totalRows === 0) {
     (function() {
       const input = document.getElementById('searchInput');
       const tbody = document.getElementById('guruTbody');
+      const tableWrap = document.getElementById('guruTableWrap');
+      const loadingOverlay = document.getElementById('tableLoadingOverlay');
 
       const checkAll = document.getElementById('checkAll');
       const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
@@ -731,6 +839,14 @@ if ($totalRows === 0) {
       let currentTotalRows = <?= (int)$totalRows ?>;
 
       let pendingDeleteHandler = null;
+
+      function scrollToTable() {
+        if (!tableWrap) return;
+        tableWrap.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }
 
       function showDeleteConfirm(message, handler) {
         if (!confirmModalEl || !confirmBodyEl || !confirmBtn) {
@@ -920,7 +1036,8 @@ if ($totalRows === 0) {
           btn.addEventListener('click', () => {
             const target = parseInt(btn.getAttribute('data-page') || '1', 10);
             if (isNaN(target) || target < 1 || target === currentPage) return;
-            doSearch(currentQuery, target, currentPerPage);
+            // pagination → overlay + scroll
+            doSearch(currentQuery, target, currentPerPage, true);
           });
         });
 
@@ -968,12 +1085,32 @@ if ($totalRows === 0) {
         });
       });
 
-      function setLoading() {
-        tbody.innerHTML = `<tr><td colspan="5">Sedang mencari…</td></tr>`;
+      function setLoading(useScroll) {
+        if (useScroll) {
+          scrollToTable();
+        }
+        if (tbody) {
+          tbody.classList.remove('tbody-loaded');
+          tbody.classList.add('tbody-loading');
+        }
+        if (loadingOverlay) {
+          loadingOverlay.classList.add('show');
+        }
       }
 
-      function doSearch(query, page, perPage) {
-        setLoading();
+      function finishLoading() {
+        if (loadingOverlay) {
+          loadingOverlay.classList.remove('show');
+        }
+        if (!tbody) return;
+        tbody.classList.remove('tbody-loading');
+        void tbody.offsetHeight; // reflow kecil
+        tbody.classList.add('tbody-loaded');
+      }
+
+      function doSearch(query, page, perPage, fromPaginationOrPerpage = false) {
+        setLoading(fromPaginationOrPerpage);
+
         if (currentController) currentController.abort();
         currentController = new AbortController();
 
@@ -1014,10 +1151,12 @@ if ($totalRows === 0) {
             attachCheckboxEvents();
             attachEditModalEvents();
             attachSingleDeleteEvents();
+            finishLoading();
           })
           .catch(e => {
             if (e.name === 'AbortError') return;
             tbody.innerHTML = `<tr><td colspan="5">Gagal memuat data.</td></tr>`;
+            finishLoading();
             console.error(e);
           });
       }
@@ -1025,7 +1164,8 @@ if ($totalRows === 0) {
       input.addEventListener('input', () => {
         clearTimeout(typingTimer);
         typingTimer = setTimeout(() => {
-          doSearch(input.value, 1, currentPerPage);
+          // search → transisi tapi tanpa scroll ke atas
+          doSearch(input.value, 1, currentPerPage, false);
         }, debounceMs);
       });
 
@@ -1034,7 +1174,8 @@ if ($totalRows === 0) {
           const val = parseInt(perPageSelect.value || '10', 10);
           if (isNaN(val) || val <= 0) return;
           currentPerPage = val;
-          doSearch(currentQuery, 1, currentPerPage);
+          // ganti perPage → scroll ke tabel
+          doSearch(currentQuery, 1, currentPerPage, true);
         });
       }
 
@@ -1066,6 +1207,11 @@ if ($totalRows === 0) {
       attachEditModalEvents();
       attachSingleDeleteEvents();
       buildPagination(currentTotalRows, currentPage, currentPerPage);
+
+      // status awal: dianggap loaded
+      if (tbody) {
+        tbody.classList.add('tbody-loaded');
+      }
     })();
   </script>
 
@@ -1093,3 +1239,4 @@ if ($totalRows === 0) {
   </script>
 
   <?php include '../../includes/footer.php'; ?>
+</body>

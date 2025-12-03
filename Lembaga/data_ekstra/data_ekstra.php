@@ -230,7 +230,7 @@ if ($totalRows === 0) {
 
     #perPage:focus {
       box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
-      border-color: var(--brand);
+      border-color: --brand;
     }
 
     .page-info-text strong {
@@ -289,6 +289,45 @@ if ($totalRows === 0) {
 
     .alert .close-btn:hover {
       opacity: 1;
+    }
+
+    /* TRANSISI TABEL + OVERLAY LOADING (SAMAKAN DENGAN DATA_USER) */
+    #ekstraTbody {
+      transition:
+        opacity 0.25s ease,
+        transform 0.25s ease;
+    }
+
+    #ekstraTbody.tbody-loading {
+      opacity: 0.4;
+      transform: scale(0.995);
+    }
+
+    #ekstraTbody.tbody-loaded {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    #ekstraTableWrap {
+      position: relative;
+    }
+
+    .table-loading-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.7);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      z-index: 2;
+    }
+
+    .table-loading-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
     }
 
     @media (max-width: 520px) {
@@ -421,7 +460,13 @@ if ($totalRows === 0) {
           </div>
 
           <div class="card-body pt-0">
-            <div class="table-responsive">
+            <div class="table-responsive" id="ekstraTableWrap">
+              <!-- OVERLAY LOADING -->
+              <div class="table-loading-overlay" id="tableLoadingOverlay">
+                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                <span style="font-size:13px;">Sedang memuat data…</span>
+              </div>
+
               <table class="table table-striped table-bordered align-middle mb-0">
                 <thead class="text-center">
                   <tr>
@@ -433,7 +478,7 @@ if ($totalRows === 0) {
                     <th style="width:200px;">Aksi</th>
                   </tr>
                 </thead>
-                <tbody id="ekstraTbody" class="text-center">
+                <tbody id="ekstraTbody" class="text-center tbody-loaded">
                   <?php
                   if ($totalRows === 0):
                   ?>
@@ -596,19 +641,71 @@ if ($totalRows === 0) {
     </div>
   </div>
 
-  <!-- MODAL IMPORT EKSTRA -->
+  <!-- MODAL IMPORT EKSTRA (DISAMAKAN DENGAN DATA GURU) -->
   <div class="modal fade" id="modalImportEkstra" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Import Data Ekstrakurikuler</h5>
+        <div class="modal-header border-0 pb-0">
+          <div>
+            <h5 class="modal-title fw-semibold">Import Data Ekstrakurikuler</h5>
+            <p class="mb-0 text-muted" style="font-size: 13px;">
+              Gunakan template resmi agar susunan kolom sesuai dengan sistem.
+            </p>
+          </div>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
         </div>
-        <form id="formImportEkstra" action="proses_import_data_ekstra.php" method="POST" enctype="multipart/form-data" autocomplete="off">
-          <div class="modal-body">
-            <div class="mb-3">
-              <label for="excelFileEkstra" class="form-label">Pilih File Excel (.xlsx / .xls)</label>
-              <div class="position-relative" style="display:flex;align-items:center;">
+
+        <form id="formImportEkstra"
+          action="proses_import_data_ekstra.php"
+          method="POST"
+          enctype="multipart/form-data"
+          autocomplete="off">
+          <div class="modal-body pt-3">
+
+            <!-- Info box langkah-langkah -->
+            <div class="mb-3 p-3 rounded-3" style="background:#f9fafb;border:1px solid #e5e7eb;">
+              <div class="d-flex align-items-start gap-2">
+                <div class="mt-1">
+                  <i class="fa-solid fa-circle-info" style="color:#0a4db3;"></i>
+                </div>
+                <div style="font-size:13px;">
+                  <strong>Langkah import data ekstrakurikuler:</strong>
+                  <ol class="mb-1 ps-3" style="padding-left:18px;">
+                    <li>Download template Excel terlebih dahulu.</li>
+                    <li>Isi data ekstrakurikuler sesuai kolom yang tersedia.</li>
+                    <li>Upload kembali file Excel tersebut di form ini.</li>
+                  </ol>
+                  <span class="text-muted">
+                    Struktur kolom template:
+                    <strong>A: nomor</strong>,
+                    <strong>B: nama ekstrakurikuler</strong>.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Baris: tombol download template -->
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+              <span class="text-muted" style="font-size:13px;">
+                Klik tombol di samping untuk mengunduh template Excel.
+              </span>
+              <a
+                href="../../assets/templates/template_data_ekstrakurikuler.xlsx"
+                class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2"
+                download>
+                <i class="fa-solid fa-file-excel"></i>
+                <span>Download Template</span>
+              </a>
+            </div>
+
+            <hr class="my-2">
+
+            <!-- Input file -->
+            <div class="mb-2">
+              <label for="excelFileEkstra" class="form-label fw-semibold mb-1">
+                Upload File Excel
+              </label>
+              <div class="position-relative d-flex align-items-center">
                 <input
                   type="file"
                   class="form-control"
@@ -618,6 +715,7 @@ if ($totalRows === 0) {
                   style="padding-right:35px;"
                   required
                   onchange="toggleClearButtonEkstraImport()">
+
                 <button
                   type="button"
                   id="clearFileBtnEkstraImport"
@@ -637,8 +735,14 @@ if ($totalRows === 0) {
                   &times;
                 </button>
               </div>
+              <small class="text-muted d-block mt-1" style="font-size:12px;">
+                Format yang didukung: <strong>.xlsx</strong> atau <strong>.xls</strong>.
+                Pastikan tidak mengubah urutan kolom di template.
+              </small>
             </div>
-          </div>
+
+          </div><!-- /.modal-body -->
+
           <div class="modal-footer d-flex justify-content-between">
             <button type="button"
               class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
@@ -648,7 +752,7 @@ if ($totalRows === 0) {
             <button type="submit"
               id="btnSubmitImportEkstra"
               class="btn btn-warning d-inline-flex align-items-center gap-2">
-              <i class="fas fa-upload"></i> Upload
+              <i class="fas fa-upload"></i> Upload &amp; Proses
             </button>
           </div>
         </form>
@@ -707,6 +811,8 @@ if ($totalRows === 0) {
     (function() {
       const input = document.getElementById('searchInput');
       const tbody = document.getElementById('ekstraTbody');
+      const tableWrap = document.getElementById('ekstraTableWrap');
+      const loadingOverlay = document.getElementById('tableLoadingOverlay');
 
       const checkAll = document.getElementById('checkAll');
       const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
@@ -730,6 +836,14 @@ if ($totalRows === 0) {
 
       let pendingDeleteHandler = null;
       const MODAL_ALERT_MS = 4000;
+
+      function scrollToTable() {
+        if (!tableWrap) return;
+        tableWrap.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }
 
       function showGlobalAlert(kind, message) {
         const container = document.getElementById('ajaxAlertContainer');
@@ -772,27 +886,21 @@ if ($totalRows === 0) {
           alertEl.textContent = message;
         }
 
-        // tampilkan dulu
         alertEl.style.display = 'block';
         alertEl.classList.remove('alert-hide');
 
-        // clear timer sebelumnya kalau ada
         if (alertEl.dataset.timerId) {
           clearTimeout(Number(alertEl.dataset.timerId));
         }
 
-        // Pasang handler tombol X sekali saja
         const closeBtn = alertEl.querySelector('.close-btn');
         if (closeBtn && !closeBtn.dataset.bound) {
           closeBtn.addEventListener('click', (e) => {
             e.preventDefault();
             alertEl.classList.add('alert-hide');
-
-            // sembunyikan setelah transisi (0.4s)
             setTimeout(() => {
               alertEl.style.display = 'none';
             }, 400);
-
             if (alertEl.dataset.timerId) {
               clearTimeout(Number(alertEl.dataset.timerId));
               alertEl.dataset.timerId = '';
@@ -801,7 +909,6 @@ if ($totalRows === 0) {
           closeBtn.dataset.bound = '1';
         }
 
-        // Timer auto-hide: pakai transisi dulu, lalu display:none
         const tid = setTimeout(() => {
           alertEl.classList.add('alert-hide');
           setTimeout(() => {
@@ -1009,7 +1116,8 @@ if ($totalRows === 0) {
           btn.addEventListener('click', () => {
             const target = parseInt(btn.getAttribute('data-page') || '1', 10);
             if (isNaN(target) || target < 1 || target === currentPage) return;
-            doSearch(currentQuery, target, currentPerPage);
+            // Pagination: overlay + scroll halus
+            doSearch(currentQuery, target, currentPerPage, true);
           });
         });
 
@@ -1057,12 +1165,32 @@ if ($totalRows === 0) {
         });
       });
 
-      function setLoading() {
-        tbody.innerHTML = `<tr><td colspan="4">Sedang mencari…</td></tr>`;
+      function setLoading(useScroll) {
+        if (useScroll) {
+          scrollToTable();
+        }
+        if (tbody) {
+          tbody.classList.remove('tbody-loaded');
+          tbody.classList.add('tbody-loading');
+        }
+        if (loadingOverlay) {
+          loadingOverlay.classList.add('show');
+        }
       }
 
-      function doSearch(query, page, perPage) {
-        setLoading();
+      function finishLoading() {
+        if (loadingOverlay) {
+          loadingOverlay.classList.remove('show');
+        }
+        if (!tbody) return;
+        tbody.classList.remove('tbody-loading');
+        void tbody.offsetHeight; // reflow kecil
+        tbody.classList.add('tbody-loaded');
+      }
+
+      function doSearch(query, page, perPage, fromPaginationOrPerpage = false) {
+        setLoading(fromPaginationOrPerpage);
+
         if (currentController) currentController.abort();
         currentController = new AbortController();
 
@@ -1103,10 +1231,12 @@ if ($totalRows === 0) {
             attachCheckboxEvents();
             attachEditModalEvents();
             attachSingleDeleteEvents();
+            finishLoading();
           })
           .catch(e => {
             if (e.name === 'AbortError') return;
             tbody.innerHTML = `<tr><td colspan="4">Gagal memuat data.</td></tr>`;
+            finishLoading();
             console.error(e);
           });
       }
@@ -1114,7 +1244,8 @@ if ($totalRows === 0) {
       input.addEventListener('input', () => {
         clearTimeout(typingTimer);
         typingTimer = setTimeout(() => {
-          doSearch(input.value, 1, currentPerPage);
+          // Search: halus tanpa scroll
+          doSearch(input.value, 1, currentPerPage, false);
         }, debounceMs);
       });
 
@@ -1123,7 +1254,8 @@ if ($totalRows === 0) {
           const val = parseInt(perPageSelect.value || '10', 10);
           if (isNaN(val) || val <= 0) return;
           currentPerPage = val;
-          doSearch(currentQuery, 1, currentPerPage);
+          // Ganti per halaman: overlay + scroll
+          doSearch(currentQuery, 1, currentPerPage, true);
         });
       }
 
@@ -1174,7 +1306,8 @@ if ($totalRows === 0) {
                 }
                 formTambah.reset();
                 showGlobalAlert('success', data.message || 'Data ekstrakurikuler berhasil disimpan.');
-                doSearch(currentQuery, currentPage, currentPerPage);
+                // refresh tabel: overlay + scroll halus
+                doSearch(currentQuery, currentPage, currentPerPage, true);
               } else {
                 const msg = (data.errors && data.errors.length) ?
                   data.errors.join(' ') :
@@ -1239,7 +1372,8 @@ if ($totalRows === 0) {
                   m.hide();
                 }
                 showGlobalAlert('success', data.message || 'Data ekstrakurikuler berhasil diperbarui.');
-                doSearch(currentQuery, currentPage, currentPerPage);
+                // refresh tabel: overlay + scroll halus
+                doSearch(currentQuery, currentPage, currentPerPage, true);
               } else {
                 const msg = (data.errors && data.errors.length) ?
                   data.errors.join(' ') :
@@ -1258,11 +1392,28 @@ if ($totalRows === 0) {
         });
       }
 
+      // ===== VALIDASI FORM IMPORT (seperti di guru) =====
+      const formImportEkstra = document.getElementById('formImportEkstra');
+      const btnSubmitImportEkstra = document.getElementById('btnSubmitImportEkstra');
+      if (formImportEkstra && btnSubmitImportEkstra) {
+        btnSubmitImportEkstra.addEventListener('click', (e) => {
+          if (!formImportEkstra.checkValidity()) {
+            e.preventDefault();
+            formImportEkstra.reportValidity();
+          }
+        });
+      }
+
       // Inisialisasi pertama kali
       attachCheckboxEvents();
       attachEditModalEvents();
       attachSingleDeleteEvents();
       buildPagination(currentTotalRows, currentPage, currentPerPage);
+
+      // pastikan state awal tbody dianggap "loaded"
+      if (tbody) {
+        tbody.classList.add('tbody-loaded');
+      }
     })();
   </script>
 
@@ -1382,3 +1533,4 @@ if ($totalRows === 0) {
   </script>
 
   <?php include '../../includes/footer.php'; ?>
+</body>

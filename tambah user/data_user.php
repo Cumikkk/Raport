@@ -183,6 +183,45 @@ if ($totalRows === 0) {
     font-family: monospace;
   }
 
+  /* TRANSISI TABEL + OVERLAY LOADING */
+  #userTbody {
+    transition:
+      opacity 0.25s ease,
+      transform 0.25s ease;
+  }
+
+  #userTbody.tbody-loading {
+    opacity: 0.4;
+    transform: scale(0.995);
+  }
+
+  #userTbody.tbody-loaded {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  #userTableWrap {
+    position: relative;
+  }
+
+  .table-loading-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.7);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 2;
+  }
+
+  .table-loading-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
   /* Tombol & hover */
   .btn-brand {
     background: #0a4db3 !important;
@@ -430,7 +469,13 @@ if ($totalRows === 0) {
         </div>
 
         <div class="card-body pt-0">
-          <div class="table-responsive">
+          <div class="table-responsive" id="userTableWrap">
+            <!-- OVERLAY LOADING -->
+            <div class="table-loading-overlay" id="tableLoadingOverlay">
+              <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+              <span style="font-size:13px;">Sedang memuat data…</span>
+            </div>
+
             <table class="table table-striped table-bordered align-middle mb-0">
               <thead class="text-center">
                 <tr>
@@ -438,14 +483,14 @@ if ($totalRows === 0) {
                     <input type="checkbox" id="checkAll" title="Pilih Semua">
                   </th>
                   <th style="width:70px;">No</th>
-                  <th>Nama Lengkap</th>
+                  <th>Nama Guru</th>
                   <th>Username</th>
                   <th>Password</th>
                   <th>Role</th>
                   <th style="width:200px;">Aksi</th>
                 </tr>
               </thead>
-              <tbody id="userTbody" class="text-center">
+              <tbody id="userTbody" class="text-center tbody-loaded">
                 <?php if (mysqli_num_rows($result) === 0): ?>
                   <tr>
                     <td colspan="7">Belum ada data</td>
@@ -713,13 +758,15 @@ if ($totalRows === 0) {
   (function() {
     const input = document.getElementById('searchInput');
     const tbody = document.getElementById('userTbody');
+    const tableWrap = document.getElementById('userTableWrap');
+    const loadingOverlay = document.getElementById('tableLoadingOverlay');
 
     const checkAll = document.getElementById('checkAll');
     const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
     const perPageSelect = document.getElementById('perPage');
     const paginationWrap = document.getElementById('paginationWrap');
     const pageInfo = document.getElementById('pageInfo');
-    const csrfToken = '<?= htmlspecialchars($csrf); ?>';
+    const csrfToken = '<?= htmlspecialchars($csrf, ENT_QUOTES, "UTF-8"); ?>';
 
     const confirmModalEl = document.getElementById('confirmDeleteModal');
     const confirmBodyEl = document.getElementById('confirmDeleteBody');
@@ -740,6 +787,14 @@ if ($totalRows === 0) {
 
     // handler yang akan dijalankan ketika user klik "Hapus" di modal
     let pendingDeleteHandler = null;
+
+    function scrollToTable() {
+      if (!tableWrap) return;
+      tableWrap.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
 
     function showDeleteConfirm(message, handler) {
       if (!confirmModalEl || !confirmBodyEl || !confirmBtn) {
@@ -905,7 +960,6 @@ if ($totalRows === 0) {
       });
     }
 
-    // Build pagination UI
     function buildPagination(totalRows, page, perPage) {
       currentTotalRows = totalRows;
       currentPage = page;
@@ -964,7 +1018,8 @@ if ($totalRows === 0) {
         btn.addEventListener('click', () => {
           const target = parseInt(btn.getAttribute('data-page') || '1', 10);
           if (isNaN(target) || target < 1 || target === currentPage) return;
-          doSearch(currentQuery, target, currentPerPage);
+          // Pagination: pakai overlay + scroll halus
+          doSearch(currentQuery, target, currentPerPage, true);
         });
       });
 
@@ -1012,12 +1067,32 @@ if ($totalRows === 0) {
       });
     });
 
-    function setLoading() {
-      tbody.innerHTML = `<tr><td colspan="7">Sedang mencari…</td></tr>`;
+    function setLoading(useScroll) {
+      if (useScroll) {
+        scrollToTable();
+      }
+      if (tbody) {
+        tbody.classList.remove('tbody-loaded');
+        tbody.classList.add('tbody-loading');
+      }
+      if (loadingOverlay) {
+        loadingOverlay.classList.add('show');
+      }
     }
 
-    function doSearch(query, page, perPage) {
-      setLoading();
+    function finishLoading() {
+      if (loadingOverlay) {
+        loadingOverlay.classList.remove('show');
+      }
+      if (!tbody) return;
+      tbody.classList.remove('tbody-loading');
+      void tbody.offsetHeight; // reflow kecil
+      tbody.classList.add('tbody-loaded');
+    }
+
+    function doSearch(query, page, perPage, fromPaginationOrPerpage = false) {
+      setLoading(fromPaginationOrPerpage);
+
       if (currentController) currentController.abort();
       currentController = new AbortController();
 
@@ -1059,10 +1134,12 @@ if ($totalRows === 0) {
           attachPasswordToggleEvents();
           attachEditModalEvents();
           attachSingleDeleteEvents();
+          finishLoading();
         })
         .catch(e => {
           if (e.name === 'AbortError') return;
           tbody.innerHTML = `<tr><td colspan="7">Gagal memuat data.</td></tr>`;
+          finishLoading();
           console.error(e);
         });
     }
@@ -1080,7 +1157,6 @@ if ($totalRows === 0) {
       const box = (mode === 'add') ? addUserAlert : editUserAlert;
       if (!box) return;
 
-      // reset dulu
       box.classList.remove('d-none', 'alert-hide');
       box.innerHTML = `<span class="close-btn">&times;</span> ${message}`;
 
@@ -1095,10 +1171,9 @@ if ($totalRows === 0) {
           box.classList.add('d-none');
           box.innerHTML = '';
           box.classList.remove('alert-hide');
-        }, 400); // sinkron dengan transition CSS
+        }, 400);
       };
 
-      // auto-hide 4 detik (sama dengan alert luar)
       const timer = setTimeout(hide, 4000);
 
       if (closeBtn) {
@@ -1181,7 +1256,8 @@ if ($totalRows === 0) {
           }
 
           showTopAlert('success', data.message || 'Berhasil menyimpan data.');
-          doSearch(currentQuery, currentPage, currentPerPage);
+          // refresh tabel: pakai overlay + scroll halus
+          doSearch(currentQuery, currentPage, currentPerPage, true);
 
           if (mode === 'add') {
             form.reset();
@@ -1203,7 +1279,8 @@ if ($totalRows === 0) {
     input.addEventListener('input', () => {
       clearTimeout(typingTimer);
       typingTimer = setTimeout(() => {
-        doSearch(input.value, 1, currentPerPage);
+        // Search: transisi halus tanpa scroll
+        doSearch(input.value, 1, currentPerPage, false);
       }, debounceMs);
     });
 
@@ -1212,7 +1289,8 @@ if ($totalRows === 0) {
         const val = parseInt(perPageSelect.value || '10', 10);
         if (isNaN(val) || val <= 0) return;
         currentPerPage = val;
-        doSearch(currentQuery, 1, currentPerPage);
+        // Ganti per halaman: overlay + scroll
+        doSearch(currentQuery, 1, currentPerPage, true);
       });
     }
 
@@ -1222,6 +1300,11 @@ if ($totalRows === 0) {
     attachEditModalEvents();
     attachSingleDeleteEvents();
     buildPagination(currentTotalRows, currentPage, currentPerPage);
+
+    // pastikan state awal tbody dianggap "loaded"
+    if (tbody) {
+      tbody.classList.add('tbody-loaded');
+    }
 
     // Intercept submit form Tambah & Edit → AJAX
     const formAdd = document.querySelector('#modalTambahUser form');
