@@ -38,16 +38,26 @@ $kategoriList = array_values(array_unique($kategoriList));
 
               <!-- Tombol group -->
               <div class="d-flex flex-wrap gap-2 tombol-aksi">
-                <a href="data_mapel_tambah.php" class="btn btn-primary btn-md d-flex align-items-center gap-1 p-2 pe-3 " style="border-radius: 5px;" data-bs-toggle="modal" data-bs-target="#modalTambahMapel">
+                <!-- Tombol TAMBAH (buka modal tambah mapel) -->
+                <button type="button"
+                        class="btn btn-primary btn-md d-flex align-items-center gap-1 p-2 pe-3"
+                        style="border-radius: 5px;"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalTambahMapel">
                   <i class="fa-solid fa-plus fa-lg"></i>
                   Tambah
-                </a>
+                </button>
 
-                <a href="data_mapel_import.php" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
+                <!-- Tombol IMPORT (buka modal import) -->
+                <button type="button"
+                        class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalImportMapel">
                   <i class="fa-solid fa-file-arrow-down fa-lg"></i>
                   <span>Import</span>
-                </a>
+                </button>
 
+                <!-- Tombol EXPORT (nanti arahkan ke file export) -->
                 <a href="" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
                   <i class="fa-solid fa-file-arrow-up fa-lg"></i>
                   <span>Export</span>
@@ -64,6 +74,7 @@ $kategoriList = array_values(array_unique($kategoriList));
                   <h5 class="modal-title fw-semibold" id="modalTambahMapelLabel">
                     <i class="fa fa-book"></i> Tambah Data Mapel
                   </h5>
+                  <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
                 <div class="modal-body">
@@ -99,7 +110,52 @@ $kategoriList = array_values(array_unique($kategoriList));
               </div>
             </div>
           </div>
-          <!-- Akhir Modal -->
+          <!-- Akhir Modal Tambah -->
+
+          <!-- Modal IMPORT MAPEL (mirip modal import kelas) -->
+          <div class="modal fade" id="modalImportMapel" tabindex="-1" aria-labelledby="modalImportMapelLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+              <div class="modal-content" style="border-radius: 12px; overflow:hidden;">
+                <div class="modal-header" style="background-color:#0d6efd; color:#fff;">
+                  <h5 class="modal-title d-flex align-items-center" id="modalImportMapelLabel">
+                    <i class="fa fa-upload me-2"></i> Import Data Mata Pelajaran
+                  </h5>
+                  <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <form action="data_mapel_import.php" method="post" enctype="multipart/form-data">
+                  <div class="modal-body">
+                    <div class="mb-3">
+                      <label class="form-label fw-semibold">File Excel</label>
+                      <input type="file" name="excel_file" class="form-control" accept=".xlsx,.xls" required>
+                      <small class="text-muted">
+                        Gunakan template Excel yang sudah disediakan agar kolom sesuai.
+                      </small>
+                    </div>
+
+                    <div class="mb-3">
+                      <label class="form-label fw-semibold">Catatan</label>
+                      <ul class="mb-0 ps-3">
+                        <li>.</li>
+                        <li>.</li>
+                        <li>.</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div class="modal-footer d-flex justify-content-between">
+                    <button type="submit" class="btn btn-success">
+                      <i class="fa fa-save"></i> Simpan
+                    </button>
+                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
+                      <i class="fa fa-times"></i> Batal
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+          <!-- Akhir Modal Import -->
 
           <!-- Tabel Data -->
           <?php if ((empty($dataMapel) || count($dataMapel) === 0)) { ?>
@@ -146,7 +202,7 @@ $kategoriList = array_values(array_unique($kategoriList));
               </div>
 
               <div class="card-body">
-
+                <h6 id="judulKategori" class="fw-semibold mb-3"></h6>
                 <div id="mapelContainer" class="list-group text-start">
                   <!-- Mapel akan muncul di sini -->
                 </div>
@@ -164,6 +220,7 @@ $kategoriList = array_values(array_unique($kategoriList));
                 <h5 class="modal-title fw-semibold" id="modalTambahMapelLabel">
                   <i class="fa fa-edit"></i> Tambah Data Mapel
                 </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
 
               <div class="modal-body">
@@ -235,15 +292,13 @@ $kategoriList = array_values(array_unique($kategoriList));
 
       if (!dataMapel[category] || dataMapel[category].length === 0) {
         mapelContainer.innerHTML = '<p class="text-muted">Belum ada data mapel pada kategori ini.</p>';
+        judulKategori.textContent = '';
         return;
       }
 
       dataMapel[category].forEach((mapel, index) => {
         const div = document.createElement('div');
         div.className = 'd-flex justify-content-between align-items-center border rounded p-2 bg-white shadow-sm mb-2';
-
-        // Escape nama agar aman untuk dipakai di onclick
-        const namaEscaped = JSON.stringify(mapel.nama_mata_pelajaran);
 
         div.innerHTML = `
         <div>
@@ -261,19 +316,16 @@ $kategoriList = array_values(array_unique($kategoriList));
         mapelContainer.appendChild(div);
       });
 
-      // Ganti judul di atas daftar mapel
       const kapital = category.charAt(0).toUpperCase() + category.slice(1);
       judulKategori.textContent = `Mata Pelajaran ${kapital}`;
     }
 
-    // --- SIMPAN INI ---
     function editMapel(id, nama, kategori) {
       document.getElementById('edit_id_mapel').value = id;
       document.getElementById('edit_nama_mapel').value = nama;
       document.getElementById('edit_jenis_mapel').value =
-        kategori.charAt(0).toUpperCase() + kategori.slice(1); // <--- taruh di sini
+        kategori.charAt(0).toUpperCase() + kategori.slice(1);
     }
-
 
     // Fungsi tombol Hapus → arahkan ke hapus_mapel.php
     function hapusMapel(id) {
@@ -281,7 +333,6 @@ $kategoriList = array_values(array_unique($kategoriList));
         window.location.href = "hapus_mapel.php?id=" + id;
       }
     }
-
 
     // Event click untuk tiap tab
     tabs.forEach(tab => {
@@ -298,11 +349,6 @@ $kategoriList = array_values(array_unique($kategoriList));
       showMapel(kategoriList[0]);
     }
   </script>
-
-
-
-
-
 
   <style>
     /* RESPONSIVE KHUSUS UNTUK TOMBOL */
@@ -321,3 +367,4 @@ $kategoriList = array_values(array_unique($kategoriList));
   </style>
 
   <?php include '../../includes/footer.php'; ?>
+</body>

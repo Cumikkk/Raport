@@ -37,10 +37,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_delete']) && !em
   exit;
 }
 
-// ===== LIST + FILTER =====
-$q = trim($_GET['q'] ?? '');
+// ===== LIST + FILTER (server-side, tetap dipakai kalau user submit form) =====
+$q       = trim($_GET['q'] ?? '');
 $tingkat = trim($_GET['tingkat'] ?? '');
-$like = "%{$q}%";
+$like    = "%{$q}%";
 $tingkatParam = $tingkat ?: '';
 
 $sql = "
@@ -97,9 +97,9 @@ include '../../includes/navbar.php';
                   placeholder="Cari kelas/wali..." aria-label="Search" style="max-width:200px; flex-grow:1;">
                 <select name="tingkat" class="form-select me-2" style="max-width:140px;">
                   <option value="">Semua</option>
-                  <option value="X" <?= $tingkat === 'X'  ? 'selected' : ''; ?>>X</option>
+                  <option value="X"  <?= $tingkat === 'X'  ? 'selected' : ''; ?>>X</option>
                   <option value="XI" <?= $tingkat === 'XI' ? 'selected' : ''; ?>>XI</option>
-                  <option value="XII" <?= $tingkat === 'XII' ? 'selected' : ''; ?>>XII</option>
+                  <option value="XII"<?= $tingkat === 'XII'? 'selected' : ''; ?>>XII</option>
                 </select>
                 <button class="btn btn-outline-secondary btn-md" type="submit">
                   <i class="fa fa-search"></i>
@@ -107,12 +107,20 @@ include '../../includes/navbar.php';
               </form>
 
               <div class="d-flex flex-wrap gap-2 mt-2 mt-sm-0 button-group">
+                <!-- Tambah -->
                 <a href="tambah_data.php" class="btn btn-primary btn-md px-3 py-2 d-flex align-items-center gap-2">
                   <i class="fa-solid fa-plus fa-lg"></i> Tambah
                 </a>
-                <a href="import.php" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
+
+                <!-- Import → buka modal -->
+                <button type="button"
+                        class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalImportKelas">
                   <i class="fa-solid fa-file-arrow-down fa-lg"></i> Import
-                </a>
+                </button>
+
+                <!-- Export -->
                 <button id="exportBtn" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2" type="button"
                   onclick="window.location='export.php'">
                   <i class="fa-solid fa-file-arrow-up fa-lg"></i> Export
@@ -177,7 +185,51 @@ include '../../includes/navbar.php';
     </div>
   </div>
 
-  <!-- CSS RESPONSIVE -->
+  <!-- MODAL IMPORT (tampil seperti form tambah data kelas) -->
+  <div class="modal fade" id="modalImportKelas" tabindex="-1" aria-labelledby="modalImportKelasLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content" style="border-radius: 12px; overflow:hidden;">
+        <div class="modal-header" style="background-color:#0d6efd; color:#fff;">
+          <h5 class="modal-title d-flex align-items-center" id="modalImportKelasLabel">
+            <i class="fa fa-upload me-2"></i> Import Data Kelas
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <form action="import.php" method="post" enctype="multipart/form-data">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">File Excel</label>
+              <input type="file" name="excel_file" class="form-control" accept=".xlsx,.xls" required>
+              <small class="text-muted">
+                Gunakan template Excel yang sudah disediakan agar kolom sesuai.
+              </small>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Catatan</label>
+              <ul class="mb-0 ps-3">
+                <li>.</li>
+                <li>.</li>
+                <li>.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="modal-footer d-flex justify-content-between">
+            <button type="submit" class="btn btn-success">
+              <i class="fa fa-save"></i> Simpan
+            </button>
+            <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
+              <i class="fa fa-times"></i> Batal
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- CSS RESPONSIVE + HIGHLIGHT -->
   <style>
     @media (max-width: 576px) {
       h4.fw-bold {
@@ -206,15 +258,21 @@ include '../../includes/navbar.php';
         width: 100%;
       }
     }
+
+    /* Warna highlight hasil pencarian (seperti data_guru) */
+    .row-highlight {
+      background-color: #d4edda !important;
+    }
   </style>
 
   <!-- SCRIPT -->
   <script>
+    // ====== BULK CHECKBOX ======
     document.addEventListener('DOMContentLoaded', () => {
-      const selectAll = document.getElementById('selectAll');
+      const selectAll  = document.getElementById('selectAll');
       const selectAll2 = document.getElementById('selectAll2');
       const checkboxes = document.querySelectorAll('.row-checkbox');
-      const deleteBtn = document.getElementById('deleteSelected');
+      const deleteBtn  = document.getElementById('deleteSelected');
 
       function updateDeleteButton() {
         const checkedCount = document.querySelectorAll('.row-checkbox:checked').length;
@@ -225,10 +283,63 @@ include '../../includes/navbar.php';
         checkboxes.forEach(cb => cb.checked = checked);
         updateDeleteButton();
       }
-      if (selectAll) selectAll.addEventListener('change', e => toggleAll(e.target.checked));
+
+      if (selectAll)  selectAll.addEventListener('change', e => toggleAll(e.target.checked));
       if (selectAll2) selectAll2.addEventListener('change', e => toggleAll(e.target.checked));
       checkboxes.forEach(cb => cb.addEventListener('change', updateDeleteButton));
+    });
+
+    // ====== LIVE SEARCH + HIGHLIGHT BARIS ======
+    document.addEventListener('DOMContentLoaded', () => {
+      const input = document.querySelector('input[name="q"]');
+      const tbody = document.querySelector('#dataKelas tbody');
+      if (!input || !tbody) return;
+
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+
+      const debounce = (fn, delay = 120) => {
+        let t;
+        return (...args) => {
+          clearTimeout(t);
+          t = setTimeout(() => fn(...args), delay);
+        };
+      };
+
+      function applyFilter() {
+        const term = (input.value || '').trim().toLowerCase();
+        let nomor = 1;
+
+        rows.forEach(tr => {
+          tr.classList.remove('row-highlight');
+          const tds = tr.querySelectorAll('td');
+          if (!tds.length) return;
+
+          const namaKelas = (tds[2].textContent || '').toLowerCase(); // kolom "Nama Kelas"
+          const wali      = (tds[4].textContent || '').toLowerCase(); // kolom "Wali Kelas"
+
+          const cocok = term === '' || namaKelas.includes(term) || wali.includes(term);
+
+          tr.style.display = cocok ? '' : 'none';
+
+          if (cocok) {
+            // renumber kolom "No"
+            tds[1].textContent = nomor++;
+
+            // highlight kalau cocok
+            if (term !== '' && (namaKelas.includes(term) || wali.includes(term))) {
+              tr.classList.add('row-highlight');
+            }
+          }
+        });
+      }
+
+      // jalan pertama kali (kalau ada ?q= di URL)
+      applyFilter();
+
+      // live search saat mengetik
+      input.addEventListener('input', debounce(applyFilter, 120));
     });
   </script>
 
   <?php include '../../includes/footer.php'; ?>
+</body>

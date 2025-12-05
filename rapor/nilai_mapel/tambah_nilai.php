@@ -128,21 +128,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $stmt->bind_param(
-    // 24 integer placeholders
-    'iiiiiiiiiiiiiiiiiiiiiiii',
-    $id_semester, $id_siswa, $id_mapel,
-    $tp1_lm1, $tp2_lm1, $tp3_lm1, $tp4_lm1, $sumatif_lm1,
-    $tp1_lm2, $tp2_lm2, $tp3_lm2, $tp4_lm2, $sumatif_lm2,
-    $tp1_lm3, $tp2_lm3, $tp3_lm3, $tp4_lm3, $sumatif_lm3,
-    $tp1_lm4, $tp2_lm4, $tp3_lm4, $tp4_lm4, $sumatif_lm4,
-    $sumatif_tengah_semester
+      // 24 integer placeholders
+      'iiiiiiiiiiiiiiiiiiiiiiii',
+      $id_semester, $id_siswa, $id_mapel,
+      $tp1_lm1, $tp2_lm1, $tp3_lm1, $tp4_lm1, $sumatif_lm1,
+      $tp1_lm2, $tp2_lm2, $tp3_lm2, $tp4_lm2, $sumatif_lm2,
+      $tp1_lm3, $tp2_lm3, $tp3_lm3, $tp4_lm3, $sumatif_lm3,
+      $tp1_lm4, $tp2_lm4, $tp3_lm4, $tp4_lm4, $sumatif_lm4,
+      $sumatif_tengah_semester
     );
 
-$stmt->execute();
-$stmt->close();
+    $stmt->execute();
+    $stmt->close();
 
-    // Redirect kembali ke nilai_mapel dengan semester aktif
-    header("Location: nilai_mapel.php?id=" . urlencode($id_mapel) . "&id_semester=" . urlencode($id_semester));
+    // Redirect kembali ke nilai_mapel dengan semester aktif + flag sukses
+    header(
+      "Location: nilai_mapel.php?id=" . urlencode($id_mapel) .
+      "&id_semester=" . urlencode($id_semester) .
+      "&status=add_success"           // <--- INI YANG MEMICU ALERT
+    );
     exit;
 
   } catch (Throwable $e) {
@@ -191,7 +195,7 @@ $stmt->close();
               </select>
             </div>
 
-            <!-- ===== FORM NILAI (sesuai yang sudah kamu tulis) ===== -->
+            <!-- ===== FORM NILAI ===== -->
             <h6 class="fw-bold mt-4 mb-2 text-primary">Nilai Lingkup Materi 1</h6>
             <div class="row">
               <div class="col-md-3 mb-3"><label class="form-label">TP1</label><input type="number" name="tp1_lm1" class="form-control" min="0" max="100"></div>

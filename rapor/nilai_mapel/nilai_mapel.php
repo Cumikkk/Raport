@@ -96,8 +96,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mode']) && $_POST['mo
  * FLAG NOTIFIKASI (ADD / EDIT / DELETE / IMPORT)
  * ============================ */
 
-// Baca pola utama ?msg=
-$status = $_GET['msg'] ?? '';
+// Bisa baca ?msg= atau ?status=
+$status = $_GET['msg'] ?? ($_GET['status'] ?? '');
 
 // Tambahan: kalau file lain pakai ?add_success=1, ?edit_success=1, ?delete_success=1
 if ($status === '') {
@@ -282,11 +282,13 @@ $q->close();
                 <i class="fa-solid fa-plus"></i><span>Tambah</span>
               </a>
 
-              <!-- Import -->
-              <a href="import_nilai.php?id=<?= urlencode($id_mapel); ?>&id_semester=<?= urlencode($id_semester); ?>"
-                class="btn btn-success btn-sm d-flex align-items-center gap-2">
+              <!-- Import (BUKA MODAL) -->
+              <button type="button"
+                class="btn btn-success btn-sm d-flex align-items-center gap-2"
+                data-bs-toggle="modal"
+                data-bs-target="#modalImportNilai">
                 <i class="fa-solid fa-download"></i><span>Import</span>
-              </a>
+              </button>
 
               <!-- Export -->
               <a href="nilai_mapel_export2.php?id=<?= urlencode($id_mapel) ?>&id_semester=<?= urlencode($id_semester) ?>"
@@ -297,7 +299,7 @@ $q->close();
           </div>
         </div>
 
-        <!-- ALERT (di bawah bar putih, mirip data_absensi) -->
+        <!-- ALERT (di bawah bar putih) -->
         <div id="alertArea">
           <?php if ($status === 'add_success'): ?>
             <div class="alert alert-success mx-3 mt-3 mb-0 alert-dismissible fade show" role="alert">
@@ -337,7 +339,7 @@ $q->close();
         <!-- Tabel nilai -->
         <div class="card-body">
           <div class="table-responsive">
-            <form method="post" id="bulkForm">
+            <form method="post" id="bulkForm" enctype="multipart/form-data">
               <input type="hidden" name="aksi" value="bulk_delete">
               <table id="nilaiTable" class="table table-bordered text-center align-middle">
                 <thead style="background-color:#1d52a2" class="text-white">
@@ -486,6 +488,50 @@ $q->close();
   </div>
 </main>
 
+<!-- ========== MODAL IMPORT NILAI (seperti contoh) ========== -->
+<div class="modal fade" id="modalImportNilai" tabindex="-1" aria-labelledby="modalImportNilaiLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content" style="border-radius:10px;">
+      <div class="modal-header" style="background-color:#0d6efd; color:#fff;">
+        <h5 class="modal-title fw-semibold" id="modalImportNilaiLabel">
+          <i class="fa fa-file-excel-o me-2"></i> Import Data Nilai Mata Pelajaran
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="import_nilai.php?id=<?= urlencode($id_mapel); ?>&id_semester=<?= urlencode($id_semester); ?>" method="post" enctype="multipart/form-data">
+        <div class="modal-body">
+          <p class="mb-1">
+            <strong>Mapel:</strong> <?= safe($mapel_nama); ?>
+            <span class="ms-2 text-muted">(Semester ID: <?= (int)$id_semester; ?>)</span>
+          </p>
+
+          <div class="mb-3 mt-3">
+            <label class="form-label fw-semibold">Pilih File Excel (.xlsx / .xls)</label>
+            <input type="file" name="excel_file" class="form-control" accept=".xlsx,.xls" required>
+          </div>
+
+          <small class="text-muted d-block">
+            Contoh header yang didukung (bebas urutan):
+            <span class="text-danger">
+              No_Absen, Nama_Siswa, tp1_lm1, tp2_lm1, tp3_lm1, tp4_lm1, sumatif_lm1, tp1_lm2, ...
+              sumatif_lm4, sumatif_tengah_semester
+            </span>
+          </small>
+        </div>
+        <div class="modal-footer d-flex justify-content-between">
+          <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
+            <i class="fa fa-times"></i> Batal
+          </button>
+          <button type="submit" class="btn btn-warning">
+            <i class="fa fa-upload"></i> Upload
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<!-- ========== END MODAL IMPORT ========== -->
+
 <!-- ===== LIVE SEARCH TANPA ENTER (+ auto-renumber kolom NO. di halaman aktif) ===== -->
 <script>
 (function () {
@@ -541,11 +587,11 @@ $q->close();
 
 <!-- SCRIPT CHECKBOX / BULK + MODE EDIT + SIMPAN -->
 <script>
-  const selectAll = document.getElementById('selectAll');
-  const deleteBtn = document.getElementById('deleteSelected');
-  const bulkForm  = document.getElementById('bulkForm');
-  const modeToggle = document.getElementById('modeEditToggle');
-  const saveAllBtn = document.getElementById('saveAllBtn');
+  const selectAll   = document.getElementById('selectAll');
+  const deleteBtn   = document.getElementById('deleteSelected');
+  const bulkForm    = document.getElementById('bulkForm');
+  const modeToggle  = document.getElementById('modeEditToggle');
+  const saveAllBtn  = document.getElementById('saveAllBtn');
 
   function toggleDeleteButton() {
     const any = [...document.querySelectorAll('.row-check')].some(c => c.checked);

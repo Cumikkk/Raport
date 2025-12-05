@@ -57,11 +57,16 @@ $status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
                 Tambah
               </button>
 
-              <a href="nilai_mapel_import.php" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
+              <!-- TOMBOL IMPORT → BUKA MODAL IMPORT -->
+              <button type="button"
+                      class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2"
+                      data-bs-toggle="modal"
+                      data-bs-target="#modalImportNilai">
                 <i class="fa-solid fa-file-arrow-down fa-lg"></i>
                 <span>Import</span>
-              </a>
+              </button>
 
+              <!-- EXPORT CSV -->
               <button id="exportBtn" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
                 <i class="fa-solid fa-file-arrow-up fa-lg"></i>
                 Export
@@ -208,7 +213,57 @@ $status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
       </div>
     </div>
   </div>
-  <!-- ========== END MODAL ========== -->
+  <!-- ========== END MODAL TAMBAH ========== -->
+
+  <!-- ========== MODAL IMPORT NILAI MAPEL ========== -->
+  <div class="modal fade" id="modalImportNilai" tabindex="-1" aria-labelledby="modalImportNilaiLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content" style="border-radius:12px; overflow:hidden;">
+        <div class="modal-header" style="background-color:#0d6efd; color:#fff;">
+          <h5 class="modal-title d-flex align-items-center" id="modalImportNilaiLabel">
+            <i class="fa fa-upload me-2"></i> Import Nilai Mata Pelajaran
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <!--
+          Di sini hanya upload file Excel.
+          Jika script nilai_mapel_import.php butuh parameter tambahan
+          (misalnya id_mapel / id_semester), bisa ditambah sendiri di form ini.
+        -->
+        <form action="nilai_mapel_import.php" method="post" enctype="multipart/form-data">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">File Excel</label>
+              <input type="file" name="excel_file" class="form-control" accept=".xlsx,.xls" required>
+              <small class="text-muted">
+                Gunakan template Excel yang sudah disediakan agar kolom sesuai.
+              </small>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Catatan</label>
+              <ul class="mb-0 ps-3">
+                <li>.</li>
+                <li>.</li>
+                <li>.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="modal-footer d-flex justify-content-between">
+            <button type="submit" class="btn btn-success">
+              <i class="fa fa-save"></i> Simpan
+            </button>
+            <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
+              <i class="fa fa-times"></i> Batal
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <!-- ========== END MODAL IMPORT ========== -->
 
   <style>
     /* Tambahan CSS Responsif */
