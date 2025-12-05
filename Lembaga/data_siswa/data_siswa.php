@@ -175,7 +175,7 @@ include '../../includes/navbar.php';
               <i class="fa-solid fa-plus"></i> Tambah
             </button>
 
-            <!-- IMPORT: sekarang buka modal, tidak lagi pindah halaman -->
+            <!-- IMPORT: sekarang tampilannya mirip data_guru.php -->
             <button type="button"
                     class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2"
                     data-bs-toggle="modal" data-bs-target="#modalImportSiswa">
@@ -376,89 +376,124 @@ include '../../includes/navbar.php';
 </div>
 
 <!-- ========================= -->
-<!-- MODAL: Import Siswa -->
+<!-- MODAL: Import Siswa (baru, mirip data_guru.php) -->
 <!-- ========================= -->
 <div class="modal fade" id="modalImportSiswa" tabindex="-1" aria-labelledby="modalImportSiswaLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="modalImportSiswaLabel">Import Data Siswa</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-header border-0 pb-0">
+        <div>
+          <h5 class="modal-title fw-semibold" id="modalImportSiswaLabel">Import Data Siswa</h5>
+          <p class="mb-0 text-muted" style="font-size: 13px;">
+            Gunakan template resmi agar susunan kolom sesuai dengan sistem.
+          </p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
       </div>
 
-      <!-- Form kirim ke import_siswa.php (fungsi saja) -->
-      <form id="formImportSiswa" method="POST" action="import_siswa.php" enctype="multipart/form-data" autocomplete="off">
-        <div class="modal-body">
-          <!-- ===== DROPDOWN FILTER (copy dari page import_siswa lama) ===== -->
-          <div class="d-flex flex-column align-items-start mb-4" style="gap: 15px;">
-            <!-- Dropdown Tingkat -->
-            <div class="filter-group d-flex align-items-center" style="gap: 12px;">
-              <label for="tingkat" class="form-label fw-semibold mb-0" style="min-width: 70px;">Tingkat</label>
-              <select id="tingkat" name="tingkat" class="form-select dk-select" style="width: 160px;">
-                <option selected disabled>--Pilih--</option>
-                <option>X</option>
-                <option>XI</option>
-                <option>XII</option>
-              </select>
-            </div>
+      <!-- Form import: fungsi tetap ke import_siswa.php -->
+      <form id="formImportSiswa"
+            action="import_siswa.php"
+            method="POST"
+            enctype="multipart/form-data"
+            autocomplete="off">
+        <div class="modal-body pt-3">
 
-            <!-- Dropdown Kelas -->
-            <div class="filter-group d-flex align-items-center" style="gap: 12px;">
-              <label for="kelas" class="form-label fw-semibold mb-0" style="min-width: 70px;">Kelas</label>
-              <select id="kelas" name="kelas" class="form-select dk-select" style="width: 160px;">
-                <option selected disabled>--Pilih--</option>
-                <option>IPA 1</option>
-                <option>IPA 2</option>
-                <option>IPS 1</option>
-                <option>IPS 2</option>
-              </select>
+          <!-- Info box langkah-langkah -->
+          <div class="mb-3 p-3 rounded-3" style="background:#f9fafb;border:1px solid #e5e7eb;">
+            <div class="d-flex align-items-start gap-2">
+              <div class="mt-1">
+                <i class="fa-solid fa-circle-info" style="color:#0a4db3;"></i>
+              </div>
+              <div style="font-size:13px;">
+                <strong>Langkah import data siswa:</strong>
+                <ol class="mb-1 ps-3" style="padding-left:18px;">
+                  <li>Download template Excel terlebih dahulu.</li>
+                  <li>Isi data siswa sesuai kolom yang tersedia.</li>
+                  <li>Upload kembali file Excel tersebut di form ini.</li>
+                </ol>
+                <span class="text-muted">
+                  Contoh struktur kolom template:
+                  <strong>A: nomor</strong>,
+                  <strong>B: nama siswa</strong>,
+                  <strong>C: NISN</strong>,
+                  <strong>D: absen</strong>,
+                  <strong>E: kelas</strong>.
+                  Silakan sesuaikan dengan template yang kamu gunakan.
+                </span>
+              </div>
             </div>
           </div>
 
-          <!-- ===== INPUT FILE ===== -->
-          <div class="mb-3">
-            <label for="excelFile" class="form-label">Pilih File Excel (.xlsx)</label>
-            
+          <!-- Baris: tombol download template -->
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+            <span class="text-muted" style="font-size:13px;">
+              Klik tombol di samping untuk mengunduh template Excel.
+            </span>
+            <a
+              href="../../assets/templates/template_data_siswa.xlsx"
+              class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2"
+              download>
+              <i class="fa-solid fa-file-excel"></i>
+              <span>Download Template</span>
+            </a>
+          </div>
+
+          <hr class="my-2">
+
+          <!-- Input file -->
+          <div class="mb-2">
+            <label for="excelFile" class="form-label fw-semibold mb-1">
+              Upload File Excel
+            </label>
             <div class="position-relative d-flex align-items-center">
-              <input 
-                type="file" 
-                class="form-control" 
-                id="excelFile" 
+              <input
+                type="file"
+                class="form-control"
+                id="excelFile"
                 name="excelFile"
-                accept=".xlsx, .xls" 
-                onchange="toggleClearButtonImport()" 
-                onclick="checkBeforeChooseImport(event)" 
-                style="padding-right: 35px;"
-              >
-              <button 
-                type="button" 
-                id="clearFileBtn" 
-                onclick="clearFileImport()" 
+                accept=".xlsx,.xls"
+                style="padding-right:35px;"
+                required
+                onchange="toggleClearButtonSiswaImport()">
+
+              <button
+                type="button"
+                id="clearFileBtnSiswaImport"
+                onclick="clearFileSiswaImport()"
                 title="Hapus file"
                 style="
-                  position: absolute;
-                  right: 10px;
-                  background: none;
-                  border: none;
-                  color: #6c757d;
-                  font-size: 20px;
-                  line-height: 1;
-                  display: none;
-                  cursor: pointer;
+                  position:absolute;
+                  right:10px;
+                  background:none;
+                  border:none;
+                  color:#6c757d;
+                  font-size:20px;
+                  line-height:1;
+                  display:none;
+                  cursor:pointer;
                 ">
                 &times;
               </button>
             </div>
-            <small id="warningText" style="color: #dc3545; display: none;">*Silakan pilih tingkat dan kelas terlebih dahulu.</small>
+            <small class="text-muted d-block mt-1" style="font-size:12px;">
+              Format yang didukung: <strong>.xlsx</strong> atau <strong>.xls</strong>.
+              Pastikan tidak mengubah urutan kolom di template.
+            </small>
           </div>
-        </div>
+
+        </div><!-- /.modal-body -->
 
         <div class="modal-footer d-flex justify-content-between">
-          <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
+          <button type="button"
+                  class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
+                  data-bs-dismiss="modal">
             <i class="fa fa-times"></i> Batal
           </button>
-          <button type="submit" class="btn btn-warning">
-            <i class="fas fa-upload"></i> Upload
+          <button type="submit"
+                  id="btnSubmitImportSiswa"
+                  class="btn btn-warning d-inline-flex align-items-center gap-2">
+            <i class="fas fa-upload"></i> Upload &amp; Proses
           </button>
         </div>
       </form>
@@ -469,50 +504,20 @@ include '../../includes/navbar.php';
 <?php include '../../includes/footer.php'; ?>
 
 <script>
-// ====== SCRIPT IMPORT (copy logika dari import_siswa lama, tapi versi modal) ======
-const tingkatImport   = document.getElementById("tingkat");
-const kelasImport     = document.getElementById("kelas");
-const fileInputImport = document.getElementById("excelFile");
-const clearBtnImport  = document.getElementById("clearFileBtn");
-const warningTextImp  = document.getElementById("warningText");
-
-// Fungsi cek sebelum memilih file
-function checkBeforeChooseImport(e) {
-  const valid = tingkatImport.value !== "--Pilih--" && kelasImport.value !== "--Pilih--";
-
-  if (!valid) {
-    e.preventDefault(); // Batalkan dialog file
-    warningTextImp.style.display = "block";
-    warningTextImp.style.opacity = 1;
-    warningTextImp.style.transition = "opacity 0.3s ease";
-  } else {
-    warningTextImp.style.display = "none";
-  }
+// ====== HELPER IMPORT SISWA (mirip guru) ======
+function toggleClearButtonSiswaImport() {
+  const fileInput = document.getElementById('excelFile');
+  const clearBtn  = document.getElementById('clearFileBtnSiswaImport');
+  if (!fileInput || !clearBtn) return;
+  clearBtn.style.display = fileInput.files.length > 0 ? 'block' : 'none';
 }
 
-// Fungsi hilangkan pesan otomatis jika user sudah pilih tingkat & kelas
-function checkSelectionImport() {
-  const valid = tingkatImport.value !== "--Pilih--" && kelasImport.value !== "--Pilih--";
-  if (valid) {
-    warningTextImp.style.display = "none";
-  }
-}
-
-if (tingkatImport && kelasImport) {
-  tingkatImport.addEventListener("change", checkSelectionImport);
-  kelasImport.addEventListener("change", checkSelectionImport);
-}
-
-// Fungsi tombol clear file
-function toggleClearButtonImport() {
-  if (!fileInputImport || !clearBtnImport) return;
-  clearBtnImport.style.display = fileInputImport.files.length > 0 ? "block" : "none";
-}
-
-function clearFileImport() {
-  if (!fileInputImport || !clearBtnImport) return;
-  fileInputImport.value = "";
-  clearBtnImport.style.display = "none";
+function clearFileSiswaImport() {
+  const fileInput = document.getElementById('excelFile');
+  const clearBtn  = document.getElementById('clearFileBtnSiswaImport');
+  if (!fileInput || !clearBtn) return;
+  fileInput.value = '';
+  clearBtn.style.display = 'none';
 }
 </script>
 
@@ -777,6 +782,18 @@ function clearFileImport() {
       }
     }
   });
+
+  // ---------- VALIDASI IMPORT SISWA DI DALAM MODAL ----------
+  const formImportSiswa = document.getElementById('formImportSiswa');
+  const btnSubmitImportSiswa = document.getElementById('btnSubmitImportSiswa');
+  if (formImportSiswa && btnSubmitImportSiswa) {
+    btnSubmitImportSiswa.addEventListener('click', (e) => {
+      if (!formImportSiswa.checkValidity()) {
+        e.preventDefault();
+        formImportSiswa.reportValidity();
+      }
+    });
+  }
 
 })();
 </script>
