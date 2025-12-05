@@ -175,9 +175,13 @@ include '../../includes/navbar.php';
               <i class="fa-solid fa-plus"></i> Tambah
             </button>
 
-            <a href="data_siswa_import.php" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
+            <!-- IMPORT: sekarang buka modal, tidak lagi pindah halaman -->
+            <button type="button"
+                    class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2"
+                    data-bs-toggle="modal" data-bs-target="#modalImportSiswa">
               <i class="fa-solid fa-file-arrow-down"></i> Import
-            </a>
+            </button>
+
             <button id="exportBtn" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
               <i class="fa-solid fa-file-arrow-up"></i> Export
             </button>
@@ -212,17 +216,34 @@ include '../../includes/navbar.php';
                   <?php
                   $no = $offset + 1;
                   foreach ($rows as $data):
+                    $catatanRaw = $data['catatan_wali_kelas'] ?? '';
                   ?>
-                  <tr data-kelas="<?= htmlspecialchars($data['id_kelas']) ?>" data-tingkat="<?= htmlspecialchars($data['tingkat'] ?? '') ?>">
-                    <td class="text-center"><input type="checkbox" name="id_siswa[]" class="row-check" value="<?= (int)$data['id_siswa'] ?>"></td>
+                  <tr
+                    data-kelas="<?= htmlspecialchars($data['id_kelas']) ?>"
+                    data-tingkat="<?= htmlspecialchars($data['tingkat'] ?? '') ?>"
+                    data-id="<?= (int)$data['id_siswa'] ?>"
+                    data-nama="<?= htmlspecialchars($data['nama_siswa']) ?>"
+                    data-nisn="<?= htmlspecialchars($data['no_induk_siswa']) ?>"
+                    data-absen="<?= htmlspecialchars($data['no_absen_siswa']) ?>"
+                    data-id_kelas="<?= htmlspecialchars($data['id_kelas']) ?>"
+                    data-catatan="<?= htmlspecialchars($catatanRaw) ?>"
+                  >
+                    <td class="text-center">
+                      <input type="checkbox" name="id_siswa[]" class="row-check" value="<?= (int)$data['id_siswa'] ?>">
+                    </td>
                     <td class="text-center"><?= htmlspecialchars($data['no_absen_siswa']) ?></td>
                     <td><?= htmlspecialchars($data['nama_siswa']) ?></td>
                     <td class="text-center"><?= htmlspecialchars($data['no_induk_siswa']) ?></td>
                     <td class="text-center"><?= htmlspecialchars($data['nama_kelas'] ?? '-') ?></td>
-                    <td><?= nl2br(htmlspecialchars($data['catatan_wali_kelas'] ?? '')) ?></td>
+                    <td><?= nl2br(htmlspecialchars($catatanRaw)) ?></td>
                     <td class="text-center">
-                      <a href="edit_siswa.php?id=<?= (int)$data['id_siswa'] ?>" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square"></i> Edit</a>
-                      <a href="hapus_siswa.php?id=<?= (int)$data['id_siswa'] ?>" onclick="return confirm('Yakin ingin menghapus data?');" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i> Del</a>
+                      <!-- Edit via modal -->
+                      <button type="button" class="btn btn-warning btn-sm btn-edit-siswa">
+                        <i class="bi bi-pencil-square"></i> Edit
+                      </button>
+                      <a href="hapus_siswa.php?id=<?= (int)$data['id_siswa'] ?>" onclick="return confirm('Yakin ingin menghapus data?');" class="btn btn-danger btn-sm">
+                        <i class="bi bi-trash"></i> Del
+                      </a>
                     </td>
                   </tr>
                   <?php endforeach; ?>
@@ -295,7 +316,205 @@ include '../../includes/navbar.php';
   </div>
 </div>
 
+<!-- ========================= -->
+<!-- MODAL: Edit Siswa -->
+<!-- ========================= -->
+<div class="modal fade" id="modalEditSiswa" tabindex="-1" aria-labelledby="modalEditSiswaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalEditSiswaLabel">Edit Data Siswa</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <!-- Form kirim ke edit_siswa.php (fungsi saja) -->
+      <form id="formEditSiswa" method="POST" action="edit_siswa.php" autocomplete="off">
+        <div class="modal-body">
+          <input type="hidden" name="id_siswa" id="edit_id_siswa">
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nama Siswa</label>
+            <input type="text" name="nama_siswa" id="edit_nama_siswa" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">NISN</label>
+            <input type="text" name="no_induk_siswa" id="edit_no_induk_siswa" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Absen</label>
+            <input type="text" name="no_absen_siswa" id="edit_no_absen_siswa" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Kelas</label>
+            <select name="id_kelas" id="edit_id_kelas" class="form-select" required>
+              <option value="" disabled>-- Pilih Kelas --</option>
+              <?php
+              $kelasQuery3 = mysqli_query($koneksi, "SELECT * FROM kelas ORDER BY nama_kelas ASC");
+              while ($kx = mysqli_fetch_assoc($kelasQuery3)) {
+                echo '<option value="'.htmlspecialchars($kx['id_kelas']).'">'.htmlspecialchars($kx['nama_kelas']).'</option>';
+              }
+              ?>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Catatan Wali Kelas</label>
+            <textarea name="catatan_wali_kelas" id="edit_catatan_wali_kelas" class="form-control" rows="3"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> Update</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ========================= -->
+<!-- MODAL: Import Siswa -->
+<!-- ========================= -->
+<div class="modal fade" id="modalImportSiswa" tabindex="-1" aria-labelledby="modalImportSiswaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalImportSiswaLabel">Import Data Siswa</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <!-- Form kirim ke import_siswa.php (fungsi saja) -->
+      <form id="formImportSiswa" method="POST" action="import_siswa.php" enctype="multipart/form-data" autocomplete="off">
+        <div class="modal-body">
+          <!-- ===== DROPDOWN FILTER (copy dari page import_siswa lama) ===== -->
+          <div class="d-flex flex-column align-items-start mb-4" style="gap: 15px;">
+            <!-- Dropdown Tingkat -->
+            <div class="filter-group d-flex align-items-center" style="gap: 12px;">
+              <label for="tingkat" class="form-label fw-semibold mb-0" style="min-width: 70px;">Tingkat</label>
+              <select id="tingkat" name="tingkat" class="form-select dk-select" style="width: 160px;">
+                <option selected disabled>--Pilih--</option>
+                <option>X</option>
+                <option>XI</option>
+                <option>XII</option>
+              </select>
+            </div>
+
+            <!-- Dropdown Kelas -->
+            <div class="filter-group d-flex align-items-center" style="gap: 12px;">
+              <label for="kelas" class="form-label fw-semibold mb-0" style="min-width: 70px;">Kelas</label>
+              <select id="kelas" name="kelas" class="form-select dk-select" style="width: 160px;">
+                <option selected disabled>--Pilih--</option>
+                <option>IPA 1</option>
+                <option>IPA 2</option>
+                <option>IPS 1</option>
+                <option>IPS 2</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- ===== INPUT FILE ===== -->
+          <div class="mb-3">
+            <label for="excelFile" class="form-label">Pilih File Excel (.xlsx)</label>
+            
+            <div class="position-relative d-flex align-items-center">
+              <input 
+                type="file" 
+                class="form-control" 
+                id="excelFile" 
+                name="excelFile"
+                accept=".xlsx, .xls" 
+                onchange="toggleClearButtonImport()" 
+                onclick="checkBeforeChooseImport(event)" 
+                style="padding-right: 35px;"
+              >
+              <button 
+                type="button" 
+                id="clearFileBtn" 
+                onclick="clearFileImport()" 
+                title="Hapus file"
+                style="
+                  position: absolute;
+                  right: 10px;
+                  background: none;
+                  border: none;
+                  color: #6c757d;
+                  font-size: 20px;
+                  line-height: 1;
+                  display: none;
+                  cursor: pointer;
+                ">
+                &times;
+              </button>
+            </div>
+            <small id="warningText" style="color: #dc3545; display: none;">*Silakan pilih tingkat dan kelas terlebih dahulu.</small>
+          </div>
+        </div>
+
+        <div class="modal-footer d-flex justify-content-between">
+          <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
+            <i class="fa fa-times"></i> Batal
+          </button>
+          <button type="submit" class="btn btn-warning">
+            <i class="fas fa-upload"></i> Upload
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <?php include '../../includes/footer.php'; ?>
+
+<script>
+// ====== SCRIPT IMPORT (copy logika dari import_siswa lama, tapi versi modal) ======
+const tingkatImport   = document.getElementById("tingkat");
+const kelasImport     = document.getElementById("kelas");
+const fileInputImport = document.getElementById("excelFile");
+const clearBtnImport  = document.getElementById("clearFileBtn");
+const warningTextImp  = document.getElementById("warningText");
+
+// Fungsi cek sebelum memilih file
+function checkBeforeChooseImport(e) {
+  const valid = tingkatImport.value !== "--Pilih--" && kelasImport.value !== "--Pilih--";
+
+  if (!valid) {
+    e.preventDefault(); // Batalkan dialog file
+    warningTextImp.style.display = "block";
+    warningTextImp.style.opacity = 1;
+    warningTextImp.style.transition = "opacity 0.3s ease";
+  } else {
+    warningTextImp.style.display = "none";
+  }
+}
+
+// Fungsi hilangkan pesan otomatis jika user sudah pilih tingkat & kelas
+function checkSelectionImport() {
+  const valid = tingkatImport.value !== "--Pilih--" && kelasImport.value !== "--Pilih--";
+  if (valid) {
+    warningTextImp.style.display = "none";
+  }
+}
+
+if (tingkatImport && kelasImport) {
+  tingkatImport.addEventListener("change", checkSelectionImport);
+  kelasImport.addEventListener("change", checkSelectionImport);
+}
+
+// Fungsi tombol clear file
+function toggleClearButtonImport() {
+  if (!fileInputImport || !clearBtnImport) return;
+  clearBtnImport.style.display = fileInputImport.files.length > 0 ? "block" : "none";
+}
+
+function clearFileImport() {
+  if (!fileInputImport || !clearBtnImport) return;
+  fileInputImport.value = "";
+  clearBtnImport.style.display = "none";
+}
+</script>
 
 <script>
 (function() {
@@ -324,7 +543,7 @@ include '../../includes/navbar.php';
 
   function renderRows(data, startNumber, keyword = '') {
     if (!data || data.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Tidak ada data siswa.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Data Tidak di Temukan</td></tr>';
       deleteBtn.disabled = true;
       return;
     }
@@ -334,9 +553,19 @@ include '../../includes/navbar.php';
       const nama = highlightText(r.nama_siswa || '', keyword);
       const nisn = highlightText(r.no_induk_siswa || '', keyword);
       const komentar = highlightText(r.catatan_wali_kelas || '', keyword);
+      const catatanRaw = r.catatan_wali_kelas || '';
 
       html += `
-        <tr data-kelas="${r.id_kelas || ''}" data-tingkat="${escapeHtml(r.tingkat || '')}">
+        <tr
+          data-kelas="${r.id_kelas || ''}"
+          data-tingkat="${escapeHtml(r.tingkat || '')}"
+          data-id="${r.id_siswa}"
+          data-nama="${escapeHtml(r.nama_siswa || '')}"
+          data-nisn="${escapeHtml(r.no_induk_siswa || '')}"
+          data-absen="${escapeHtml(r.no_absen_siswa || '')}"
+          data-id_kelas="${escapeHtml(r.id_kelas || '')}"
+          data-catatan="${escapeHtml(catatanRaw)}"
+        >
           <td class="text-center"><input type="checkbox" class="row-check" name="id_siswa[]" value="${r.id_siswa}"></td>
           <td class="text-center">${escapeHtml(r.no_absen_siswa || '')}</td>
           <td>${nama}</td>
@@ -344,8 +573,12 @@ include '../../includes/navbar.php';
           <td class="text-center">${escapeHtml(r.nama_kelas || '-')}</td>
           <td>${komentar}</td>
           <td class="text-center">
-            <a href="edit_siswa.php?id=${r.id_siswa}" class="btn btn-warning btn-sm"><i class="bi bi-pencil-square"></i> Edit</a>
-            <a href="hapus_siswa.php?id=${r.id_siswa}" onclick="return confirm('Yakin ingin menghapus data?');" class="btn btn-danger btn-sm"><i class="bi bi-trash"></i> Del</a>
+            <button type="button" class="btn btn-warning btn-sm btn-edit-siswa">
+              <i class="bi bi-pencil-square"></i> Edit
+            </button>
+            <a href="hapus_siswa.php?id=${r.id_siswa}" onclick="return confirm('Yakin ingin menghapus data?');" class="btn btn-danger btn-sm">
+              <i class="bi bi-trash"></i> Del
+            </a>
           </td>
         </tr>`;
     }
@@ -449,7 +682,7 @@ include '../../includes/navbar.php';
   // jalankan pertama kali
   doSearch();
 
-  // ----------  MODAL: open handler ----------
+  // ----------  MODAL: open handler (Tambah Siswa) ----------
   document.addEventListener('DOMContentLoaded', function() {
     const btnOpen = document.getElementById('openTambahModal');
     const modalEl = document.getElementById('modalTambahSiswa');
@@ -459,7 +692,36 @@ include '../../includes/navbar.php';
     }
   });
 
-  // ----------  MODAL FORM SUBMIT (delegated, robust) ----------
+  // ----------  MODAL: Edit Siswa (klik tombol Edit) ----------
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.btn-edit-siswa');
+    if (!btn) return;
+
+    const row = btn.closest('tr');
+    if (!row) return;
+
+    const id      = row.dataset.id || '';
+    const nama    = row.dataset.nama || '';
+    const nisn    = row.dataset.nisn || '';
+    const absen   = row.dataset.absen || '';
+    const idKelas = row.dataset.id_kelas || '';
+    const catatan = row.dataset.catatan || '';
+
+    document.getElementById('edit_id_siswa').value           = id;
+    document.getElementById('edit_nama_siswa').value         = nama;
+    document.getElementById('edit_no_induk_siswa').value     = nisn;
+    document.getElementById('edit_no_absen_siswa').value     = absen;
+    document.getElementById('edit_catatan_wali_kelas').value = catatan;
+    document.getElementById('edit_id_kelas').value           = idKelas;
+
+    const modalEl = document.getElementById('modalEditSiswa');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+      const modalInstance = new bootstrap.Modal(modalEl);
+      modalInstance.show();
+    }
+  });
+
+  // ----------  MODAL FORM SUBMIT (Tambah Siswa via AJAX) ----------
   document.addEventListener('submit', async function(e) {
     if (e.target && e.target.id === 'formTambahSiswa') {
       e.preventDefault();
