@@ -16,15 +16,20 @@ if ($perPage > 100) $perPage = 100;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($page < 1) $page = 1;
 
-// Hitung total
+/* ==========================
+ * HITUNG TOTAL DATA
+ * ========================== */
 if ($search !== '') {
   $countSql = "
     SELECT COUNT(*) AS total
     FROM absensi a
+    INNER JOIN siswa s ON s.id_siswa = a.id_siswa
+    LEFT JOIN kelas k ON k.id_kelas = s.id_kelas
+    LEFT JOIN guru  g ON g.id_guru  = k.id_guru
     WHERE (
-      a.nama_siswa_text LIKE ?
-      OR a.nis_text LIKE ?
-      OR a.wali_kelas_text LIKE ?
+      s.nama_siswa LIKE ?
+      OR s.no_induk_siswa LIKE ?
+      OR COALESCE(g.nama_guru,'') LIKE ?
   ";
   $params = [$like, $like, $like];
   $types  = 'sss';
@@ -59,21 +64,28 @@ if ($page > $totalPages) {
 }
 $offset = ($page - 1) * $perPage;
 
-// Ambil data
+/* ==========================
+ * AMBIL DATA (INNER JOIN)
+ * ========================== */
 if ($search !== '') {
   $sql = "
     SELECT
       a.id_absensi,
       a.id_siswa,
-      COALESCE(a.nama_siswa_text, '-') AS nama_siswa,
-      COALESCE(a.nis_text, '-')        AS nis,
-      COALESCE(a.wali_kelas_text, '-') AS wali_kelas,
-      a.sakit, a.izin, a.alpha
+      s.nama_siswa,
+      s.no_induk_siswa AS nis,
+      COALESCE(g.nama_guru, '-') AS wali_kelas,
+      a.sakit,
+      a.izin,
+      a.alpha
     FROM absensi a
+    INNER JOIN siswa s ON s.id_siswa = a.id_siswa
+    LEFT JOIN kelas k ON k.id_kelas = s.id_kelas
+    LEFT JOIN guru  g ON g.id_guru  = k.id_guru
     WHERE (
-      a.nama_siswa_text LIKE ?
-      OR a.nis_text LIKE ?
-      OR a.wali_kelas_text LIKE ?
+      s.nama_siswa LIKE ?
+      OR s.no_induk_siswa LIKE ?
+      OR COALESCE(g.nama_guru,'') LIKE ?
   ";
   $params = [$like, $like, $like];
   $types  = 'sss';
@@ -88,7 +100,9 @@ if ($search !== '') {
     $types   .= 'iiii';
   }
 
-  $sql .= " ) ORDER BY a.nama_siswa_text ASC LIMIT ? OFFSET ? ";
+  $sql .= " ) 
+            ORDER BY s.nama_siswa ASC 
+            LIMIT ? OFFSET ? ";
 
   $params[] = $perPage;
   $params[] = $offset;
@@ -101,17 +115,23 @@ if ($search !== '') {
     SELECT
       a.id_absensi,
       a.id_siswa,
-      COALESCE(a.nama_siswa_text, '-') AS nama_siswa,
-      COALESCE(a.nis_text, '-')        AS nis,
-      COALESCE(a.wali_kelas_text, '-') AS wali_kelas,
-      a.sakit, a.izin, a.alpha
+      s.nama_siswa,
+      s.no_induk_siswa AS nis,
+      COALESCE(g.nama_guru, '-') AS wali_kelas,
+      a.sakit,
+      a.izin,
+      a.alpha
     FROM absensi a
-    ORDER BY a.nama_siswa_text ASC
+    INNER JOIN siswa s ON s.id_siswa = a.id_siswa
+    LEFT JOIN kelas k ON k.id_kelas = s.id_kelas
+    LEFT JOIN guru  g ON g.id_guru  = k.id_guru
+    ORDER BY s.nama_siswa ASC
     LIMIT ? OFFSET ?
   ";
   $stmt = mysqli_prepare($koneksi, $sql);
   mysqli_stmt_bind_param($stmt, 'ii', $perPage, $offset);
 }
+
 mysqli_stmt_execute($stmt);
 $result = mysqli_stmt_get_result($stmt);
 

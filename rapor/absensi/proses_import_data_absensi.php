@@ -8,14 +8,6 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 error_reporting(E_ALL);
 
-// Self-healing kolom snapshot
-$koneksi->query("
-  ALTER TABLE absensi
-    ADD COLUMN IF NOT EXISTS nama_siswa_text VARCHAR(100) NOT NULL DEFAULT '-' AFTER id_absensi,
-    ADD COLUMN IF NOT EXISTS nis_text        VARCHAR(50)  NOT NULL DEFAULT '-' AFTER nama_siswa_text,
-    ADD COLUMN IF NOT EXISTS wali_kelas_text VARCHAR(100) NOT NULL DEFAULT '-' AFTER nis_text
-");
-
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
   header('Location: data_absensi.php?err=' . urlencode('Metode tidak diizinkan.'));
   exit;
@@ -32,13 +24,13 @@ $res = $koneksi->query("SELECT id_semester FROM semester ORDER BY id_semester AS
 if ($res && $res->num_rows) {
   $id_semester = (int)$res->fetch_assoc()['id_semester'];
 } else {
-  $id_semester = 0; // fallback
+  $id_semester = 0; // fallback (kalau ada FK, pastikan ada row id_semester=0 atau ubah logika ini)
 }
 
-$success       = 0;
-$skipped       = 0;
-$emptyRows     = 0;
-$skippedNoNIS  = 0;
+$success        = 0;
+$skipped        = 0;
+$emptyRows      = 0;
+$skippedNoNIS   = 0;
 $skippedNoSiswa = 0;
 
 try {
@@ -81,10 +73,8 @@ try {
 
     // Cari siswa berdasar NIS
     $stmtFind = $koneksi->prepare("
-      SELECT s.id_siswa, s.nama_siswa, s.no_induk_siswa, g.nama_guru
+      SELECT s.id_siswa
       FROM siswa s
-      LEFT JOIN kelas k ON k.id_kelas = s.id_kelas
-      LEFT JOIN guru  g ON g.id_guru  = k.id_guru
       WHERE s.no_induk_siswa = ?
       LIMIT 1
     ");
@@ -100,16 +90,14 @@ try {
       continue;
     }
 
-    $id_siswa  = (int)$rowS['id_siswa'];
-    $nama_snap = $rowS['nama_siswa']     !== null && $rowS['nama_siswa']     !== '' ? $rowS['nama_siswa']     : '-';
-    $nis_snap  = $rowS['no_induk_siswa'] !== null && $rowS['no_induk_siswa'] !== '' ? $rowS['no_induk_siswa'] : '-';
-    $wali_snap = $rowS['nama_guru']      !== null && $rowS['nama_guru']      !== '' ? $rowS['nama_guru']      : '-';
+    $id_siswa = (int)$rowS['id_siswa'];
 
+    // Insert ke absensi (pakai INNER JOIN saat read)
     $stmtIns = $koneksi->prepare("
-      INSERT INTO absensi (id_semester, id_siswa, nama_siswa_text, nis_text, wali_kelas_text, sakit, izin, alpha)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO absensi (id_semester, id_siswa, sakit, izin, alpha)
+      VALUES (?, ?, ?, ?, ?)
     ");
-    $stmtIns->bind_param('iisssiii', $id_semester, $id_siswa, $nama_snap, $nis_snap, $wali_snap, $sakit, $izin, $alpha);
+    $stmtIns->bind_param('iiiii', $id_semester, $id_siswa, $sakit, $izin, $alpha);
 
     if ($stmtIns->execute()) {
       $success++;
