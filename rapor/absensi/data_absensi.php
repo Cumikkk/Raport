@@ -543,15 +543,8 @@ include '../../includes/header.php';
                   </div>
                 </div>
 
-                <!-- Mode Edit + Tombol Tambah / Import / Export -->
+                <!-- Tombol Tambah / Import / Export -->
                 <div class="d-flex justify-content-md-end flex-wrap gap-2 align-items-center">
-                  <div class="form-check form-switch m-0">
-                    <input class="form-check-input" type="checkbox" id="toggleEditMode">
-                    <label class="form-check-label small" for="toggleEditMode">
-                      Mode Edit
-                    </label>
-                  </div>
-
                   <button type="button"
                     class="btn btn-brand btn-sm d-inline-flex align-items-center gap-2 px-3"
                     data-bs-toggle="modal"
@@ -573,6 +566,12 @@ include '../../includes/header.php';
                   </button>
                 </div>
               </div>
+            </div>
+            <div class="form-check form-switch mt-3 d-flex justify-content-end">
+              <input class="form-check-input" type="checkbox" id="toggleEditMode">
+              <label class="form-check-label fw-semibold ms-2" for="toggleEditMode">
+                Mode Edit
+              </label>
             </div>
           </div>
 

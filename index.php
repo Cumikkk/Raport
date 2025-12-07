@@ -15,9 +15,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
   if ($result && mysqli_num_rows($result) > 0) {
     $user = mysqli_fetch_assoc($result);
     if ($password === $user['password_user']) {
-      $_SESSION['id_user'] = $user['id_user'];
-      $_SESSION['username'] = $user['username'];
+      $_SESSION['id_user']   = $user['id_user'];
+      $_SESSION['username']  = $user['username'];
       $_SESSION['role_user'] = $user['role_user'];
+      // simpan relasi ke guru (jika ada) untuk filter data per-guru
+      $_SESSION['id_guru']   = isset($user['id_guru']) ? (int)$user['id_guru'] : 0;
 
       $role = $user['role_user'];
       $success = "✅ Login berhasil sebagai <b>$role</b>! Mengarahkan ke dashboard...";

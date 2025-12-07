@@ -88,12 +88,11 @@ if ($roleKey === 'guru') {
       </a>
 
     <?php elseif ($roleKey === 'guru'): ?>
-      <details <?= str_contains($current_url, '/Lembaga/') ? 'open' : '' ?>>
-        <summary><span><i class="fas fa-building"></i> Lembaga</span><i class="fas fa-angle-right arrow"></i></summary>
-        <ul>
-          <li><a href="/RAPORT/Lembaga/data_siswa/data_siswa.php" class="<?= str_contains($current_url, 'data_siswa') ? 'active' : '' ?>">Data Siswa</a></li>
-        </ul>
-      </details>
+      <!-- Untuk guru: hanya tampilkan menu Data Siswa tanpa dropdown -->
+      <a href="/RAPORT/Lembaga/data_siswa/data_siswa.php"
+        class="<?= str_contains($current_url, 'data_siswa') ? 'active' : '' ?>">
+        <i class="fas fa-users"></i><span>Data Siswa</span>
+      </a>
 
     <?php else: ?>
       <a href="/RAPORT/login.php">Login</a>
