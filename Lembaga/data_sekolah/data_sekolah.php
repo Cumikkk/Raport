@@ -14,6 +14,11 @@ $data = $res->fetch_assoc() ?: [];
 <body>
   <?php include '../../includes/navbar.php'; ?>
 
+  <!-- CropperJS (CDN) -->
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css"
+    referrerpolicy="no-referrer" />
+
   <style>
     :root {
       --bg: #f6f7fb;
@@ -261,6 +266,117 @@ $data = $res->fetch_assoc() ?: [];
       font-size: 12px;
       color: #b91c1c;
     }
+
+    /* ============================
+       TAMBAHAN: CROP OVERLAY (CUSTOM)
+       ============================ */
+    .crop-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 9999;
+    }
+
+    .crop-overlay.show {
+      display: flex;
+    }
+
+    .crop-box {
+      width: min(980px, 100%);
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+      overflow: hidden;
+    }
+
+    .crop-head {
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #eee;
+    }
+
+    .crop-head h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .crop-close {
+      border: none;
+      background: transparent;
+      font-size: 22px;
+      line-height: 1;
+      cursor: pointer;
+      opacity: .7;
+    }
+    .crop-close:hover { opacity: 1; }
+
+    .crop-body {
+      padding: 14px 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .crop-canvas {
+      width: 100%;
+      max-height: 65vh;
+      overflow: hidden;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      background: #fafafa;
+    }
+
+    #cropImage {
+      max-width: 100%;
+      display: block;
+    }
+
+    .crop-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 4px;
+    }
+
+    .crop-actions .left,
+    .crop-actions .right {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn-lite {
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid #d1d5db;
+      background: #fff;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-lite:hover { background: #f9fafb; }
+
+    .btn-danger-lite {
+      background: #dc2626;
+      color: #fff;
+      border: none;
+    }
+
+    .btn-success-lite {
+      background: #16a34a;
+      color: #fff;
+      border: none;
+    }
   </style>
 
   <div class="dk-page">
@@ -392,8 +508,8 @@ $data = $res->fetch_assoc() ?: [];
                       name="logo_sekolah"
                       id="logoInput"
                       class="form-control"
-                      accept=".jpg,.jpeg,.png,.webp">
-                    <div class="hint">Format: JPG/PNG/WebP · Maks 10MB.</div>
+                      accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                    <div class="hint">Format: JPG/PNG/WebP · Maks 10MB. (akan muncul crop sebelum upload)</div>
                   </div>
 
                   <div class="actions">
@@ -422,7 +538,7 @@ $data = $res->fetch_assoc() ?: [];
                     src="uploads/<?= htmlspecialchars(($data['logo_sekolah'] ?? '') ?: 'default.png') ?>"
                     class="logo-preview"
                     alt="Logo Sekolah">
-                  <div class="hint">Gambar pratinjau akan berubah saat Anda memilih file.</div>
+                  <div class="hint">Gambar pratinjau akan berubah saat Anda memilih file (hasil crop).</div>
                 </div>
 
                 <hr style="border:none;border-top:1px solid #eee;margin:18px 0">
@@ -444,6 +560,41 @@ $data = $res->fetch_assoc() ?: [];
       </div><!-- /.dk-content-box -->
     </div><!-- /.dk-main -->
   </div><!-- /.dk-page -->
+
+  <!-- =============================
+       CROP OVERLAY (HIDDEN BY DEFAULT)
+       ============================= -->
+  <div class="crop-overlay" id="cropOverlay" aria-hidden="true">
+    <div class="crop-box">
+      <div class="crop-head">
+        <h3>Crop Logo</h3>
+        <button class="crop-close" id="cropCloseBtn" type="button" aria-label="Close">&times;</button>
+      </div>
+
+      <div class="crop-body">
+        <div class="hint" style="margin-top:0;">
+          Atur crop lalu klik <strong>Gunakan</strong>. Jika batal, file tidak akan terupload.
+        </div>
+
+        <div class="crop-canvas">
+          <img id="cropImage" alt="Crop Area">
+        </div>
+
+        <div class="crop-actions">
+          <div class="left">
+            <button type="button" class="btn-lite" id="btnZoomIn">Zoom +</button>
+            <button type="button" class="btn-lite" id="btnZoomOut">Zoom -</button>
+            <button type="button" class="btn-lite" id="btnRotate">Putar</button>
+            <button type="button" class="btn-lite" id="btnReset">Reset</button>
+          </div>
+          <div class="right">
+            <button type="button" class="btn-lite btn-danger-lite" id="btnCancelCrop">Batal</button>
+            <button type="button" class="btn-lite btn-success-lite" id="btnApplyCrop">Gunakan</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
     // --- VALIDASI WAJIB ISI SEMUA INPUT + ERROR MERAH & SCROLL KE PERTAMA YANG KOSONG ---
@@ -551,19 +702,174 @@ $data = $res->fetch_assoc() ?: [];
     });
   </script>
 
+  <!-- CropperJS (CDN) -->
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"
+    referrerpolicy="no-referrer"></script>
+
   <script>
-    // Preview file logo instan
-    const input = document.getElementById('logoInput');
-    const img = document.getElementById('logoPreview');
-    if (input) {
+    // ============================
+    // FITUR CROP SEBELUM UPLOAD LOGO
+    // ============================
+    document.addEventListener('DOMContentLoaded', () => {
+      const input = document.getElementById('logoInput');
+      const imgPreview = document.getElementById('logoPreview');
+
+      const overlay = document.getElementById('cropOverlay');
+      const cropImg = document.getElementById('cropImage');
+
+      const btnClose = document.getElementById('cropCloseBtn');
+      const btnCancel = document.getElementById('btnCancelCrop');
+      const btnApply = document.getElementById('btnApplyCrop');
+
+      const btnZoomIn = document.getElementById('btnZoomIn');
+      const btnZoomOut = document.getElementById('btnZoomOut');
+      const btnRotate = document.getElementById('btnRotate');
+      const btnReset = document.getElementById('btnReset');
+
+      if (!input || !imgPreview || !overlay || !cropImg) return;
+
+      let cropper = null;
+      let objectUrl = null;
+      let lastSelectedFile = null;
+
+      function openOverlay() {
+        overlay.classList.add('show');
+        overlay.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeOverlay() {
+        overlay.classList.remove('show');
+        overlay.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+      }
+
+      function cleanupUrl() {
+        if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
+          objectUrl = null;
+        }
+      }
+
+      function destroyCropper() {
+        if (cropper) {
+          cropper.destroy();
+          cropper = null;
+        }
+      }
+
+      function resetFileInput() {
+        input.value = '';
+        lastSelectedFile = null;
+      }
+
+      // ketika pilih file -> tampilkan overlay crop
       input.addEventListener('change', (e) => {
         const f = e.target.files && e.target.files[0];
         if (!f) return;
-        const url = URL.createObjectURL(f);
-        img.src = url;
-        img.onload = () => URL.revokeObjectURL(url);
+
+        // validasi tipe gambar
+        const okTypes = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!okTypes.includes(f.type)) {
+          alert('Format gambar harus JPG/PNG/WebP.');
+          resetFileInput();
+          return;
+        }
+
+        // validasi ukuran (10MB)
+        const max = 10 * 1024 * 1024;
+        if (f.size > max) {
+          alert('Ukuran logo melebihi 10MB.');
+          resetFileInput();
+          return;
+        }
+
+        lastSelectedFile = f;
+
+        cleanupUrl();
+        objectUrl = URL.createObjectURL(f);
+        cropImg.src = objectUrl;
+
+        // buka overlay dulu, baru init cropper setelah image siap
+        openOverlay();
+
+        // init cropper setelah image load
+        cropImg.onload = () => {
+          destroyCropper();
+          cropper = new Cropper(cropImg, {
+            viewMode: 1,
+            dragMode: 'move',
+            autoCropArea: 1,
+            background: false,
+            responsive: true,
+            // logo umumnya kotak
+            aspectRatio: 1
+          });
+        };
       });
-    }
+
+      // tombol bantu
+      btnZoomIn && btnZoomIn.addEventListener('click', () => cropper && cropper.zoom(0.1));
+      btnZoomOut && btnZoomOut.addEventListener('click', () => cropper && cropper.zoom(-0.1));
+      btnRotate && btnRotate.addEventListener('click', () => cropper && cropper.rotate(90));
+      btnReset && btnReset.addEventListener('click', () => cropper && cropper.reset());
+
+      // batal / close: jangan upload file mentah
+      function cancelCrop() {
+        destroyCropper();
+        cleanupUrl();
+        closeOverlay();
+        resetFileInput();
+      }
+
+      btnCancel && btnCancel.addEventListener('click', cancelCrop);
+      btnClose && btnClose.addEventListener('click', cancelCrop);
+
+      // klik luar box (opsional): tidak aku aktifkan biar tidak kebablasan, tetap via tombol
+
+      // apply crop -> replace file input dengan hasil crop + update preview
+      btnApply && btnApply.addEventListener('click', () => {
+        if (!cropper || !lastSelectedFile) return;
+
+        const mime = lastSelectedFile.type || 'image/png';
+
+        const canvas = cropper.getCroppedCanvas({
+          width: 600,
+          height: 600,
+          imageSmoothingEnabled: true,
+          imageSmoothingQuality: 'high'
+        });
+
+        if (!canvas) return;
+
+        canvas.toBlob((blob) => {
+          if (!blob) return;
+
+          // buat file baru hasil crop
+          const ext = (mime === 'image/jpeg') ? 'jpg' : (mime === 'image/webp') ? 'webp' : 'png';
+          const newFile = new File([blob], 'logo-crop.' + ext, { type: mime });
+
+          // inject ke input type=file
+          const dt = new DataTransfer();
+          dt.items.add(newFile);
+          input.files = dt.files;
+
+          // update preview kanan
+          const previewUrl = URL.createObjectURL(newFile);
+          imgPreview.src = previewUrl;
+          imgPreview.onload = () => URL.revokeObjectURL(previewUrl);
+
+          // tutup overlay + bersihkan cropper/url asli
+          destroyCropper();
+          cleanupUrl();
+          closeOverlay();
+
+          // lastSelectedFile biar aman
+          lastSelectedFile = null;
+        }, mime, 0.92);
+      });
+    });
   </script>
 
   <script>
