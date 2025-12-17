@@ -41,58 +41,76 @@ $status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
     <div class="cards row" style="margin-top: -50px;">
       <div class="col-12">
         <div class="card shadow-sm" style="border-radius: 15px;">
-          <div class="mt-0 d-flex align-items-center flex-wrap mb-0 p-3 top-bar">
-            <!-- Judul di kiri -->
-            <h5 class="mb-1 fw-semibold fs-4" style=" text-align: center">Nilai Mata Pelajaran</h5>
 
-            <!-- Tombol di kanan -->
-            <div class="ms-auto d-flex gap-2 action-buttons">
-              <!-- TOMBOL TAMBAH → BUKA MODAL -->
-              <button type="button"
-                      class="btn btn-primary btn-sm d-flex align-items-center gap-1 p-2 pe-3 fw-semibold"
-                      style="border-radius: 5px;"
-                      data-bs-toggle="modal"
-                      data-bs-target="#modalTambahMapel">
-                <i class="fa-solid fa-plus fa-lg"></i>
-                Tambah
-              </button>
+          <!-- TOP BAR: JUDUL + BARIS SEARCH & TOMBOL -->
+          <div class="mt-0 p-3 top-bar">
+            <!-- Judul -->
+            <h5 class="mb-1 fw-semibold fs-4 text-center text-md-start">
+              Nilai Mata Pelajaran
+            </h5>
 
-              <!-- TOMBOL IMPORT → BUKA MODAL IMPORT -->
-              <button type="button"
-                      class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2"
-                      data-bs-toggle="modal"
-                      data-bs-target="#modalImportNilai">
-                <i class="fa-solid fa-file-arrow-down fa-lg"></i>
-                <span>Import</span>
-              </button>
+            <!-- Baris bawah: Search & Sort (kiri) + Tombol aksi (kanan) -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+              <!-- Search + Sort -->
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <input type="text"
+                       id="searchInput"
+                       class="form-control form-control-sm"
+                       placeholder="Search"
+                       style="width: 200px;">
+                <button id="searchBtn"
+                        class="btn btn-outline-secondary btn-sm p-2 rounded-3 d-flex align-items-center justify-content-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                       class="bi bi-search" viewBox="0 0 16 16">
+                    <path d="M11 6a5 5 0 1 0-2.9 4.7l3.85 3.85a1 1 0 0 0 1.414-1.414l-3.85-3.85A4.978 4.978 0 0 0 11 6zM6 10a4 4 0 1 1 0-8 4 4 0 0 1 0 8z" />
+                  </svg>
+                </button>
 
-              <!-- EXPORT CSV -->
-              <button id="exportBtn" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
-                <i class="fa-solid fa-file-arrow-up fa-lg"></i>
-                Export
-              </button>
+                <button id="sortBtn"
+                        class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 rounded-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                       class="bi bi-sort-alpha-down" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd"
+                          d="M10.082 5.629 9.664 7H8.598l1.789-5.332h1.234L13.402 7h-1.12l-.419-1.371zm1.57-.785L11 2.687h-.047l-.652 2.157z" />
+                    <path
+                      d="M12.96 14H9.028v-.691l2.579-3.72v-.054H9.098v-.867h3.785v.691l-2.567 3.72v.054h2.645zM4.5 2.5a.5.5 0 0 0-1 0v9.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 1.999.007.007a.497.497 0 0 0 .7-.006l2-2a.5.5 0 0 0-.707-.708L4.5 12.293z" />
+                  </svg>
+                  Sort
+                </button>
+              </div>
+
+              <!-- Tombol aksi -->
+              <div class="d-flex gap-2 action-buttons">
+                <!-- TOMBOL TAMBAH → BUKA MODAL -->
+                <button type="button"
+                        class="btn btn-primary btn-sm d-flex align-items-center gap-1 p-2 pe-3 fw-semibold"
+                        style="border-radius: 5px;"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalTambahMapel">
+                  <i class="fa-solid fa-plus fa-lg"></i>
+                  Tambah
+                </button>
+
+                <!-- TOMBOL IMPORT → BUKA MODAL IMPORT -->
+                <button type="button"
+                        class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalImportNilai">
+                  <i class="fa-solid fa-file-arrow-down fa-lg"></i>
+                  <span>Import</span>
+                </button>
+
+                <!-- EXPORT CSV -->
+                <button id="exportBtn"
+                        class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
+                  <i class="fa-solid fa-file-arrow-up fa-lg"></i>
+                  Export
+                </button>
+              </div>
             </div>
           </div>
 
-          <!-- Search & Sort -->
-          <div class="ms-3 me-3 bg-white d-flex justify-content-center align-items-center flex-wrap p-2 gap-2">
-            <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search" style="width: 200px;">
-            <button id="searchBtn" class="btn btn-outline-secondary btn-sm p-2 rounded-3 d-flex align-items-center justify-content-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
-                <path d="M11 6a5 5 0 1 0-2.9 4.7l3.85 3.85a1 1 0 0 0 1.414-1.414l-3.85-3.85A4.978 4.978 0 0 0 11 6zM6 10a4 4 0 1 1 0-8 4 4 0 0 1 0 8z" />
-              </svg>
-            </button>
-
-            <button id="sortBtn" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 rounded-3">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-sort-alpha-down" viewBox="0 0 16 16">
-                <path fill-rule="evenodd" d="M10.082 5.629 9.664 7H8.598l1.789-5.332h1.234L13.402 7h-1.12l-.419-1.371zm1.57-.785L11 2.687h-.047l-.652 2.157z" />
-                <path d="M12.96 14H9.028v-.691l2.579-3.72v-.054H9.098v-.867h3.785v.691l-2.567 3.72v.054h2.645zM4.5 2.5a.5.5 0 0 0-1 0v9.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 1.999.007.007a.497.497 0 0 0 .7-.006l2-2a.5.5 0 0 0-.707-.708L4.5 12.293z" />
-              </svg>
-              Sort
-            </button>
-          </div>
-
-          <!-- ALERT (di bawah search & sort) -->
+          <!-- ALERT (di bawah top-bar) -->
           <div id="alertArea">
             <?php if ($status === 'add_success'): ?>
               <div class="alert alert-success mx-3 mt-3 mb-0 alert-dismissible fade show" role="alert">
@@ -129,15 +147,15 @@ $status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
                     <tr>
                       <td colspan="4" class="text-center text-muted">Belum ada data mata pelajaran.</td>
                     </tr>
-                  <?php else: $no=1; foreach ($mapel as $m): ?>
+                  <?php else: $no = 1; foreach ($mapel as $m): ?>
                     <tr>
                       <td><?= $no++; ?></td>
                       <td><?= htmlspecialchars($m['nama_mata_pelajaran']); ?></td>
                       <td><?= htmlspecialchars($m['kelompok_mata_pelajaran']); ?></td>
                       <td class="text-center">
                         <a href="nilai_mapel.php?id=<?= urlencode($m['id_mata_pelajaran']); ?>"
-                          class="btn btn-warning btn-sm me-1 d-inline-flex align-items-center justify-content-center gap-1 px-2 py-1 me-1"
-                          style="font-size: 15px;">
+                           class="btn btn-warning btn-sm me-1 d-inline-flex align-items-center justify-content-center gap-1 px-2 py-1 me-1"
+                           style="font-size: 15px;">
                           <i class="bi bi-pencil-square" style="font-size: 15px;"></i>
                           <span>Details</span>
                         </a>
@@ -157,7 +175,6 @@ $status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
   <div class="modal fade" id="modalTambahMapel" tabindex="-1" aria-labelledby="modalTambahMapelLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="max-width: 600px;">
       <div class="modal-content" style="border-radius: 10px; overflow: hidden;">
-        <!-- Header biru -->
         <div class="modal-header" style="background-color:#0d6efd; color:#fff;">
           <h5 class="modal-title d-flex align-items-center" id="modalTambahMapelLabel">
             <i class="fa fa-star me-2"></i> Tambah Nilai Mata Pelajaran
@@ -165,10 +182,8 @@ $status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
 
-        <!-- Form di dalam modal: submit ke nilai_mapel_tambah.php -->
         <form method="post" action="nilai_mapel_tambah.php">
           <div class="modal-body">
-            <!-- Nama Mapel: INPUT TEKS -->
             <div class="mb-3">
               <label class="form-label fw-semibold">Nama Mapel</label>
               <input type="text"
@@ -178,7 +193,6 @@ $status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
                      required>
             </div>
 
-            <!-- Jenis: DROPDOWN -->
             <div class="mb-3">
               <label class="form-label fw-bold">Jenis</label>
               <select class="form-select" name="jenis_mapel" required>
@@ -188,7 +202,6 @@ $status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
               </select>
             </div>
 
-            <!-- Nilai: DROPDOWN -->
             <div class="mb-3">
               <label class="form-label fw-bold">Nilai</label>
               <select class="form-select" name="nilai" required>
@@ -226,11 +239,6 @@ $status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
 
-        <!--
-          Di sini hanya upload file Excel.
-          Jika script nilai_mapel_import.php butuh parameter tambahan
-          (misalnya id_mapel / id_semester), bisa ditambah sendiri di form ini.
-        -->
         <form action="nilai_mapel_import.php" method="post" enctype="multipart/form-data">
           <div class="modal-body">
             <div class="mb-3">
@@ -266,21 +274,19 @@ $status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
   <!-- ========== END MODAL IMPORT ========== -->
 
   <style>
-    /* Tambahan CSS Responsif */
     @media (max-width: 768px) {
       .top-bar {
-        flex-direction: column !important;
-        align-items: flex-center !important;
+        text-align: center;
+      }
+      .top-bar .d-flex.flex-wrap {
+        flex-direction: column;
+        align-items: center !important;
       }
       .action-buttons {
-        margin-top: 10px;
-        width: 100%;
         justify-content: center !important;
+        width: 100%;
         flex-wrap: wrap;
       }
-      .h5 { justify-content:center; }
-      .action-buttons a,
-      .action-buttons button { width: auto; }
     }
   </style>
 
@@ -317,7 +323,6 @@ $status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
       if (input) input.addEventListener('input', debounce(filter, 120));
       if (btn) btn.addEventListener('click', (e) => { e.preventDefault(); filter(); input.focus(); });
 
-      // Normalisasi nomor awal
       filter();
     })();
 
@@ -325,7 +330,7 @@ $status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
     (function(){
       const btn = document.getElementById('sortBtn');
       const body = document.getElementById('mapelBody');
-      let asc = false; // pertama klik -> A-Z
+      let asc = false; // pertama klik → A-Z
 
       function sortRows() {
         const rows = Array.from(body.querySelectorAll('tr')).filter(tr => tr.querySelectorAll('td').length > 1);
@@ -343,7 +348,7 @@ $status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
       if (btn) btn.addEventListener('click', sortRows);
     })();
 
-    // ====== EXPORT CSV (tampilan sama, hanya aksi tombol) ======
+    // ====== EXPORT CSV ======
     (function(){
       const btn = document.getElementById('exportBtn');
       if (!btn) return;
@@ -381,7 +386,7 @@ $status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
           a.style.opacity = '0';
           setTimeout(() => { if (a.parentNode) a.parentNode.remove(); }, 600);
         });
-      }, 5000); // 5 detik
+      }, 5000);
     });
   </script>
 

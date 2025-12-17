@@ -139,11 +139,29 @@ include '../../includes/navbar.php';
           <?php endif; ?>
         </div>
 
+        <!-- TOP BAR: Judul + Search + Filter + Tombol -->
         <div class="mt-0 d-flex flex-column flex-md-row align-items-md-center justify-content-between p-3 top-bar">
           <div class="d-flex flex-column align-items-md-start align-items-center text-md-start text-center mb-2 mb-md-0">
             <h5 class="mb-2 fw-semibold fs-4">Data Siswa</h5>
 
-            <div class="filter-container d-flex flex-column gap-2 mt-2">
+            <!-- PENCARIAN DI BAWAH JUDUL -->
+            <form id="searchForm"
+                  class="d-flex flex-wrap align-items-center gap-2 mb-2 mt-1">
+              <input type="text"
+                     id="searchInput"
+                     class="form-control form-control-sm"
+                     placeholder="Masukan kata kunci"
+                     style="width:200px;"
+                     value="<?= htmlspecialchars($q) ?>">
+              <select id="perSelect" class="form-select form-select-sm" style="width:120px;">
+                <?php foreach ([10, 20, 50, 100] as $opt): ?>
+                  <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>><?= $opt ?>/hal</option>
+                <?php endforeach; ?>
+              </select>
+            </form>
+
+            <!-- FILTER TINGKAT & KELAS -->
+            <div class="filter-container d-flex flex-column gap-2 mt-1">
               <div class="filter-group d-flex align-items-center gap-2">
                 <label class="form-label fw-semibold mb-0">Tingkat</label>
                 <select id="filterTingkat" class="form-select dk-select" style="width: 120px;">
@@ -169,13 +187,13 @@ include '../../includes/navbar.php';
           </div>
 
           <div class="d-flex gap-2 flex-wrap justify-content-md-end justify-content-center mt-3 mt-md-0 action-buttons">
-            <!-- tombol tambahkan: tetap tampil sama, akan membuka modal via JS -->
+            <!-- tombol tambahkan: buka modal via JS -->
             <button type="button" class="btn btn-primary btn-sm d-flex align-items-center gap-1 px-3 fw-semibold"
                     id="openTambahModal">
               <i class="fa-solid fa-plus"></i> Tambah
             </button>
 
-            <!-- IMPORT: sekarang tampilannya mirip data_guru.php -->
+            <!-- IMPORT: modal -->
             <button type="button"
                     class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2"
                     data-bs-toggle="modal" data-bs-target="#modalImportSiswa">
@@ -189,15 +207,6 @@ include '../../includes/navbar.php';
         </div>
 
         <div class="card-body">
-          <form id="searchForm" class="d-flex flex-wrap align-items-center gap-2 mb-2">
-            <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Masukan kata kunci" style="width:200px;" value="<?= htmlspecialchars($q) ?>">
-            <select id="perSelect" class="form-select form-select-sm" style="width:120px;">
-              <?php foreach ([10, 20, 50, 100] as $opt): ?>
-                <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>><?= $opt ?>/hal</option>
-              <?php endforeach; ?>
-            </select>
-          </form>
-
           <form id="formDeleteMultiple" action="hapus_siswa_multiple.php" method="POST">
             <div class="table-responsive">
               <table class="table table-bordered table-striped align-middle">
@@ -376,7 +385,7 @@ include '../../includes/navbar.php';
 </div>
 
 <!-- ========================= -->
-<!-- MODAL: Import Siswa (baru, mirip data_guru.php) -->
+<!-- MODAL: Import Siswa -->
 <!-- ========================= -->
 <div class="modal fade" id="modalImportSiswa" tabindex="-1" aria-labelledby="modalImportSiswaLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -391,7 +400,7 @@ include '../../includes/navbar.php';
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
       </div>
 
-      <!-- Form import: fungsi tetap ke import_siswa.php -->
+      <!-- Form import -->
       <form id="formImportSiswa"
             action="import_siswa.php"
             method="POST"
@@ -504,7 +513,7 @@ include '../../includes/navbar.php';
 <?php include '../../includes/footer.php'; ?>
 
 <script>
-// ====== HELPER IMPORT SISWA (mirip guru) ======
+// ====== HELPER IMPORT SISWA ======
 function toggleClearButtonSiswaImport() {
   const fileInput = document.getElementById('excelFile');
   const clearBtn  = document.getElementById('clearFileBtnSiswaImport');
@@ -610,7 +619,7 @@ function clearFileSiswaImport() {
     let html = '';
     const makeLi = (disabled, target, text, active = false) => {
       const cls = ['page-item', disabled ? 'disabled' : '', active ? 'active' : ''].filter(Boolean).join(' ');
-      const aAttr = disabled ? 'tabindex=\"-1\"' : `data-page=\"${target}\"`;
+      const aAttr = disabled ? 'tabindex="-1"' : `data-page="${target}"`;
       return `<li class="${cls}"><a class="page-link" href="#" ${aAttr}>${text}</a></li>`;
     };
     html += makeLi(page <= 1, 1, '« First');
@@ -697,7 +706,7 @@ function clearFileSiswaImport() {
     }
   });
 
-  // ----------  MODAL: Edit Siswa (klik tombol Edit) ----------
+  // ----------  MODAL: Edit Siswa ----------
   document.addEventListener('click', function(e) {
     const btn = e.target.closest('.btn-edit-siswa');
     if (!btn) return;
@@ -749,7 +758,6 @@ function clearFileSiswaImport() {
         }
 
         if (json.status === 'success') {
-          // tampilkan notifikasi sementara di halaman (tanpa reload)
           const notifWrap = document.getElementById('notifContainer');
           if (notifWrap) {
             const el = document.createElement('div');
@@ -760,15 +768,12 @@ function clearFileSiswaImport() {
             setTimeout(() => { if (el) el.remove(); }, 4000);
           }
 
-          // tutup modal
           const modalEl = document.getElementById('modalTambahSiswa');
           const bsModal = bootstrap.Modal.getInstance(modalEl);
           if (bsModal) bsModal.hide();
 
-          // bersihkan form
           form.reset();
 
-          // reload data via AJAX (tetap pada halaman yang sama)
           currentPage = 1;
           doSearch();
         } else {
@@ -783,7 +788,7 @@ function clearFileSiswaImport() {
     }
   });
 
-  // ---------- VALIDASI IMPORT SISWA DI DALAM MODAL ----------
+  // ----------  VALIDASI IMPORT SISWA ----------
   const formImportSiswa = document.getElementById('formImportSiswa');
   const btnSubmitImportSiswa = document.getElementById('btnSubmitImportSiswa');
   if (formImportSiswa && btnSubmitImportSiswa) {

@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_delete']) && !em
   exit;
 }
 
-// ===== LIST + FILTER (server-side, tetap dipakai kalau user submit form) =====
+// ===== LIST + FILTER =====
 $q       = trim($_GET['q'] ?? '');
 $tingkat = trim($_GET['tingkat'] ?? '');
 $like    = "%{$q}%";
@@ -68,7 +68,6 @@ include '../../includes/navbar.php';
 ?>
 
 <body>
-
   <div class="dk-page">
     <div class="dk-main">
       <div class="dk-content-box">
@@ -87,28 +86,46 @@ include '../../includes/navbar.php';
             </div>
           <?php endif; ?>
 
-          <!-- HEADER + CARI + TOMBOL -->
-          <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
-            <h4 class="fw-bold mb-2 mb-sm-0">Data Kelas</h4>
+          <!-- HEADER + SEARCH + TOMBOL -->
+          <div class="mb-3">
+            <!-- Judul -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h4 class="fw-bold mb-0">Data Kelas</h4>
+            </div>
 
-            <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 search-group w-100 w-sm-auto">
-              <form class="d-flex flex-nowrap flex-grow-1 flex-sm-grow-0" role="search" method="GET">
-                <input name="q" value="<?= htmlspecialchars($q) ?>" class="form-control me-2" type="search"
-                  placeholder="Cari kelas/wali..." aria-label="Search" style="max-width:200px; flex-grow:1;">
-                <select name="tingkat" class="form-select me-2" style="max-width:140px;">
+            <!-- Baris: Search + Dropdown + Tombol -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+              <!-- FORM SEARCH (kiri) -->
+              <form class="d-flex align-items-center gap-2 kelas-search-form" role="search" method="GET">
+                <!-- Input search -->
+                <input
+                  name="q"
+                  value="<?= htmlspecialchars($q) ?>"
+                  class="form-control"
+                  type="search"
+                  placeholder="Cari kelas/wali..."
+                  aria-label="Search"
+                  style="max-width:220px;">
+
+                <!-- Dropdown tingkat -->
+                <select name="tingkat" class="form-select" style="max-width:140px;">
                   <option value="">Semua</option>
                   <option value="X"  <?= $tingkat === 'X'  ? 'selected' : ''; ?>>X</option>
                   <option value="XI" <?= $tingkat === 'XI' ? 'selected' : ''; ?>>XI</option>
                   <option value="XII"<?= $tingkat === 'XII'? 'selected' : ''; ?>>XII</option>
                 </select>
-                <button class="btn btn-outline-secondary btn-md" type="submit">
+
+                <!-- Tombol search di samping dropdown -->
+                <button class="btn btn-outline-secondary btn-md px-3" type="submit">
                   <i class="fa fa-search"></i>
                 </button>
               </form>
 
-              <div class="d-flex flex-wrap gap-2 mt-2 mt-sm-0 button-group">
+              <!-- TOMBOL AKSI (kanan) -->
+              <div class="d-flex flex-wrap gap-2 button-group">
                 <!-- Tambah -->
-                <a href="tambah_data.php" class="btn btn-primary btn-md px-3 py-2 d-flex align-items-center gap-2">
+                <a href="tambah_data.php"
+                   class="btn btn-primary btn-md px-3 py-2 d-flex align-items-center gap-2">
                   <i class="fa-solid fa-plus fa-lg"></i> Tambah
                 </a>
 
@@ -121,8 +138,10 @@ include '../../includes/navbar.php';
                 </button>
 
                 <!-- Export -->
-                <button id="exportBtn" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2" type="button"
-                  onclick="window.location='export.php'">
+                <button id="exportBtn"
+                        class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2"
+                        type="button"
+                        onclick="window.location='export.php'">
                   <i class="fa-solid fa-file-arrow-up fa-lg"></i> Export
                 </button>
               </div>
@@ -157,8 +176,8 @@ include '../../includes/navbar.php';
                       <td>
                         <a class="btn btn-warning btn-sm me-1" href="edit_data.php?id=<?= (int)$row['id_kelas'] ?>">Edit</a>
                         <a class="btn btn-danger btn-sm"
-                          href="datakelas.php?hapus=<?= (int)$row['id_kelas'] ?>"
-                          onclick="return confirm('Hapus kelas ini?');">Del</a>
+                           href="datakelas.php?hapus=<?= (int)$row['id_kelas'] ?>"
+                           onclick="return confirm('Hapus kelas ini?');">Del</a>
                       </td>
                     </tr>
                   <?php endwhile;
@@ -185,7 +204,7 @@ include '../../includes/navbar.php';
     </div>
   </div>
 
-  <!-- MODAL IMPORT (tampil seperti form tambah data kelas) -->
+  <!-- MODAL IMPORT KELAS -->
   <div class="modal fade" id="modalImportKelas" tabindex="-1" aria-labelledby="modalImportKelasLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content" style="border-radius: 12px; overflow:hidden;">
@@ -209,19 +228,19 @@ include '../../includes/navbar.php';
             <div class="mb-3">
               <label class="form-label fw-semibold">Catatan</label>
               <ul class="mb-0 ps-3">
-                <li>.</li>
-                <li>.</li>
-                <li>.</li>
+                <li>Pastikan nama kelas tidak kosong.</li>
+                <li>Tingkat kelas hanya boleh X, XI, atau XII.</li>
+                <li>Wali kelas harus sudah terdaftar di data guru (opsional).</li>
               </ul>
             </div>
           </div>
 
           <div class="modal-footer d-flex justify-content-between">
-            <button type="submit" class="btn btn-success">
-              <i class="fa fa-save"></i> Simpan
-            </button>
             <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
               <i class="fa fa-times"></i> Batal
+            </button>
+            <button type="submit" class="btn btn-success">
+              <i class="fa fa-upload"></i> Upload &amp; Proses
             </button>
           </div>
         </form>
@@ -235,27 +254,25 @@ include '../../includes/navbar.php';
       h4.fw-bold {
         text-align: center;
         width: 100%;
-        margin-bottom: 12px !important;
       }
 
-      .search-group {
-        flex-direction: column;
-        align-items: center !important;
+      .kelas-search-form {
         width: 100%;
-        gap: 12px;
+        justify-content: center !important;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+      }
+
+      .kelas-search-form input,
+      .kelas-search-form select,
+      .kelas-search-form button {
+        width: 100% !important;
+        max-width: 100% !important;
       }
 
       .button-group {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 10px;
         width: 100%;
-      }
-
-      .mb-3 {
-        width: 100%;
+        justify-content: center !important;
       }
     }
 
@@ -289,7 +306,7 @@ include '../../includes/navbar.php';
       checkboxes.forEach(cb => cb.addEventListener('change', updateDeleteButton));
     });
 
-    // ====== LIVE SEARCH + HIGHLIGHT BARIS ======
+    // ====== LIVE SEARCH + HIGHLIGHT BARIS (client side tambahan) ======
     document.addEventListener('DOMContentLoaded', () => {
       const input = document.querySelector('input[name="q"]');
       const tbody = document.querySelector('#dataKelas tbody');

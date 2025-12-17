@@ -58,32 +58,41 @@ $queryEkstraFilter = mysqli_query(
           </div>
         <?php endif; ?>
 
-        <!-- TOP BAR: JUDUL + TOMBOL -->
-        <div class="mt-0 d-flex align-items-center flex-wrap mb-0 p-3 top-bar">
-          <h5 class="mb-1 fw-semibold fs-4" style="text-align:center;">Nilai Ekstrakulikuler</h5>
+        <!-- TOP BAR: JUDUL + TOMBOL + SEARCH DI BAWAH JUDUL -->
+        <div class="mt-0 p-3 top-bar">
+          <!-- Baris 1: judul + tombol -->
+          <div class="d-flex align-items-center flex-wrap mb-2 gap-2">
+            <h5 class="mb-1 fw-semibold fs-4" style="text-align:center;">Nilai Ekstrakulikuler</h5>
 
-          <div class="ms-auto d-flex gap-2 action-buttons">
-            <!-- Tambah -->
-            <button class="btn btn-primary btn-md px-3 py-2 d-flex align-items-center gap-2"
-                    type="button"
-                    data-bs-toggle="modal" data-bs-target="#modalTambahEkstra">
-              <i class="fa fa-plus"></i> Tambah
-            </button>
+            <div class="ms-auto d-flex gap-2 action-buttons">
+              <!-- Tambah -->
+              <button class="btn btn-primary btn-md px-3 py-2 d-flex align-items-center gap-2"
+                      type="button"
+                      data-bs-toggle="modal" data-bs-target="#modalTambahEkstra">
+                <i class="fa fa-plus"></i> Tambah
+              </button>
 
-            <!-- Import -->
-            <button type="button"
-                    class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2"
-                    data-bs-toggle="modal" data-bs-target="#modalImportEkstra">
-              <i class="fa-solid fa-file-arrow-down fa-lg"></i>
-              <span>Import</span>
-            </button>
+              <!-- Import -->
+              <button type="button"
+                      class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2"
+                      data-bs-toggle="modal" data-bs-target="#modalImportEkstra">
+                <i class="fa-solid fa-file-arrow-down fa-lg"></i>
+                <span>Import</span>
+              </button>
 
-            <!-- Export -->
-            <button id="exportBtn" type="button"
-                    class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
-              <i class="fa-solid fa-file-arrow-up fa-lg"></i>
-              Export
-            </button>
+              <!-- Export -->
+              <button id="exportBtn" type="button"
+                      class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
+                <i class="fa-solid fa-file-arrow-up fa-lg"></i>
+                Export
+              </button>
+            </div>
+          </div>
+
+          <!-- Baris 2: SEARCH (tepat di bawah judul) -->
+          <div class="d-flex justify-content-start search-row">
+            <input type="text" id="searchInput" class="form-control form-control-sm"
+                   placeholder="Cari siswa atau kelas..." style="max-width:260px; width:100%;">
           </div>
         </div>
 
@@ -123,12 +132,6 @@ $queryEkstraFilter = mysqli_query(
         </div>
 
         <div class="card-body">
-
-          <!-- SEARCH -->
-          <div class="mb-3 d-flex justify-content-start search-row">
-            <input type="text" id="searchInput" class="form-control form-control-sm"
-                   placeholder="Cari siswa atau kelas..." style="max-width:260px; width:100%;">
-          </div>
 
           <?php
           /* =========================

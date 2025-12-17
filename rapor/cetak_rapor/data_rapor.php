@@ -1,4 +1,4 @@
-<?php
+<?php 
 include '../../koneksi.php';
 
 // ====== PROSES DATA (MODE AJAX TANPA OUTPUT HTML) ======
@@ -140,11 +140,32 @@ include '../../includes/navbar.php';
         <!-- ===== BAR ATAS ===== -->
         <div class="mt-0 d-flex flex-column flex-md-row align-items-md-center justify-content-between p-3 top-bar">
 
-          <!-- Kiri: Judul dan Dropdown -->
+          <!-- Kiri: Judul + Search + Filter -->
           <div class="d-flex flex-column align-items-md-start align-items-center text-md-start text-center mb-2 mb-md-0">
             <h5 class="mb-2 fw-semibold fs-4">Cetak Rapor Siswa</h5>
 
-            <!-- ===== FILTER CONTAINER ===== -->
+            <!-- ===== SEARCH + PER PAGE (DI BAWAH JUDUL) ===== -->
+            <form id="searchForm"
+                  class="d-flex flex-wrap align-items-center gap-2 mb-2 w-100 justify-content-start justify-content-md-start">
+              <div class="position-relative" style="width:240px; max-width:100%;">
+                <input
+                  type="text"
+                  id="searchInput"
+                  class="form-control form-control-sm"
+                  placeholder="Search..."
+                  value="<?= htmlspecialchars($q) ?>"
+                >
+                <span class="search-icon"><i class="bi bi-search"></i></span>
+              </div>
+
+              <select id="perSelect" class="form-select form-select-sm" style="width:120px;">
+                <?php foreach ([10, 20, 50, 100] as $opt): ?>
+                  <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>><?= $opt ?>/hal</option>
+                <?php endforeach; ?>
+              </select>
+            </form>
+
+            <!-- ===== FILTER TINGKAT & KELAS (DI BAWAH SEARCH) ===== -->
             <div class="filter-container d-flex flex-column align-items-md-start align-items-center gap-2">
 
               <!-- Dropdown Tingkat -->
@@ -175,36 +196,17 @@ include '../../includes/navbar.php';
 
           <!-- Kanan: Tombol Print & Import -->
           <div class="d-flex gap-2 flex-wrap justify-content-md-end justify-content-center mt-3 mt-md-0 action-buttons">
-            <a href="data_absensi_tambah.php" class="btn btn-primary btn-sm d-flex align-items-center gap-1 px-3 fw-semibold" style="border-radius: 5px;">
+            <a href="data_absensi_tambah.php"
+               class="btn btn-primary btn-sm d-flex align-items-center gap-1 px-3 fw-semibold"
+               style="border-radius: 5px;">
               <i class="fa-solid fa-print fa-lg"></i> Print Semua Rapor
             </a>
 
-            <a href="data_absensi_import.php" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
+            <a href="data_absensi_import.php"
+               class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
               <i class="fa-solid fa-file-arrow-down fa-lg"></i> <span>Import</span>
             </a>
           </div>
-        </div>
-
-        <!-- ===== SEARCH & PER PAGE ===== -->
-        <div class="ms-3 me-3 bg-white d-flex justify-content-start align-items-center flex-wrap p-2 gap-2">
-          <form id="searchForm" class="d-flex flex-wrap align-items-center gap-2">
-            <div class="position-relative" style="max-width:200px; width:80%;">
-              <input
-                type="text"
-                id="searchInput"
-                class="form-control form-control-sm"
-                placeholder="Search..."
-                value="<?= htmlspecialchars($q) ?>"
-              >
-              <span class="search-icon"><i class="bi bi-search"></i></span>
-            </div>
-
-            <select id="perSelect" class="form-select form-select-sm" style="width:120px;">
-              <?php foreach ([10, 20, 50, 100] as $opt): ?>
-                <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>><?= $opt ?>/hal</option>
-              <?php endforeach; ?>
-            </select>
-          </form>
         </div>
 
         <!-- ===== TABEL SISWA ===== -->
@@ -283,14 +285,14 @@ function highlightText(text, keyword) {
 }
 
 (function() {
-  const tbody        = document.getElementById('tbodyData');
-  const pagUl        = document.getElementById('pagination');
-  const pageInfo     = document.getElementById('pageInfo');
-  const input        = document.getElementById('searchInput');
-  const perSel       = document.getElementById('perSelect');
+  const tbody         = document.getElementById('tbodyData');
+  const pagUl         = document.getElementById('pagination');
+  const pageInfo      = document.getElementById('pageInfo');
+  const input         = document.getElementById('searchInput');
+  const perSel        = document.getElementById('perSelect');
   const filterTingkat = document.getElementById('tingkat');
   const filterKelas   = document.getElementById('kelas');
-  let currentPage    = <?= (int)$page ?>;
+  let currentPage     = <?= (int)$page ?>;
   let typingTimer;
 
   function renderRows(data) {
@@ -301,12 +303,12 @@ function highlightText(text, keyword) {
 
     let html = '';
     for (const r of data) {
-      const noAbsen   = escapeHtml(r.no_absen_siswa || '');
-      const nama      = escapeHtml(r.nama_siswa || '');
-      const nisn      = escapeHtml(r.no_induk_siswa || '');
-      const kelas     = escapeHtml(r.nama_kelas || '-');
-      const kelasAttr = escapeHtml(r.nama_kelas || '');
-      const catatanSafe = escapeHtml(r.catatan_wali_kelas || '').replace(/\r\n|\r|\n/g, '<br>');
+      const noAbsen      = escapeHtml(r.no_absen_siswa || '');
+      const nama         = escapeHtml(r.nama_siswa || '');
+      const nisn         = escapeHtml(r.no_induk_siswa || '');
+      const kelas        = escapeHtml(r.nama_kelas || '-');
+      const kelasAttr    = escapeHtml(r.nama_kelas || '');
+      const catatanSafe  = escapeHtml(r.catatan_wali_kelas || '').replace(/\r\n|\r|\n/g, '<br>');
 
       html += `
         <tr data-kelas="${kelasAttr}">
@@ -362,8 +364,8 @@ function highlightText(text, keyword) {
   }
 
   async function doSearch() {
-    const q   = input.value.trim();
-    const per = Number(perSel.value || 10);
+    const q    = input.value.trim();
+    const per  = Number(perSel.value || 10);
     const page = currentPage;
     const params = new URLSearchParams({ ajax: '1', q, per, page });
 
