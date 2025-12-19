@@ -13,7 +13,6 @@ $mapel = [];
 try {
   $cek = $koneksi->query("SHOW TABLES LIKE 'mata_pelajaran'");
   if ($cek && $cek->num_rows > 0) {
-    // Pakai kolom sesuai skema: id_mata_pelajaran, nama_mata_pelajaran, kelompok_mata_pelajaran
     $stmt = $koneksi->prepare("
       SELECT id_mata_pelajaran, nama_mata_pelajaran, kelompok_mata_pelajaran
       FROM mata_pelajaran
@@ -30,7 +29,6 @@ try {
   // biarkan kosong jika error, tampilan tetap sama
 }
 
-// ===== FLAG NOTIFIKASI (ADD / EDIT / DELETE) =====
 $status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
 ?>
 
@@ -44,12 +42,11 @@ $status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
 
           <!-- TOP BAR: JUDUL + BARIS SEARCH & TOMBOL -->
           <div class="mt-0 p-3 top-bar">
-            <!-- Judul -->
             <h5 class="mb-1 fw-semibold fs-4 text-center text-md-start">
               Nilai Mata Pelajaran
             </h5>
 
-            <!-- Baris bawah: Search & Sort (kiri) + Tombol aksi (kanan) -->
+            <!-- Baris bawah: Search + Sort (kiri) + Tombol aksi (kanan) -->
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
               <!-- Search + Sort -->
               <div class="d-flex align-items-center gap-2 flex-wrap">
@@ -58,13 +55,8 @@ $status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
                        class="form-control form-control-sm"
                        placeholder="Search"
                        style="width: 200px;">
-                <button id="searchBtn"
-                        class="btn btn-outline-secondary btn-sm p-2 rounded-3 d-flex align-items-center justify-content-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                       class="bi bi-search" viewBox="0 0 16 16">
-                    <path d="M11 6a5 5 0 1 0-2.9 4.7l3.85 3.85a1 1 0 0 0 1.414-1.414l-3.85-3.85A4.978 4.978 0 0 0 11 6zM6 10a4 4 0 1 1 0-8 4 4 0 0 1 0 8z" />
-                  </svg>
-                </button>
+
+                <!-- ✅ tombol pencarian DIHAPUS -->
 
                 <button id="sortBtn"
                         class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 rounded-3">
@@ -81,7 +73,6 @@ $status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
 
               <!-- Tombol aksi -->
               <div class="d-flex gap-2 action-buttons">
-                <!-- TOMBOL TAMBAH → BUKA MODAL -->
                 <button type="button"
                         class="btn btn-primary btn-sm d-flex align-items-center gap-1 p-2 pe-3 fw-semibold"
                         style="border-radius: 5px;"
@@ -91,7 +82,6 @@ $status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
                   Tambah
                 </button>
 
-                <!-- TOMBOL IMPORT → BUKA MODAL IMPORT -->
                 <button type="button"
                         class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2"
                         data-bs-toggle="modal"
@@ -100,7 +90,6 @@ $status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
                   <span>Import</span>
                 </button>
 
-                <!-- EXPORT CSV -->
                 <button id="exportBtn"
                         class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
                   <i class="fa-solid fa-file-arrow-up fa-lg"></i>
@@ -275,9 +264,7 @@ $status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
 
   <style>
     @media (max-width: 768px) {
-      .top-bar {
-        text-align: center;
-      }
+      .top-bar { text-align: center; }
       .top-bar .d-flex.flex-wrap {
         flex-direction: column;
         align-items: center !important;
@@ -288,13 +275,18 @@ $status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
         flex-wrap: wrap;
       }
     }
+
+    /* ✅ highlight baris saat cocok */
+    .row-highlight {
+      background-color: #d4edda !important;
+      transition: background-color 0.2s ease;
+    }
   </style>
 
   <script>
-    // ====== LIVE SEARCH (tanpa Enter, + renumber) ======
+    // ====== LIVE SEARCH + HIGHLIGHT (tanpa tombol) ======
     (function () {
       const input = document.getElementById('searchInput');
-      const btn   = document.getElementById('searchBtn');
       const body  = document.getElementById('mapelBody');
 
       const debounce = (fn, delay = 120) => {
@@ -307,22 +299,26 @@ $status = $_GET['msg'] ?? '';   // add_success, edit_success, delete_success
         let visible = 0;
 
         rows.forEach(tr => {
+          tr.classList.remove('row-highlight');
+
           const tds = tr.querySelectorAll('td');
           if (tds.length < 4) return; // skip placeholder
+
           const nama  = (tds[1].textContent || '').toLowerCase();
           const jenis = (tds[2].textContent || '').toLowerCase();
           const match = !q || nama.includes(q) || jenis.includes(q);
+
           tr.style.display = match ? '' : 'none';
+
           if (match) {
             visible++;
             tds[0].textContent = visible; // renumber kolom "No"
+            if (q) tr.classList.add('row-highlight');
           }
         });
       }
 
       if (input) input.addEventListener('input', debounce(filter, 120));
-      if (btn) btn.addEventListener('click', (e) => { e.preventDefault(); filter(); input.focus(); });
-
       filter();
     })();
 

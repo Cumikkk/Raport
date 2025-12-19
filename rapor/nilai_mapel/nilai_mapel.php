@@ -51,35 +51,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mode']) && $_POST['mo
 
   // daftar kolom di tabel nilai_mata_pelajaran
   $cols = [
-    'tp1_lm1',
-    'tp2_lm1',
-    'tp3_lm1',
-    'tp4_lm1',
-    'sumatif_lm1',
-    'tp1_lm2',
-    'tp2_lm2',
-    'tp3_lm2',
-    'tp4_lm2',
-    'sumatif_lm2',
-    'tp1_lm3',
-    'tp2_lm3',
-    'tp3_lm3',
-    'tp4_lm3',
-    'sumatif_lm3',
-    'tp1_lm4',
-    'tp2_lm4',
-    'tp3_lm4',
-    'tp4_lm4',
-    'sumatif_lm4',
+    'tp1_lm1','tp2_lm1','tp3_lm1','tp4_lm1','sumatif_lm1',
+    'tp1_lm2','tp2_lm2','tp3_lm2','tp4_lm2','sumatif_lm2',
+    'tp1_lm3','tp2_lm3','tp3_lm3','tp4_lm3','sumatif_lm3',
+    'tp1_lm4','tp2_lm4','tp3_lm4','tp4_lm4','sumatif_lm4',
     'sumatif_tengah_semester'
   ];
 
   if (!empty($dataNilai)) {
-    // buat query UPDATE dengan NULLIF supaya input kosong jadi NULL
     $setParts = [];
-    foreach ($cols as $c) {
-      $setParts[] = "$c = NULLIF(?, '')";
-    }
+    foreach ($cols as $c) $setParts[] = "$c = NULLIF(?, '')";
+
     $sqlUpd = "
       UPDATE nilai_mata_pelajaran SET
         " . implode(', ', $setParts) . "
@@ -90,11 +72,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mode']) && $_POST['mo
     $types = str_repeat('s', count($cols)) . 'iii';
 
     foreach ($dataNilai as $id_siswa => $kolom) {
-      // siapkan parameter sesuai urutan kolom
       $params = [];
-      foreach ($cols as $c) {
-        $params[] = isset($kolom[$c]) ? trim((string)$kolom[$c]) : '';
-      }
+      foreach ($cols as $c) $params[] = isset($kolom[$c]) ? trim((string)$kolom[$c]) : '';
       $params[] = (int)$id_siswa;
       $params[] = $id_mapel;
       $params[] = $id_semester;
@@ -112,19 +91,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mode']) && $_POST['mo
 /* ============================
  * FLAG NOTIFIKASI (ADD / EDIT / DELETE / IMPORT)
  * ============================ */
-
-// Bisa baca ?msg= atau ?status=
 $status = $_GET['msg'] ?? ($_GET['status'] ?? '');
 
-// Tambahan: kalau file lain pakai ?add_success=1, ?edit_success=1, ?delete_success=1
 if ($status === '') {
-  if (isset($_GET['add_success'])) {
-    $status = 'add_success';
-  } elseif (isset($_GET['edit_success'])) {
-    $status = 'edit_success';
-  } elseif (isset($_GET['delete_success'])) {
-    $status = 'delete_success';
-  }
+  if (isset($_GET['add_success'])) $status = 'add_success';
+  elseif (isset($_GET['edit_success'])) $status = 'edit_success';
+  elseif (isset($_GET['delete_success'])) $status = 'delete_success';
 }
 
 // Flag import
@@ -134,10 +106,7 @@ $updCount  = isset($_GET['update']) ? (int)$_GET['update'] : 0;
 $skipCount = isset($_GET['skip'])   ? (int)$_GET['skip']   : 0;
 $errCount  = isset($_GET['err'])    ? (int)$_GET['err']    : 0;
 
-// Jika ada import_ok=1, override status khusus import
-if ($import_ok === 1) {
-  $status = 'import_success';
-}
+if ($import_ok === 1) $status = 'import_success';
 
 /* ============================
  * BULK DELETE
@@ -147,19 +116,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aksi']) && $_POST['ak
 
   if (!empty($ids)) {
     $marks = implode(',', array_fill(0, count($ids), '?'));
-    $types = str_repeat('i', count($ids));   // untuk id_siswa
+    $types = str_repeat('i', count($ids));
 
     $sqlDel = "DELETE FROM nilai_mata_pelajaran 
                WHERE id_siswa IN ($marks) AND id_mata_pelajaran = ? AND id_semester = ?";
     $stmt = $koneksi->prepare($sqlDel);
 
-    // tambahkan 2 parameter lagi (id_mapel & id_semester)
     $types .= 'ii';
-    $params = $ids;          // mulai dari array id_siswa
-    $params[] = $id_mapel;   // tambahkan id_mapel
-    $params[] = $id_semester; // tambahkan id_semester
+    $params = $ids;
+    $params[] = $id_mapel;
+    $params[] = $id_semester;
 
-    // unpack sekali saja, dan di akhir
     $stmt->bind_param($types, ...$params);
     $stmt->execute();
     $stmt->close();
@@ -211,8 +178,7 @@ $sqlData = "
     n.tp1_lm4, n.tp2_lm4, n.tp3_lm4, n.tp4_lm4, n.sumatif_lm4,
     n.sumatif_tengah_semester
   FROM nilai_mata_pelajaran n
-  INNER JOIN siswa s 
-    ON s.id_siswa = n.id_siswa
+  INNER JOIN siswa s ON s.id_siswa = n.id_siswa
   WHERE n.id_mata_pelajaran = ?
     AND n.id_semester = ?
   GROUP BY 
@@ -274,13 +240,9 @@ $q->close();
               </select>
             </div>
 
+            <!-- ✅ tombol search DIHAPUS -->
             <div class="d-flex align-items-center gap-2">
               <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Cari nama siswa..." style="width: 220px;">
-              <button id="searchBtn" class="btn btn-outline-secondary btn-sm p-2 rounded-3 d-flex align-items-center justify-content-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
-                  <path d="M11 6a5 5 0 1 0-2.9 4.7l3.85 3.85a1 1 0 0 0 1.414-1.414l-3.85-3.85A4.978 4.978 0 0 0 11 6zM6 10a4 4 0 1 1 0-8 4 4 0 0 1 0 8z" />
-                </svg>
-              </button>
             </div>
 
             <div class="d-flex align-items-center gap-2 flex-wrap ms-auto flex-grow-1 justify-content-between">
@@ -378,26 +340,11 @@ $q->close();
                       <th colspan="4">LINGKUP MATERI</th>
                     </tr>
                     <tr>
-                      <th>TP1</th>
-                      <th>TP2</th>
-                      <th>TP3</th>
-                      <th>TP4</th>
-                      <th>TP1</th>
-                      <th>TP2</th>
-                      <th>TP3</th>
-                      <th>TP4</th>
-                      <th>TP1</th>
-                      <th>TP2</th>
-                      <th>TP3</th>
-                      <th>TP4</th>
-                      <th>TP1</th>
-                      <th>TP2</th>
-                      <th>TP3</th>
-                      <th>TP4</th>
-                      <th>LM1</th>
-                      <th>LM2</th>
-                      <th>LM3</th>
-                      <th>LM4</th>
+                      <th>TP1</th><th>TP2</th><th>TP3</th><th>TP4</th>
+                      <th>TP1</th><th>TP2</th><th>TP3</th><th>TP4</th>
+                      <th>TP1</th><th>TP2</th><th>TP3</th><th>TP4</th>
+                      <th>TP1</th><th>TP2</th><th>TP3</th><th>TP4</th>
+                      <th>LM1</th><th>LM2</th><th>LM3</th><th>LM4</th>
                     </tr>
                   </thead>
                   <tbody id="nilaiBody">
@@ -405,7 +352,7 @@ $q->close();
                       <tr>
                         <td colspan="25" class="text-center text-muted">Belum ada data nilai untuk semester ini.</td>
                       </tr>
-                      <?php else:
+                    <?php else:
                       $no = $offset + 1;
                       foreach ($rows as $r): ?>
                         <tr>
@@ -454,8 +401,7 @@ $q->close();
                             </a>
                           </td>
                         </tr>
-                    <?php endforeach;
-                    endif; ?>
+                      <?php endforeach; endif; ?>
                   </tbody>
                 </table>
               </form>
@@ -473,13 +419,12 @@ $q->close();
               </button>
             </div>
 
-            <!-- PAGINATION (DITENGAH) -->
+            <!-- PAGINATION -->
             <div class="mt-3 d-flex justify-content-center">
               <div class="d-flex flex-column align-items-center text-center">
                 <nav aria-label="Page navigation">
                   <ul class="pagination pagination-sm mb-1">
                     <?php
-                    // helper buat link
                     function page_link($pageLabel, $pageNumber, $disabled, $id_mapel, $id_semester, $perPage)
                     {
                       $href  = $disabled ? '#' : "nilai_mapel.php?id={$id_mapel}&id_semester={$id_semester}&page={$pageNumber}&per={$perPage}";
@@ -492,14 +437,9 @@ $q->close();
                     $isFirst = ($page <= 1);
                     $isLast  = ($page >= $totalPages);
 
-                    // First & Prev
                     page_link('« First', 1, $isFirst, $id_mapel, $id_semester, $perPage);
                     page_link('‹ Prev', max(1, $page - 1), $isFirst, $id_mapel, $id_semester, $perPage);
-
-                    // Current page
                     page_link((string)$page, $page, false, $id_mapel, $id_semester, $perPage);
-
-                    // Next & Last
                     page_link('Next ›', min($totalPages, $page + 1), $isLast, $id_mapel, $id_semester, $perPage);
                     page_link('Last »', $totalPages, $isLast, $id_mapel, $id_semester, $perPage);
                     ?>
@@ -511,7 +451,6 @@ $q->close();
               </div>
             </div>
 
-            <!-- Tombol Back -->
             <div class="mt-3 d-flex justify-content-start">
               <a href="mapel.php" class="btn btn-danger px-4 py-2 d-flex align-items-center gap-2" style="border-radius: 6px;">
                 <i class="bi bi-arrow-left-circle"></i>Back
@@ -525,7 +464,7 @@ $q->close();
     </div>
   </main>
 
-  <!-- ========== MODAL IMPORT NILAI (seperti contoh) ========== -->
+  <!-- MODAL IMPORT NILAI -->
   <div class="modal fade" id="modalImportNilai" tabindex="-1" aria-labelledby="modalImportNilaiLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content" style="border-radius:10px;">
@@ -567,14 +506,20 @@ $q->close();
       </div>
     </div>
   </div>
-  <!-- ========== END MODAL IMPORT ========== -->
 
-  <!-- ===== LIVE SEARCH TANPA ENTER (+ auto-renumber kolom NO. di halaman aktif) ===== -->
+  <!-- ✅ CSS highlight hasil search -->
+  <style>
+    .row-highlight {
+      background-color: #d4edda !important;
+      transition: background-color .2s ease;
+    }
+  </style>
+
+  <!-- ✅ LIVE SEARCH + HIGHLIGHT + renumber (tanpa tombol) -->
   <script>
     (function() {
       const input = document.getElementById('searchInput');
-      const btn = document.getElementById('searchBtn');
-      const body = document.getElementById('nilaiBody');
+      const body  = document.getElementById('nilaiBody');
 
       const debounce = (fn, delay = 120) => {
         let t;
@@ -590,27 +535,25 @@ $q->close();
         let visible = 0;
 
         rows.forEach(tr => {
-          const tds = tr.querySelectorAll('td');
-          if (tds.length < 3) return; // baris placeholder
+          tr.classList.remove('row-highlight');
 
-          const nama = (tds[2].textContent || '').toLowerCase(); // kolom NAMA (setelah checkbox & NO)
+          const tds = tr.querySelectorAll('td');
+          if (tds.length < 3) return; // placeholder
+
+          const nama = (tds[2].textContent || '').toLowerCase(); // kolom NAMA
           const match = !q || nama.includes(q);
+
           tr.style.display = match ? '' : 'none';
+
           if (match) {
             visible++;
-            tds[1].textContent = visible; // kolom NO. di halaman aktif
+            tds[1].textContent = visible; // kolom NO. (pada baris tampil)
+            if (q) tr.classList.add('row-highlight');
           }
         });
       }
 
       if (input) input.addEventListener('input', debounce(filter, 120));
-      if (btn) btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        filter();
-        input.focus();
-      });
-
-      // Normalisasi penomoran awal
       filter();
     })();
   </script>
@@ -624,11 +567,9 @@ $q->close();
         alerts.forEach(a => {
           a.style.transition = 'opacity 0.5s ease';
           a.style.opacity = '0';
-          setTimeout(() => {
-            if (a.parentNode) a.parentNode.remove();
-          }, 600);
+          setTimeout(() => { if (a.parentNode) a.parentNode.remove(); }, 600);
         });
-      }, 5000); // 5 detik
+      }, 5000);
     });
   </script>
 
@@ -655,9 +596,7 @@ $q->close();
     document.addEventListener('change', (e) => {
       if (e.target.classList.contains('row-check')) {
         const all = [...document.querySelectorAll('.row-check')];
-        if (selectAll) {
-          selectAll.checked = all.length > 0 && all.every(c => c.checked);
-        }
+        if (selectAll) selectAll.checked = all.length > 0 && all.every(c => c.checked);
         toggleDeleteButton();
       }
     });
@@ -665,13 +604,10 @@ $q->close();
     if (deleteBtn) {
       deleteBtn.addEventListener('click', function() {
         if (this.disabled) return;
-        if (confirm('Yakin ingin menghapus nilai terpilih?')) {
-          bulkForm.submit();
-        }
+        if (confirm('Yakin ingin menghapus nilai terpilih?')) bulkForm.submit();
       });
     }
 
-    // === MODE EDIT: enable/disable semua input nilai + tombol Simpan ===
     function setEditMode(on) {
       const inputs = document.querySelectorAll('.nilai-input');
       inputs.forEach(inp => inp.disabled = !on);
@@ -687,10 +623,8 @@ $q->close();
         setEditMode(this.checked);
       });
     }
-    // default: non-edit
     setEditMode(false);
 
-    // === SIMPAN: kirim form dengan mode=save_inline ===
     if (saveAllBtn) {
       saveAllBtn.addEventListener('click', function() {
         if (this.disabled) return;
