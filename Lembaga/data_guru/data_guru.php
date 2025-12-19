@@ -330,6 +330,51 @@ if ($totalRows === 0) {
       opacity: 1;
     }
 
+    /* ================================
+       ✅ PAGINATION GROUP (Referensi 2)
+       ================================ */
+    .pager-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      gap: 10px;
+    }
+
+    .pager-group {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+
+      padding: 10px 12px;
+      border: 1px solid rgba(0, 0, 0, .12);
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .pager-group .pagination {
+      margin: 0;
+      justify-content: center;
+    }
+
+    .pager-sep {
+      width: 1px;
+      height: 34px;
+      background: rgba(0, 0, 0, .15);
+    }
+
+    .per-select {
+      width: 120px;
+      min-width: 120px;
+    }
+
+    .page-info-center {
+      text-align: center;
+      width: 100%;
+    }
+
     @media (max-width: 520px) {
       table.table thead {
         display: none;
@@ -373,6 +418,15 @@ if ($totalRows === 0) {
       .search-perpage-row {
         flex-direction: column;
         align-items: stretch !important;
+      }
+
+      /* di mobile: separator disembunyikan biar rapih */
+      .pager-sep {
+        display: none;
+      }
+
+      .pager-group {
+        width: 100%;
       }
     }
 
@@ -419,15 +473,7 @@ if ($totalRows === 0) {
                     </div>
                   </div>
 
-                  <div class="d-flex align-items-center gap-2">
-                    <select id="perPage" class="form-select form-select-sm" style="width:auto;">
-                      <?php foreach ($allowedPer as $opt): ?>
-                        <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>>
-                          <?= $opt ?>/hal
-                        </option>
-                      <?php endforeach; ?>
-                    </select>
-                  </div>
+                  <!-- (perPage dipindah ke grup pagination bawah, jadi ini dikosongkan) -->
                 </div>
 
                 <!-- Tombol Tambah / Import / Export -->
@@ -477,14 +523,11 @@ if ($totalRows === 0) {
                   </tr>
                 </thead>
                 <tbody id="guruTbody" class="text-center tbody-loaded">
-                  <?php
-                  if ($totalRows === 0):
-                  ?>
+                  <?php if ($totalRows === 0): ?>
                     <tr>
                       <td colspan="5">Belum ada data.</td>
                     </tr>
-                    <?php
-                  else:
+                    <?php else:
                     $no = $offset + 1;
                     $rowClass = ($search !== '') ? 'highlight-row' : '';
                     while ($row = mysqli_fetch_assoc($result)):
@@ -498,7 +541,6 @@ if ($totalRows === 0) {
                         <td data-label="Jabatan" class="text-center"><?= htmlspecialchars($row['jabatan_guru']) ?></td>
                         <td data-label="Aksi">
                           <div class="d-flex gap-2 justify-content-center flex-wrap">
-                            <!-- Edit pakai modal -->
                             <button type="button"
                               class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-edit-guru"
                               data-id="<?= (int)$row['id_guru'] ?>"
@@ -507,7 +549,6 @@ if ($totalRows === 0) {
                               <i class="bi bi-pencil-square"></i> Edit
                             </button>
 
-                            <!-- Hapus pakai modal konfirmasi -->
                             <button type="button"
                               class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-delete-single"
                               data-id="<?= (int)$row['id_guru'] ?>"
@@ -517,10 +558,8 @@ if ($totalRows === 0) {
                           </div>
                         </td>
                       </tr>
-                  <?php
-                    endwhile;
-                  endif;
-                  ?>
+                  <?php endwhile;
+                  endif; ?>
                 </tbody>
               </table>
             </div>
@@ -534,15 +573,35 @@ if ($totalRows === 0) {
               </button>
             </div>
 
-            <!-- Info & Pagination -->
-            <div class="mt-3 d-flex flex-column align-items-center gap-1">
-              <nav id="paginationWrap" class="d-flex justify-content-center"></nav>
-              <div id="pageInfo" class="page-info-text text-muted text-center mt-2">
-                Menampilkan <?= $shown ?> dari <?= $totalRows ?> data • Halaman <?= $pageDisplayCurrent ?> / <?= $pageDisplayTotal ?>
-              </div>
-            </div>
-          </div>
+            <!-- ✅ Pagination + perPage digabung (Referensi 2) -->
+            <nav aria-label="Page navigation" class="mt-3">
+              <div class="pager-area">
+                <div class="pager-group">
+                  <!-- kiri: pagination -->
+                  <ul class="pagination mb-0" id="paginationWrap"></ul>
 
+                  <!-- separator -->
+                  <div class="pager-sep" aria-hidden="true"></div>
+
+                  <!-- kanan: per halaman -->
+                  <select id="perPage" class="form-select form-select-sm per-select">
+                    <?php foreach ($allowedPer as $opt): ?>
+                      <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>>
+                        <?= $opt ?>/hal
+                      </option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+
+                <!-- info bawah: center -->
+                <p id="pageInfo" class="page-info-text text-muted mb-0 page-info-center">
+                  Menampilkan <strong><?= $shown ?></strong> dari <strong><?= $totalRows ?></strong> data •
+                  Halaman <strong><?= $pageDisplayCurrent ?></strong> / <strong><?= $pageDisplayTotal ?></strong>
+                </p>
+              </div>
+            </nav>
+
+          </div>
         </div><!-- /.card -->
       </div><!-- /.col-12 -->
     </div><!-- /.row -->
@@ -556,19 +615,11 @@ if ($totalRows === 0) {
           <h5 class="modal-title">Tambah Data Guru</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
         </div>
-        <!-- HAPUS novalidate supaya required HTML jalan -->
         <form id="formTambahGuru" action="proses_tambah_data_guru.php" method="POST" autocomplete="off">
           <div class="modal-body">
             <div class="mb-3">
               <label class="form-label fw-semibold" for="add_nama_guru">Nama Guru</label>
-              <input
-                type="text"
-                id="add_nama_guru"
-                name="nama_guru"
-                class="form-control"
-                maxlength="100"
-                required
-                placeholder="Nama Guru">
+              <input type="text" id="add_nama_guru" name="nama_guru" class="form-control" maxlength="100" required placeholder="Nama Guru">
             </div>
 
             <div class="mb-3">
@@ -581,14 +632,10 @@ if ($totalRows === 0) {
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button"
-              class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
-              data-bs-dismiss="modal">
+            <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-dismiss="modal">
               <i class="bi bi-x-lg"></i> Batal
             </button>
-            <button type="submit"
-              id="btnSubmitTambahGuru"
-              class="btn btn-brand d-inline-flex align-items-center gap-2">
+            <button type="submit" id="btnSubmitTambahGuru" class="btn btn-brand d-inline-flex align-items-center gap-2">
               <i class="bi bi-check2-circle"></i> Simpan
             </button>
           </div>
@@ -610,13 +657,7 @@ if ($totalRows === 0) {
           <div class="modal-body">
             <div class="mb-3">
               <label class="form-label fw-semibold" for="edit_nama_guru">Nama Guru</label>
-              <input
-                type="text"
-                id="edit_nama_guru"
-                name="nama_guru"
-                class="form-control"
-                maxlength="100"
-                required>
+              <input type="text" id="edit_nama_guru" name="nama_guru" class="form-control" maxlength="100" required>
             </div>
 
             <div class="mb-3">
@@ -628,13 +669,10 @@ if ($totalRows === 0) {
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button"
-              class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
-              data-bs-dismiss="modal">
+            <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-dismiss="modal">
               <i class="bi bi-x-lg"></i> Batal
             </button>
-            <button type="submit"
-              class="btn btn-brand d-inline-flex align-items-center gap-2">
+            <button type="submit" class="btn btn-brand d-inline-flex align-items-center gap-2">
               <i class="bi bi-save"></i> Simpan Perubahan
             </button>
           </div>
@@ -664,7 +702,6 @@ if ($totalRows === 0) {
           autocomplete="off">
           <div class="modal-body pt-3">
 
-            <!-- Info box langkah-langkah -->
             <div class="mb-3 p-3 rounded-3" style="background:#f9fafb;border:1px solid #e5e7eb;">
               <div class="d-flex align-items-start gap-2">
                 <div class="mt-1">
@@ -688,13 +725,11 @@ if ($totalRows === 0) {
               </div>
             </div>
 
-            <!-- Baris: tombol download template -->
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
               <span class="text-muted" style="font-size:13px;">
                 Klik tombol di samping untuk mengunduh template Excel.
               </span>
-              <a
-                href="../../assets/templates/template_data_guru.xlsx"
+              <a href="../../assets/templates/template_data_guru.xlsx"
                 class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2"
                 download>
                 <i class="fa-solid fa-file-excel"></i>
@@ -704,14 +739,10 @@ if ($totalRows === 0) {
 
             <hr class="my-2">
 
-            <!-- Input file -->
             <div class="mb-2">
-              <label for="excelFile" class="form-label fw-semibold mb-1">
-                Upload File Excel
-              </label>
+              <label for="excelFile" class="form-label fw-semibold mb-1">Upload File Excel</label>
               <div class="position-relative d-flex align-items-center">
-                <input
-                  type="file"
+                <input type="file"
                   class="form-control"
                   id="excelFile"
                   name="excel_file"
@@ -720,22 +751,11 @@ if ($totalRows === 0) {
                   required
                   onchange="toggleClearButtonGuruImport()">
 
-                <button
-                  type="button"
+                <button type="button"
                   id="clearFileBtnGuruImport"
                   onclick="clearFileGuruImport()"
                   title="Hapus file"
-                  style="
-                    position:absolute;
-                    right:10px;
-                    background:none;
-                    border:none;
-                    color:#6c757d;
-                    font-size:20px;
-                    line-height:1;
-                    display:none;
-                    cursor:pointer;
-                  ">
+                  style="position:absolute;right:10px;background:none;border:none;color:#6c757d;font-size:20px;line-height:1;display:none;cursor:pointer;">
                   &times;
                 </button>
               </div>
@@ -745,17 +765,13 @@ if ($totalRows === 0) {
               </small>
             </div>
 
-          </div><!-- /.modal-body -->
+          </div>
 
           <div class="modal-footer d-flex justify-content-between">
-            <button type="button"
-              class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
-              data-bs-dismiss="modal">
+            <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-dismiss="modal">
               <i class="fa fa-times"></i> Batal
             </button>
-            <button type="submit"
-              id="btnSubmitImportGuru"
-              class="btn btn-warning d-inline-flex align-items-center gap-2">
+            <button type="submit" id="btnSubmitImportGuru" class="btn btn-warning d-inline-flex align-items-center gap-2">
               <i class="fas fa-upload"></i> Upload &amp; Proses
             </button>
           </div>
@@ -764,7 +780,7 @@ if ($totalRows === 0) {
     </div>
   </div>
 
-  <!-- MODAL KONFIRMASI HAPUS (single & bulk) -->
+  <!-- MODAL KONFIRMASI HAPUS -->
   <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
@@ -778,14 +794,8 @@ if ($totalRows === 0) {
           <p id="confirmDeleteBody" class="mb-0">Yakin ingin menghapus data ini?</p>
         </div>
         <div class="modal-footer">
-          <button type="button"
-            class="btn btn-outline-secondary"
-            data-bs-dismiss="modal">
-            Batal
-          </button>
-          <button type="button"
-            class="btn btn-danger d-inline-flex align-items-center gap-2"
-            id="confirmDeleteBtn">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-danger d-inline-flex align-items-center gap-2" id="confirmDeleteBtn">
             <i class="bi bi-trash"></i> Hapus
           </button>
         </div>
@@ -794,7 +804,6 @@ if ($totalRows === 0) {
   </div>
 
   <script>
-    // helper import modal
     function toggleClearButtonGuruImport() {
       const fileInput = document.getElementById('excelFile');
       const clearBtn = document.getElementById('clearFileBtnGuruImport');
@@ -821,8 +830,11 @@ if ($totalRows === 0) {
       const checkAll = document.getElementById('checkAll');
       const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
       const perPageSelect = document.getElementById('perPage');
-      const paginationWrap = document.getElementById('paginationWrap');
+
+      // ✅ sekarang pagination UL langsung
+      const paginationUl = document.getElementById('paginationWrap');
       const pageInfo = document.getElementById('pageInfo');
+
       const csrfToken = '<?= htmlspecialchars($csrf, ENT_QUOTES, "UTF-8"); ?>';
 
       const confirmModalEl = document.getElementById('confirmDeleteModal');
@@ -850,9 +862,7 @@ if ($totalRows === 0) {
 
       function showDeleteConfirm(message, handler) {
         if (!confirmModalEl || !confirmBodyEl || !confirmBtn) {
-          if (confirm(message)) {
-            handler();
-          }
+          if (confirm(message)) handler();
           return;
         }
 
@@ -860,9 +870,7 @@ if ($totalRows === 0) {
         pendingDeleteHandler = handler;
 
         confirmBtn.onclick = function() {
-          if (pendingDeleteHandler) {
-            pendingDeleteHandler();
-          }
+          if (pendingDeleteHandler) pendingDeleteHandler();
           if (typeof bootstrap !== 'undefined') {
             const m = bootstrap.Modal.getOrCreateInstance(confirmModalEl);
             m.hide();
@@ -873,9 +881,7 @@ if ($totalRows === 0) {
           const m = bootstrap.Modal.getOrCreateInstance(confirmModalEl);
           m.show();
         } else {
-          if (confirm(message)) {
-            handler();
-          }
+          if (confirm(message)) handler();
         }
       }
 
@@ -907,13 +913,10 @@ if ($totalRows === 0) {
 
       function attachCheckboxEvents() {
         const boxes = getRowCheckboxes();
-        boxes.forEach(box => {
-          box.addEventListener('change', updateBulkUI);
-        });
+        boxes.forEach(box => box.addEventListener('change', updateBulkUI));
         updateBulkUI();
       }
 
-      // EDIT: isi modal edit guru
       function attachEditModalEvents() {
         const editButtons = document.querySelectorAll('.btn-edit-guru');
         const modalEl = document.getElementById('modalEditGuru');
@@ -943,7 +946,6 @@ if ($totalRows === 0) {
         });
       }
 
-      // HAPUS SATU GURU
       function attachSingleDeleteEvents() {
         const buttons = document.querySelectorAll('.btn-delete-single');
         buttons.forEach(btn => {
@@ -951,7 +953,6 @@ if ($totalRows === 0) {
             e.preventDefault();
             const id = btn.getAttribute('data-id');
             const label = btn.getAttribute('data-label') || 'guru ini';
-
             if (!id) return;
 
             showDeleteConfirm(`Yakin ingin menghapus guru "${label}"?`, () => {
@@ -978,6 +979,7 @@ if ($totalRows === 0) {
         });
       }
 
+      // ✅ Build pagination ke <ul id="paginationWrap"> (bukan wrapper div/nav)
       function buildPagination(totalRows, page, perPage) {
         currentTotalRows = totalRows;
         currentPage = page;
@@ -986,64 +988,56 @@ if ($totalRows === 0) {
         const totalPages = Math.max(1, Math.ceil(totalRows / perPage));
         if (page > totalPages) page = totalPages;
 
-        let from, to, shown;
+        let shown;
         if (totalRows === 0) {
-          from = 0;
-          to = 0;
           shown = 0;
         } else {
-          from = (page - 1) * perPage + 1;
-          to = Math.min(page * perPage, totalRows);
+          const from = (page - 1) * perPage + 1;
+          const to = Math.min(page * perPage, totalRows);
           shown = to - from + 1;
         }
 
         const pageDisplayCurrent = totalRows === 0 ? 0 : page;
         const pageDisplayTotal = totalRows === 0 ? 0 : totalPages;
+
         pageInfo.innerHTML =
-          `Menampilkan <strong>${shown}</strong> dari <strong>${totalRows}</strong> data • 
-          Halaman <strong>${pageDisplayCurrent}</strong> / <strong>${pageDisplayTotal}</strong>`;
+          `Menampilkan <strong>${shown}</strong> dari <strong>${totalRows}</strong> data • Halaman <strong>${pageDisplayCurrent}</strong> / <strong>${pageDisplayTotal}</strong>`;
 
-        let html = '<ul class="pagination mb-0">';
+        const makeLi = (disabled, target, text, active = false) => {
+          const cls = ['page-item', disabled ? 'disabled' : '', active ? 'active' : ''].filter(Boolean).join(' ');
+          const aAttr = disabled ? 'tabindex="-1"' : `data-page="${target}"`;
+          return `<li class="${cls}"><a class="page-link" href="#" ${aAttr}>${text}</a></li>`;
+        };
 
+        let html = '';
         const isFirst = (page <= 1);
         const isLast = (page >= totalPages);
 
-        html += `<li class="page-item${isFirst ? ' disabled' : ''}">
-                   <button class="page-link page-btn" type="button" data-page="1">&laquo; First</button>
-                 </li>`;
+        html += makeLi(isFirst, 1, '« First');
+        html += makeLi(isFirst, Math.max(1, page - 1), '‹ Prev');
 
-        html += `<li class="page-item${isFirst ? ' disabled' : ''}">
-                   <button class="page-link page-btn" type="button" data-page="${page - 1}">&lsaquo; Prev</button>
-                 </li>`;
+        // tampilkan sekitar 5 tombol
+        const start = Math.max(1, page - 2);
+        const end = Math.min(totalPages, page + 2);
+        for (let i = start; i <= end; i++) {
+          html += makeLi(false, i, String(i), i === page);
+        }
 
-        html += `<li class="page-item active">
-                   <button class="page-link" type="button" data-page="${page}">${page}</button>
-                 </li>`;
+        html += makeLi(isLast, Math.min(totalPages, page + 1), 'Next ›');
+        html += makeLi(isLast, totalPages, 'Last »');
 
-        html += `<li class="page-item${isLast ? ' disabled' : ''}">
-                   <button class="page-link page-btn" type="button" data-page="${page + 1}">Next &rsaquo;</button>
-                 </li>`;
+        paginationUl.innerHTML = html;
 
-        html += `<li class="page-item${isLast ? ' disabled' : ''}">
-                   <button class="page-link page-btn" type="button" data-page="${totalPages}">Last &raquo;</button>
-                 </li>`;
-
-        html += '</ul>';
-
-        paginationWrap.innerHTML = html;
-
-        paginationWrap.querySelectorAll('.page-btn').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const target = parseInt(btn.getAttribute('data-page') || '1', 10);
+        paginationUl.querySelectorAll('a[data-page]').forEach(a => {
+          a.addEventListener('click', (e) => {
+            e.preventDefault();
+            const target = parseInt(a.getAttribute('data-page') || '1', 10);
             if (isNaN(target) || target < 1 || target === currentPage) return;
-            // pagination → overlay + scroll
             doSearch(currentQuery, target, currentPerPage, true);
           });
         });
 
-        if (perPageSelect) {
-          perPageSelect.value = String(perPage);
-        }
+        if (perPageSelect) perPageSelect.value = String(perPage);
       }
 
       checkAll.addEventListener('change', () => {
@@ -1054,13 +1048,11 @@ if ($totalRows === 0) {
         updateBulkUI();
       });
 
-      // HAPUS TERPILIH
       bulkDeleteBtn.addEventListener('click', () => {
         const boxes = getRowCheckboxes().filter(b => b.checked);
         if (boxes.length === 0) return;
 
         const count = boxes.length;
-
         const form = document.createElement('form');
         form.method = 'post';
         form.action = 'hapus_data_guru.php';
@@ -1086,25 +1078,19 @@ if ($totalRows === 0) {
       });
 
       function setLoading(useScroll) {
-        if (useScroll) {
-          scrollToTable();
-        }
+        if (useScroll) scrollToTable();
         if (tbody) {
           tbody.classList.remove('tbody-loaded');
           tbody.classList.add('tbody-loading');
         }
-        if (loadingOverlay) {
-          loadingOverlay.classList.add('show');
-        }
+        if (loadingOverlay) loadingOverlay.classList.add('show');
       }
 
       function finishLoading() {
-        if (loadingOverlay) {
-          loadingOverlay.classList.remove('show');
-        }
+        if (loadingOverlay) loadingOverlay.classList.remove('show');
         if (!tbody) return;
         tbody.classList.remove('tbody-loading');
-        void tbody.offsetHeight; // reflow kecil
+        void tbody.offsetHeight;
         tbody.classList.add('tbody-loaded');
       }
 
@@ -1141,6 +1127,7 @@ if ($totalRows === 0) {
               const pg = parseInt(metaRow.getAttribute('data-page') || '1', 10);
               const pp = parseInt(metaRow.getAttribute('data-per') || String(currentPerPage), 10);
               metaRow.parentNode.removeChild(metaRow);
+
               buildPagination(
                 isNaN(total) ? 0 : total,
                 isNaN(pg) ? 1 : pg,
@@ -1164,7 +1151,6 @@ if ($totalRows === 0) {
       input.addEventListener('input', () => {
         clearTimeout(typingTimer);
         typingTimer = setTimeout(() => {
-          // search → transisi tapi tanpa scroll ke atas
           doSearch(input.value, 1, currentPerPage, false);
         }, debounceMs);
       });
@@ -1174,12 +1160,11 @@ if ($totalRows === 0) {
           const val = parseInt(perPageSelect.value || '10', 10);
           if (isNaN(val) || val <= 0) return;
           currentPerPage = val;
-          // ganti perPage → scroll ke tabel
           doSearch(currentQuery, 1, currentPerPage, true);
         });
       }
 
-      // VALIDASI di dalam modal (biar nggak keluar halaman kalau input kosong)
+      // VALIDASI modal
       const formTambah = document.getElementById('formTambahGuru');
       const btnSubmitTambah = document.getElementById('btnSubmitTambahGuru');
       if (formTambah && btnSubmitTambah) {
@@ -1202,16 +1187,13 @@ if ($totalRows === 0) {
         });
       }
 
-      // Inisialisasi pertama kali
+      // init
       attachCheckboxEvents();
       attachEditModalEvents();
       attachSingleDeleteEvents();
       buildPagination(currentTotalRows, currentPage, currentPerPage);
 
-      // status awal: dianggap loaded
-      if (tbody) {
-        tbody.classList.add('tbody-loaded');
-      }
+      if (tbody) tbody.classList.add('tbody-loaded');
     })();
   </script>
 

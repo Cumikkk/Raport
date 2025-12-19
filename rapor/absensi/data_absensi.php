@@ -446,6 +446,51 @@ include '../../includes/header.php';
       opacity: 1;
     }
 
+    /* ================================
+       ✅ PAGINATION GROUP (Referensi 2)
+       ================================ */
+    .pager-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      gap: 10px;
+    }
+
+    .pager-group {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+
+      padding: 10px 12px;
+      border: 1px solid rgba(0, 0, 0, .12);
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .pager-group .pagination {
+      margin: 0;
+      justify-content: center;
+    }
+
+    .pager-sep {
+      width: 1px;
+      height: 34px;
+      background: rgba(0, 0, 0, .15);
+    }
+
+    .per-select {
+      width: 120px;
+      min-width: 120px;
+    }
+
+    .page-info-center {
+      text-align: center;
+      width: 100%;
+    }
+
     @media (max-width: 520px) {
       table.table thead {
         display: none;
@@ -490,6 +535,15 @@ include '../../includes/header.php';
         flex-direction: column;
         align-items: stretch !important;
       }
+
+      /* di mobile: separator disembunyikan biar rapih */
+      .pager-sep {
+        display: none;
+      }
+
+      .pager-group {
+        width: 100%;
+      }
     }
 
     .searchbox:focus-within {
@@ -519,7 +573,7 @@ include '../../includes/header.php';
               </div>
 
               <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-2">
-                <!-- Search + per page -->
+                <!-- Search (perPage dipindah ke bawah) -->
                 <div class="d-flex search-perpage-row align-items-md-center gap-2 flex-grow-1">
                   <div class="search-wrap flex-grow-1">
                     <div class="searchbox" role="search" aria-label="Pencarian absensi">
@@ -530,16 +584,6 @@ include '../../includes/header.php';
                         value="<?= htmlspecialchars($search, ENT_QUOTES, 'UTF-8'); ?>"
                         autofocus>
                     </div>
-                  </div>
-
-                  <div class="d-flex align-items-center gap-2">
-                    <select id="perPage" class="form-select form-select-sm" style="width:auto;">
-                      <?php foreach ($allowedPer as $opt): ?>
-                        <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>>
-                          <?= $opt ?>/hal
-                        </option>
-                      <?php endforeach; ?>
-                    </select>
                   </div>
                 </div>
 
@@ -567,6 +611,7 @@ include '../../includes/header.php';
                 </div>
               </div>
             </div>
+
             <div class="form-check form-switch mt-3 d-flex justify-content-end">
               <input class="form-check-input" type="checkbox" id="toggleEditMode">
               <label class="form-check-label fw-semibold ms-2" for="toggleEditMode">
@@ -604,14 +649,11 @@ include '../../includes/header.php';
                     </tr>
                   </thead>
                   <tbody id="absensiTbody" class="text-center tbody-loaded">
-                    <?php
-                    if ($totalRows === 0):
-                    ?>
+                    <?php if ($totalRows === 0): ?>
                       <tr>
                         <td colspan="9">Belum ada data.</td>
                       </tr>
-                      <?php
-                    else:
+                      <?php else:
                       $no = $offset + 1;
                       $rowClass = ($search !== '') ? 'highlight-row' : '';
                       while ($row = $result->fetch_assoc()):
@@ -624,8 +666,7 @@ include '../../includes/header.php';
                         $izin      = (int)($row['izin'] ?? 0);
                         $alpha     = (int)($row['alpha'] ?? 0);
                       ?>
-                        <tr class="<?= $rowClass; ?>"
-                          data-id="<?= $id; ?>">
+                        <tr class="<?= $rowClass; ?>" data-id="<?= $id; ?>">
                           <td class="text-center" data-label="Pilih">
                             <input type="checkbox" class="row-check" value="<?= $id; ?>">
                             <input type="hidden" name="id_absensi[]" value="<?= $id; ?>">
@@ -637,30 +678,15 @@ include '../../includes/header.php';
 
                           <td data-label="Sakit">
                             <span class="cell-view"><?= $sakit; ?></span>
-                            <input type="number"
-                              class="form-control form-control-sm cell-input d-none"
-                              name="sakit[]"
-                              min="0"
-                              step="1"
-                              value="<?= $sakit; ?>">
+                            <input type="number" class="form-control form-control-sm cell-input d-none" name="sakit[]" min="0" step="1" value="<?= $sakit; ?>">
                           </td>
                           <td data-label="Izin">
                             <span class="cell-view"><?= $izin; ?></span>
-                            <input type="number"
-                              class="form-control form-control-sm cell-input d-none"
-                              name="izin[]"
-                              min="0"
-                              step="1"
-                              value="<?= $izin; ?>">
+                            <input type="number" class="form-control form-control-sm cell-input d-none" name="izin[]" min="0" step="1" value="<?= $izin; ?>">
                           </td>
                           <td data-label="Alpha">
                             <span class="cell-view"><?= $alpha; ?></span>
-                            <input type="number"
-                              class="form-control form-control-sm cell-input d-none"
-                              name="alpha[]"
-                              min="0"
-                              step="1"
-                              value="<?= $alpha; ?>">
+                            <input type="number" class="form-control form-control-sm cell-input d-none" name="alpha[]" min="0" step="1" value="<?= $alpha; ?>">
                           </td>
 
                           <td data-label="Aksi">
@@ -672,10 +698,8 @@ include '../../includes/header.php';
                             </button>
                           </td>
                         </tr>
-                    <?php
-                      endwhile;
-                    endif;
-                    ?>
+                    <?php endwhile;
+                    endif; ?>
                   </tbody>
                 </table>
               </form>
@@ -697,15 +721,35 @@ include '../../includes/header.php';
               </button>
             </div>
 
-            <!-- Info & Pagination -->
-            <div class="mt-3 d-flex flex-column align-items-center gap-1">
-              <nav id="paginationWrap" class="d-flex justify-content-center"></nav>
-              <div id="pageInfo" class="page-info-text text-muted text-center mt-2">
-                Menampilkan <?= $shown ?> dari <?= $totalRows ?> data • Halaman <?= $pageDisplayCurrent ?> / <?= $pageDisplayTotal ?>
-              </div>
-            </div>
-          </div>
+            <!-- ✅ Pagination + perPage digabung (Referensi 2) -->
+            <nav aria-label="Page navigation" class="mt-3">
+              <div class="pager-area">
+                <div class="pager-group">
+                  <!-- kiri: pagination -->
+                  <ul class="pagination mb-0" id="paginationWrap"></ul>
 
+                  <!-- separator -->
+                  <div class="pager-sep" aria-hidden="true"></div>
+
+                  <!-- kanan: per halaman -->
+                  <select id="perPage" class="form-select form-select-sm per-select">
+                    <?php foreach ($allowedPer as $opt): ?>
+                      <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>>
+                        <?= $opt ?>/hal
+                      </option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+
+                <!-- info bawah: center -->
+                <p id="pageInfo" class="page-info-text text-muted mb-0 page-info-center">
+                  Menampilkan <strong><?= $shown ?></strong> dari <strong><?= $totalRows ?></strong> data •
+                  Halaman <strong><?= $pageDisplayCurrent ?></strong> / <strong><?= $pageDisplayTotal ?></strong>
+                </p>
+              </div>
+            </nav>
+
+          </div>
         </div><!-- /.card -->
       </div><!-- /.col-12 -->
     </div><!-- /.row -->
@@ -752,14 +796,10 @@ include '../../includes/header.php';
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button"
-              class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
-              data-bs-dismiss="modal">
+            <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-dismiss="modal">
               <i class="bi bi-x-lg"></i> Batal
             </button>
-            <button type="submit"
-              id="btnSubmitTambahAbsensi"
-              class="btn btn-brand d-inline-flex align-items-center gap-2">
+            <button type="submit" id="btnSubmitTambahAbsensi" class="btn btn-brand d-inline-flex align-items-center gap-2">
               <i class="bi bi-check2-circle"></i> Simpan
             </button>
           </div>
@@ -788,7 +828,6 @@ include '../../includes/header.php';
           enctype="multipart/form-data"
           autocomplete="off">
           <div class="modal-body pt-3">
-
             <div class="mb-3 p-3 rounded-3" style="background:#f9fafb;border:1px solid #e5e7eb;">
               <div class="d-flex align-items-start gap-2">
                 <div class="mt-1">
@@ -817,11 +856,8 @@ include '../../includes/header.php';
             </div>
 
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
-              <span class="text-muted" style="font-size:13px;">
-                Klik tombol di samping untuk mengunduh template Excel.
-              </span>
-              <a
-                href="../../assets/templates/template_data_absensi.xlsx"
+              <span class="text-muted" style="font-size:13px;">Klik tombol di samping untuk mengunduh template Excel.</span>
+              <a href="../../assets/templates/template_data_absensi.xlsx"
                 class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2"
                 download>
                 <i class="fa-solid fa-file-excel"></i>
@@ -832,12 +868,9 @@ include '../../includes/header.php';
             <hr class="my-2">
 
             <div class="mb-2">
-              <label for="excelFileAbsensi" class="form-label fw-semibold mb-1">
-                Upload File Excel
-              </label>
+              <label for="excelFileAbsensi" class="form-label fw-semibold mb-1">Upload File Excel</label>
               <div class="position-relative d-flex align-items-center">
-                <input
-                  type="file"
+                <input type="file"
                   class="form-control"
                   id="excelFileAbsensi"
                   name="excel_file"
@@ -846,22 +879,11 @@ include '../../includes/header.php';
                   required
                   onchange="toggleClearButtonAbsensiImport()">
 
-                <button
-                  type="button"
+                <button type="button"
                   id="clearFileBtnAbsensiImport"
                   onclick="clearFileAbsensiImport()"
                   title="Hapus file"
-                  style="
-                    position:absolute;
-                    right:10px;
-                    background:none;
-                    border:none;
-                    color:#6c757d;
-                    font-size:20px;
-                    line-height:1;
-                    display:none;
-                    cursor:pointer;
-                  ">
+                  style="position:absolute;right:10px;background:none;border:none;color:#6c757d;font-size:20px;line-height:1;display:none;cursor:pointer;">
                   &times;
                 </button>
               </div>
@@ -870,18 +892,13 @@ include '../../includes/header.php';
                 Pastikan tidak mengubah urutan kolom di template.
               </small>
             </div>
-
           </div>
 
           <div class="modal-footer d-flex justify-content-between">
-            <button type="button"
-              class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
-              data-bs-dismiss="modal">
+            <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-dismiss="modal">
               <i class="fa fa-times"></i> Batal
             </button>
-            <button type="submit"
-              id="btnSubmitImportAbsensi"
-              class="btn btn-warning d-inline-flex align-items-center gap-2">
+            <button type="submit" id="btnSubmitImportAbsensi" class="btn btn-warning d-inline-flex align-items-center gap-2">
               <i class="fas fa-upload"></i> Upload &amp; Proses
             </button>
           </div>
@@ -890,7 +907,7 @@ include '../../includes/header.php';
     </div>
   </div>
 
-  <!-- MODAL KONFIRMASI HAPUS (single & bulk) -->
+  <!-- MODAL KONFIRMASI HAPUS -->
   <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
@@ -904,14 +921,8 @@ include '../../includes/header.php';
           <p id="confirmDeleteBody" class="mb-0">Yakin ingin menghapus data ini?</p>
         </div>
         <div class="modal-footer">
-          <button type="button"
-            class="btn btn-outline-secondary"
-            data-bs-dismiss="modal">
-            Batal
-          </button>
-          <button type="button"
-            class="btn btn-danger d-inline-flex align-items-center gap-2"
-            id="confirmDeleteBtn">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-danger d-inline-flex align-items-center gap-2" id="confirmDeleteBtn">
             <i class="bi bi-trash"></i> Hapus
           </button>
         </div>
@@ -946,8 +957,11 @@ include '../../includes/header.php';
       const checkAll = document.getElementById('checkAll');
       const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
       const perPageSelect = document.getElementById('perPage');
-      const paginationWrap = document.getElementById('paginationWrap');
+
+      // ✅ pagination sekarang UL langsung
+      const paginationUl = document.getElementById('paginationWrap');
       const pageInfo = document.getElementById('pageInfo');
+
       const toggleEditMode = document.getElementById('toggleEditMode');
       const bulkSaveBtn = document.getElementById('bulkSaveBtn');
 
@@ -987,9 +1001,7 @@ include '../../includes/header.php';
         pendingDeleteHandler = handler;
 
         confirmBtn.onclick = function() {
-          if (pendingDeleteHandler) {
-            pendingDeleteHandler();
-          }
+          if (pendingDeleteHandler) pendingDeleteHandler();
           if (typeof bootstrap !== 'undefined') {
             const m = bootstrap.Modal.getOrCreateInstance(confirmModalEl);
             m.hide();
@@ -1032,9 +1044,7 @@ include '../../includes/header.php';
 
       function attachCheckboxEvents() {
         const boxes = getRowCheckboxes();
-        boxes.forEach(box => {
-          box.addEventListener('change', updateBulkUI);
-        });
+        boxes.forEach(box => box.addEventListener('change', updateBulkUI));
         updateBulkUI();
       }
 
@@ -1086,6 +1096,7 @@ include '../../includes/header.php';
         });
       }
 
+      // ✅ Build pagination ke <ul id="paginationWrap">
       function buildPagination(totalRows, page, perPage) {
         currentTotalRows = totalRows;
         currentPage = page;
@@ -1094,55 +1105,49 @@ include '../../includes/header.php';
         const totalPages = Math.max(1, Math.ceil(totalRows / perPage));
         if (page > totalPages) page = totalPages;
 
-        let from, to, shown;
+        let shown;
         if (totalRows === 0) {
-          from = 0;
-          to = 0;
           shown = 0;
         } else {
-          from = (page - 1) * perPage + 1;
-          to = Math.min(page * perPage, totalRows);
+          const from = (page - 1) * perPage + 1;
+          const to = Math.min(page * perPage, totalRows);
           shown = to - from + 1;
         }
 
         const pageDisplayCurrent = totalRows === 0 ? 0 : page;
         const pageDisplayTotal = totalRows === 0 ? 0 : totalPages;
+
         pageInfo.innerHTML =
-          `Menampilkan <strong>${shown}</strong> dari <strong>${totalRows}</strong> data • 
-           Halaman <strong>${pageDisplayCurrent}</strong> / <strong>${pageDisplayTotal}</strong>`;
+          `Menampilkan <strong>${shown}</strong> dari <strong>${totalRows}</strong> data • Halaman <strong>${pageDisplayCurrent}</strong> / <strong>${pageDisplayTotal}</strong>`;
 
-        let html = '<ul class="pagination mb-0">';
+        const makeLi = (disabled, target, text, active = false) => {
+          const cls = ['page-item', disabled ? 'disabled' : '', active ? 'active' : ''].filter(Boolean).join(' ');
+          const aAttr = disabled ? 'tabindex="-1"' : `data-page="${target}"`;
+          return `<li class="${cls}"><a class="page-link" href="#" ${aAttr}>${text}</a></li>`;
+        };
 
+        let html = '';
         const isFirst = (page <= 1);
         const isLast = (page >= totalPages);
 
-        html += `<li class="page-item${isFirst ? ' disabled' : ''}">
-                   <button class="page-link page-btn" type="button" data-page="1">&laquo; First</button>
-                 </li>`;
+        html += makeLi(isFirst, 1, '« First');
+        html += makeLi(isFirst, Math.max(1, page - 1), '‹ Prev');
 
-        html += `<li class="page-item${isFirst ? ' disabled' : ''}">
-                   <button class="page-link page-btn" type="button" data-page="${page - 1}">&lsaquo; Prev</button>
-                 </li>`;
+        const start = Math.max(1, page - 2);
+        const end = Math.min(totalPages, page + 2);
+        for (let i = start; i <= end; i++) {
+          html += makeLi(false, i, String(i), i === page);
+        }
 
-        html += `<li class="page-item active">
-                   <button class="page-link" type="button" data-page="${page}">${page}</button>
-                 </li>`;
+        html += makeLi(isLast, Math.min(totalPages, page + 1), 'Next ›');
+        html += makeLi(isLast, totalPages, 'Last »');
 
-        html += `<li class="page-item${isLast ? ' disabled' : ''}">
-                   <button class="page-link page-btn" type="button" data-page="${page + 1}">Next &rsaquo;</button>
-                 </li>`;
+        paginationUl.innerHTML = html;
 
-        html += `<li class="page-item${isLast ? ' disabled' : ''}">
-                   <button class="page-link page-btn" type="button" data-page="${totalPages}">Last &raquo;</button>
-                 </li>`;
-
-        html += '</ul>';
-
-        paginationWrap.innerHTML = html;
-
-        paginationWrap.querySelectorAll('.page-btn').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const target = parseInt(btn.getAttribute('data-page') || '1', 10);
+        paginationUl.querySelectorAll('a[data-page]').forEach(a => {
+          a.addEventListener('click', (e) => {
+            e.preventDefault();
+            const target = parseInt(a.getAttribute('data-page') || '1', 10);
             if (isNaN(target) || target < 1 || target === currentPage) return;
             doSearch(currentQuery, target, currentPerPage, true);
           });
@@ -1164,7 +1169,6 @@ include '../../includes/header.php';
         if (boxes.length === 0) return;
 
         const count = boxes.length;
-
         const form = document.createElement('form');
         form.method = 'post';
         form.action = 'hapus_data_absensi.php';
@@ -1196,7 +1200,6 @@ include '../../includes/header.php';
         bulkSaveBtn.disabled = !editMode;
       });
 
-      // Simpan perubahan (submit form bulk edit)
       bulkSaveBtn.addEventListener('click', (e) => {
         if (!editMode) {
           e.preventDefault();
@@ -1257,6 +1260,7 @@ include '../../includes/header.php';
               const pg = parseInt(metaRow.getAttribute('data-page') || '1', 10);
               const pp = parseInt(metaRow.getAttribute('data-per') || String(currentPerPage), 10);
               metaRow.parentNode.removeChild(metaRow);
+
               buildPagination(
                 isNaN(total) ? 0 : total,
                 isNaN(pg) ? 1 : pg,
@@ -1266,7 +1270,7 @@ include '../../includes/header.php';
 
             attachCheckboxEvents();
             attachSingleDeleteEvents();
-            applyEditModeToTable(); // supaya mode edit tetap aktif setelah pencarian
+            applyEditModeToTable();
             finishLoading();
           })
           .catch(e => {
@@ -1316,18 +1320,17 @@ include '../../includes/header.php';
         });
       }
 
-      // Inisialisasi awal
+      // init
       attachCheckboxEvents();
       attachSingleDeleteEvents();
       buildPagination(currentTotalRows, currentPage, currentPerPage);
-      applyEditModeToTable(); // default: off
+      applyEditModeToTable();
 
       if (tbody) tbody.classList.add('tbody-loaded');
     })();
   </script>
 
   <script>
-    // Auto-hide alert + tombol X
     document.addEventListener('DOMContentLoaded', () => {
       const alerts = document.querySelectorAll('.alert');
       if (!alerts.length) return;

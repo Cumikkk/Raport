@@ -185,9 +185,7 @@ if ($totalRows === 0) {
 
   /* TRANSISI TABEL + OVERLAY LOADING */
   #userTbody {
-    transition:
-      opacity 0.25s ease,
-      transform 0.25s ease;
+    transition: opacity 0.25s ease, transform 0.25s ease;
   }
 
   #userTbody.tbody-loading {
@@ -279,7 +277,7 @@ if ($totalRows === 0) {
     color: #333 !important;
   }
 
-  /* Styling dropdown per halaman supaya mirip searchbox */
+  /* Styling dropdown per halaman */
   #perPage {
     border: 1px solid var(--ring);
     border-radius: 10px;
@@ -298,19 +296,13 @@ if ($totalRows === 0) {
     font-size: 0.95rem;
   }
 
-  /* ALERT – global & modal (animasi sama) */
+  /* ALERT */
   .alert {
     padding: 12px 14px;
     border-radius: 12px;
     margin-bottom: 20px;
     font-size: 14px;
-    transition:
-      opacity 0.4s ease,
-      transform 0.4s ease,
-      max-height 0.4s ease,
-      margin 0.4s ease,
-      padding-top 0.4s ease,
-      padding-bottom 0.4s ease;
+    transition: opacity 0.4s ease, transform 0.4s ease, max-height 0.4s ease, margin 0.4s ease, padding-top 0.4s ease, padding-bottom 0.4s ease;
     max-height: 200px;
     overflow: hidden;
     position: relative;
@@ -350,6 +342,49 @@ if ($totalRows === 0) {
 
   .alert .close-btn:hover {
     opacity: 1;
+  }
+
+  /* ✅ PAGINATION GROUP (Referensi 2) */
+  .pager-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .pager-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+
+    padding: 10px 12px;
+    border: 1px solid rgba(0, 0, 0, .12);
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  .pager-group .pagination {
+    margin: 0;
+    justify-content: center;
+  }
+
+  .pager-sep {
+    width: 1px;
+    height: 34px;
+    background: rgba(0, 0, 0, .15);
+  }
+
+  .per-select {
+    width: 120px;
+    min-width: 120px;
+  }
+
+  .page-info-center {
+    text-align: center;
+    width: 100%;
   }
 
   /* Mobile “card table” */
@@ -397,6 +432,15 @@ if ($totalRows === 0) {
       flex-direction: column;
       align-items: stretch !important;
     }
+
+    /* di mobile: separator disembunyikan */
+    .pager-sep {
+      display: none;
+    }
+
+    .pager-group {
+      width: 100%;
+    }
   }
 
   .searchbox:focus-within {
@@ -435,23 +479,13 @@ if ($totalRows === 0) {
             </div>
 
             <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-2">
-              <!-- Search + per page -->
+              <!-- ✅ Search saja (perPage dipindah ke bawah) -->
               <div class="d-flex search-perpage-row align-items-md-center gap-2 flex-grow-1">
                 <div class="search-wrap flex-grow-1">
                   <div class="searchbox" role="search" aria-label="Pencarian user">
                     <i class="bi bi-search icon"></i>
                     <input type="text" id="searchInput" placeholder="Ketik untuk mencari" autofocus>
                   </div>
-                </div>
-
-                <div class="d-flex align-items-center gap-2">
-                  <select id="perPage" class="form-select form-select-sm" style="width:auto;">
-                    <?php foreach ($allowedPer as $opt): ?>
-                      <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>>
-                        <?= $opt ?>/hal
-                      </option>
-                    <?php endforeach; ?>
-                  </select>
                 </div>
               </div>
 
@@ -523,16 +557,13 @@ if ($totalRows === 0) {
                               <i class="bi bi-eye"></i>
                             </button>
                           </div>
-                        <?php
-                        }
-                        ?>
+                        <?php } ?>
                       </td>
                       <td data-label="Role">
                         <span class="badge role-badge"><?= htmlspecialchars($row['role_user']) ?></span>
                       </td>
                       <td data-label="Aksi">
                         <div class="d-flex gap-2 justify-content-center flex-wrap">
-                          <!-- Edit pakai modal -->
                           <button type="button"
                             class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-edit-user"
                             data-id="<?= (int)$row['id_user'] ?>"
@@ -542,7 +573,6 @@ if ($totalRows === 0) {
                             <i class="bi bi-pencil-square"></i> Edit
                           </button>
 
-                          <!-- Hapus pakai modal konfirmasi -->
                           <button type="button"
                             class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-delete-single"
                             data-href="hapus_data_user.php?id=<?= (int)$row['id_user'] ?>"
@@ -567,15 +597,34 @@ if ($totalRows === 0) {
             </button>
           </div>
 
-          <!-- Info & Pagination -->
-          <div class="mt-3 d-flex flex-column align-items-center gap-1">
-            <nav id="paginationWrap" class="d-flex justify-content-center"></nav>
-            <div id="pageInfo" class="page-info-text text-muted text-center mt-2">
-              Menampilkan <?= $shown ?> dari <?= $totalRows ?> data • Halaman <?= $pageDisplayCurrent ?> / <?= $pageDisplayTotal ?>
-            </div>
-          </div>
-        </div>
+          <!-- ✅ Pagination + perPage digabung (Referensi 2) -->
+          <nav aria-label="Page navigation" class="mt-3">
+            <div class="pager-area">
+              <div class="pager-group">
+                <!-- kiri: pagination (UL langsung) -->
+                <ul class="pagination mb-0" id="paginationWrap"></ul>
 
+                <div class="pager-sep" aria-hidden="true"></div>
+
+                <!-- kanan: per halaman -->
+                <select id="perPage" class="form-select form-select-sm per-select">
+                  <?php foreach ($allowedPer as $opt): ?>
+                    <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>>
+                      <?= $opt ?>/hal
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+
+              <!-- info bawah: center -->
+              <p id="pageInfo" class="page-info-text text-muted mb-0 page-info-center">
+                Menampilkan <strong><?= $shown ?></strong> dari <strong><?= $totalRows ?></strong> data •
+                Halaman <strong><?= $pageDisplayCurrent ?></strong> / <strong><?= $pageDisplayTotal ?></strong>
+              </p>
+            </div>
+          </nav>
+
+        </div>
       </div><!-- /.card -->
     </div><!-- /.col-12 -->
   </div><!-- /.row -->
@@ -590,7 +639,6 @@ if ($totalRows === 0) {
         </div>
         <form action="proses_tambah_data_user.php" method="POST" autocomplete="off">
           <div class="modal-body">
-            <!-- ALERT ERROR DI DALAM MODAL TAMBAH -->
             <div id="addUserAlert" class="alert alert-danger d-none mb-3"></div>
 
             <div class="mb-3">
@@ -616,33 +664,19 @@ if ($totalRows === 0) {
 
             <div class="mb-3">
               <label for="add_username" class="form-label fw-semibold">Username</label>
-              <input
-                type="text"
-                id="add_username"
-                name="username"
-                maxlength="50"
-                class="form-control"
-                required>
+              <input type="text" id="add_username" name="username" maxlength="50" class="form-control" required>
             </div>
 
             <div class="mb-3">
               <label for="add_password_user" class="form-label fw-semibold">Password</label>
-              <input
-                type="password"
-                id="add_password_user"
-                name="password_user"
-                class="form-control"
-                required>
+              <input type="password" id="add_password_user" name="password_user" class="form-control" required>
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button"
-              class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
-              data-bs-dismiss="modal">
+            <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-dismiss="modal">
               <i class="bi bi-x-lg"></i> Batal
             </button>
-            <button type="submit"
-              class="btn btn-brand d-inline-flex align-items-center gap-2">
+            <button type="submit" class="btn btn-brand d-inline-flex align-items-center gap-2">
               <i class="bi bi-check2-circle"></i> Simpan
             </button>
           </div>
@@ -662,7 +696,6 @@ if ($totalRows === 0) {
         <form action="proses_edit_data_user.php" method="POST" autocomplete="off">
           <input type="hidden" name="id_user" id="edit_id_user">
           <div class="modal-body">
-            <!-- ALERT ERROR DI DALAM MODAL EDIT -->
             <div id="editUserAlert" class="alert alert-danger d-none mb-3"></div>
 
             <div class="mb-3">
@@ -688,33 +721,19 @@ if ($totalRows === 0) {
 
             <div class="mb-3">
               <label for="edit_username" class="form-label fw-semibold">Username</label>
-              <input
-                type="text"
-                id="edit_username"
-                name="username"
-                maxlength="50"
-                class="form-control"
-                required>
+              <input type="text" id="edit_username" name="username" maxlength="50" class="form-control" required>
             </div>
 
             <div class="mb-3">
               <label for="edit_password_user" class="form-label fw-semibold">Password (opsional)</label>
-              <input
-                type="password"
-                id="edit_password_user"
-                name="password_user"
-                class="form-control"
-                placeholder="Kosongkan jika tidak ingin mengubah password">
+              <input type="password" id="edit_password_user" name="password_user" class="form-control" placeholder="Kosongkan jika tidak ingin mengubah password">
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button"
-              class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
-              data-bs-dismiss="modal">
+            <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-dismiss="modal">
               <i class="bi bi-x-lg"></i> Batal
             </button>
-            <button type="submit"
-              class="btn btn-brand d-inline-flex align-items-center gap-2">
+            <button type="submit" class="btn btn-brand d-inline-flex align-items-center gap-2">
               <i class="bi bi-save"></i> Simpan Perubahan
             </button>
           </div>
@@ -737,14 +756,8 @@ if ($totalRows === 0) {
           <p id="confirmDeleteBody" class="mb-0">Yakin ingin menghapus data ini?</p>
         </div>
         <div class="modal-footer">
-          <button type="button"
-            class="btn btn-outline-secondary"
-            data-bs-dismiss="modal">
-            Batal
-          </button>
-          <button type="button"
-            class="btn btn-danger d-inline-flex align-items-center gap-2"
-            id="confirmDeleteBtn">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-danger d-inline-flex align-items-center gap-2" id="confirmDeleteBtn">
             <i class="bi bi-trash"></i> Hapus
           </button>
         </div>
@@ -763,9 +776,13 @@ if ($totalRows === 0) {
 
     const checkAll = document.getElementById('checkAll');
     const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+
     const perPageSelect = document.getElementById('perPage');
-    const paginationWrap = document.getElementById('paginationWrap');
+
+    // ✅ sekarang paginationWrap adalah UL
+    const paginationUl = document.getElementById('paginationWrap');
     const pageInfo = document.getElementById('pageInfo');
+
     const csrfToken = '<?= htmlspecialchars($csrf, ENT_QUOTES, "UTF-8"); ?>';
 
     const confirmModalEl = document.getElementById('confirmDeleteModal');
@@ -785,7 +802,6 @@ if ($totalRows === 0) {
     let currentPerPage = <?= (int)$perPage ?>;
     let currentTotalRows = <?= (int)$totalRows ?>;
 
-    // handler yang akan dijalankan ketika user klik "Hapus" di modal
     let pendingDeleteHandler = null;
 
     function scrollToTable() {
@@ -798,9 +814,7 @@ if ($totalRows === 0) {
 
     function showDeleteConfirm(message, handler) {
       if (!confirmModalEl || !confirmBodyEl || !confirmBtn) {
-        if (confirm(message)) {
-          handler();
-        }
+        if (confirm(message)) handler();
         return;
       }
 
@@ -808,9 +822,7 @@ if ($totalRows === 0) {
       pendingDeleteHandler = handler;
 
       confirmBtn.onclick = function() {
-        if (pendingDeleteHandler) {
-          pendingDeleteHandler();
-        }
+        if (pendingDeleteHandler) pendingDeleteHandler();
         if (typeof bootstrap !== 'undefined') {
           const m = bootstrap.Modal.getOrCreateInstance(confirmModalEl);
           m.hide();
@@ -821,9 +833,7 @@ if ($totalRows === 0) {
         const m = bootstrap.Modal.getOrCreateInstance(confirmModalEl);
         m.show();
       } else {
-        if (confirm(message)) {
-          handler();
-        }
+        if (confirm(message)) handler();
       }
     }
 
@@ -855,13 +865,10 @@ if ($totalRows === 0) {
 
     function attachCheckboxEvents() {
       const boxes = getRowCheckboxes();
-      boxes.forEach(box => {
-        box.addEventListener('change', updateBulkUI);
-      });
+      boxes.forEach(box => box.addEventListener('change', updateBulkUI));
       updateBulkUI();
     }
 
-    // Toggle password di tabel
     function attachPasswordToggleEvents() {
       const buttons = tbody.querySelectorAll('.toggle-password');
       buttons.forEach(btn => {
@@ -893,16 +900,12 @@ if ($totalRows === 0) {
       });
     }
 
-    // Tutup semua alert global (atas) – dipakai saat klik Edit / Hapus
     function dismissGlobalAlerts() {
       if (!globalAlertContainer) return;
       const alerts = globalAlertContainer.querySelectorAll('.alert');
-      alerts.forEach(alert => {
-        alert.classList.add('alert-hide');
-      });
+      alerts.forEach(alert => alert.classList.add('alert-hide'));
     }
 
-    // EDIT: pakai modal Bootstrap saat tombol Edit diklik
     function attachEditModalEvents() {
       const editButtons = document.querySelectorAll('.btn-edit-user');
       const modalEl = document.getElementById('modalEditUser');
@@ -917,8 +920,6 @@ if ($totalRows === 0) {
       editButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.preventDefault();
-
-          // Tutup alert global di atas (kalau ada)
           dismissGlobalAlerts();
 
           const id = btn.getAttribute('data-id') || '';
@@ -933,21 +934,17 @@ if ($totalRows === 0) {
           if (inputPass) inputPass.value = '';
 
           if (typeof bootstrap !== 'undefined') {
-            const editModal = bootstrap.Modal.getOrCreateInstance(modalEl);
-            editModal.show();
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
           }
         });
       });
     }
 
-    // HAPUS SATU USER – pakai modal konfirmasi
     function attachSingleDeleteEvents() {
       const buttons = document.querySelectorAll('.btn-delete-single');
       buttons.forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.preventDefault();
-
-          // Tutup alert global di atas (kalau ada)
           dismissGlobalAlerts();
 
           const href = btn.getAttribute('data-href');
@@ -960,6 +957,7 @@ if ($totalRows === 0) {
       });
     }
 
+    // ✅ Build pagination ke <ul id="paginationWrap"> (samakan seperti Absensi)
     function buildPagination(totalRows, page, perPage) {
       currentTotalRows = totalRows;
       currentPage = page;
@@ -968,64 +966,55 @@ if ($totalRows === 0) {
       const totalPages = Math.max(1, Math.ceil(totalRows / perPage));
       if (page > totalPages) page = totalPages;
 
-      let from, to, shown;
+      let shown;
       if (totalRows === 0) {
-        from = 0;
-        to = 0;
         shown = 0;
       } else {
-        from = (page - 1) * perPage + 1;
-        to = Math.min(page * perPage, totalRows);
+        const from = (page - 1) * perPage + 1;
+        const to = Math.min(page * perPage, totalRows);
         shown = to - from + 1;
       }
 
       const pageDisplayCurrent = totalRows === 0 ? 0 : page;
       const pageDisplayTotal = totalRows === 0 ? 0 : totalPages;
+
       pageInfo.innerHTML =
-        `Menampilkan <strong>${shown}</strong> dari <strong>${totalRows}</strong> data • 
-        Halaman <strong>${pageDisplayCurrent}</strong> / <strong>${pageDisplayTotal}</strong>`;
+        `Menampilkan <strong>${shown}</strong> dari <strong>${totalRows}</strong> data • Halaman <strong>${pageDisplayCurrent}</strong> / <strong>${pageDisplayTotal}</strong>`;
 
-      let html = '<ul class="pagination mb-0">';
+      const makeLi = (disabled, target, text, active = false) => {
+        const cls = ['page-item', disabled ? 'disabled' : '', active ? 'active' : ''].filter(Boolean).join(' ');
+        const aAttr = disabled ? 'tabindex="-1"' : `data-page="${target}"`;
+        return `<li class="${cls}"><a class="page-link" href="#" ${aAttr}>${text}</a></li>`;
+      };
 
+      let html = '';
       const isFirst = (page <= 1);
       const isLast = (page >= totalPages);
 
-      html += `<li class="page-item${isFirst ? ' disabled' : ''}">
-                 <button class="page-link page-btn" type="button" data-page="1">&laquo; First</button>
-               </li>`;
+      html += makeLi(isFirst, 1, '« First');
+      html += makeLi(isFirst, Math.max(1, page - 1), '‹ Prev');
 
-      html += `<li class="page-item${isFirst ? ' disabled' : ''}">
-                 <button class="page-link page-btn" type="button" data-page="${page - 1}">&lsaquo; Prev</button>
-               </li>`;
+      const start = Math.max(1, page - 2);
+      const end = Math.min(totalPages, page + 2);
+      for (let i = start; i <= end; i++) {
+        html += makeLi(false, i, String(i), i === page);
+      }
 
-      html += `<li class="page-item active">
-                 <button class="page-link" type="button" data-page="${page}">${page}</button>
-               </li>`;
+      html += makeLi(isLast, Math.min(totalPages, page + 1), 'Next ›');
+      html += makeLi(isLast, totalPages, 'Last »');
 
-      html += `<li class="page-item${isLast ? ' disabled' : ''}">
-                 <button class="page-link page-btn" type="button" data-page="${page + 1}">Next &rsaquo;</button>
-               </li>`;
+      paginationUl.innerHTML = html;
 
-      html += `<li class="page-item${isLast ? ' disabled' : ''}">
-                 <button class="page-link page-btn" type="button" data-page="${totalPages}">Last &raquo;</button>
-               </li>`;
-
-      html += '</ul>';
-
-      paginationWrap.innerHTML = html;
-
-      paginationWrap.querySelectorAll('.page-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const target = parseInt(btn.getAttribute('data-page') || '1', 10);
+      paginationUl.querySelectorAll('a[data-page]').forEach(a => {
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          const target = parseInt(a.getAttribute('data-page') || '1', 10);
           if (isNaN(target) || target < 1 || target === currentPage) return;
-          // Pagination: pakai overlay + scroll halus
           doSearch(currentQuery, target, currentPerPage, true);
         });
       });
 
-      if (perPageSelect) {
-        perPageSelect.value = String(perPage);
-      }
+      if (perPageSelect) perPageSelect.value = String(perPage);
     }
 
     checkAll.addEventListener('change', () => {
@@ -1036,7 +1025,6 @@ if ($totalRows === 0) {
       updateBulkUI();
     });
 
-    // HAPUS TERPILIH – lewat modal konfirmasi
     bulkDeleteBtn.addEventListener('click', () => {
       const boxes = getRowCheckboxes().filter(b => b.checked);
       if (boxes.length === 0) return;
@@ -1068,25 +1056,19 @@ if ($totalRows === 0) {
     });
 
     function setLoading(useScroll) {
-      if (useScroll) {
-        scrollToTable();
-      }
+      if (useScroll) scrollToTable();
       if (tbody) {
         tbody.classList.remove('tbody-loaded');
         tbody.classList.add('tbody-loading');
       }
-      if (loadingOverlay) {
-        loadingOverlay.classList.add('show');
-      }
+      if (loadingOverlay) loadingOverlay.classList.add('show');
     }
 
     function finishLoading() {
-      if (loadingOverlay) {
-        loadingOverlay.classList.remove('show');
-      }
+      if (loadingOverlay) loadingOverlay.classList.remove('show');
       if (!tbody) return;
       tbody.classList.remove('tbody-loading');
-      void tbody.offsetHeight; // reflow kecil
+      void tbody.offsetHeight;
       tbody.classList.add('tbody-loaded');
     }
 
@@ -1123,6 +1105,7 @@ if ($totalRows === 0) {
             const pg = parseInt(metaRow.getAttribute('data-page') || '1', 10);
             const pp = parseInt(metaRow.getAttribute('data-per') || String(currentPerPage), 10);
             metaRow.parentNode.removeChild(metaRow);
+
             buildPagination(
               isNaN(total) ? 0 : total,
               isNaN(pg) ? 1 : pg,
@@ -1144,7 +1127,7 @@ if ($totalRows === 0) {
         });
     }
 
-    // ==== Helper alert modal & global ====
+    // ==== Helper alert modal & global (tetap) ====
     function clearModalAlert(mode) {
       const box = (mode === 'add') ? addUserAlert : editUserAlert;
       if (!box) return;
@@ -1212,7 +1195,6 @@ if ($totalRows === 0) {
       }
     }
 
-    // ==== Submit form via AJAX ====
     function handleFormSubmit(form, mode) {
       clearModalAlert(mode);
 
@@ -1245,23 +1227,17 @@ if ($totalRows === 0) {
             return;
           }
 
-          // sukses: tutup modal, refresh tabel, tampilkan alert global
           if (typeof bootstrap !== 'undefined') {
             const modalEl = mode === 'add' ?
               document.getElementById('modalTambahUser') :
               document.getElementById('modalEditUser');
-            if (modalEl) {
-              bootstrap.Modal.getOrCreateInstance(modalEl).hide();
-            }
+            if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).hide();
           }
 
           showTopAlert('success', data.message || 'Berhasil menyimpan data.');
-          // refresh tabel: pakai overlay + scroll halus
           doSearch(currentQuery, currentPage, currentPerPage, true);
 
-          if (mode === 'add') {
-            form.reset();
-          }
+          if (mode === 'add') form.reset();
         })
         .catch(err => {
           console.error(err);
@@ -1275,11 +1251,9 @@ if ($totalRows === 0) {
         });
     }
 
-    // ==== Event input & perPage ====
     input.addEventListener('input', () => {
       clearTimeout(typingTimer);
       typingTimer = setTimeout(() => {
-        // Search: transisi halus tanpa scroll
         doSearch(input.value, 1, currentPerPage, false);
       }, debounceMs);
     });
@@ -1289,24 +1263,19 @@ if ($totalRows === 0) {
         const val = parseInt(perPageSelect.value || '10', 10);
         if (isNaN(val) || val <= 0) return;
         currentPerPage = val;
-        // Ganti per halaman: overlay + scroll
         doSearch(currentQuery, 1, currentPerPage, true);
       });
     }
 
-    // Inisialisasi pertama kali
+    // init
     attachCheckboxEvents();
     attachPasswordToggleEvents();
     attachEditModalEvents();
     attachSingleDeleteEvents();
     buildPagination(currentTotalRows, currentPage, currentPerPage);
 
-    // pastikan state awal tbody dianggap "loaded"
-    if (tbody) {
-      tbody.classList.add('tbody-loaded');
-    }
+    if (tbody) tbody.classList.add('tbody-loaded');
 
-    // Intercept submit form Tambah & Edit → AJAX
     const formAdd = document.querySelector('#modalTambahUser form');
     if (formAdd) {
       formAdd.addEventListener('submit', (e) => {
@@ -1326,7 +1295,6 @@ if ($totalRows === 0) {
 </script>
 
 <script>
-  // Auto-hide alert global + tombol X
   document.addEventListener('DOMContentLoaded', () => {
     const container = document.getElementById('globalAlertContainer');
     if (!container) return;
@@ -1352,7 +1320,6 @@ if ($totalRows === 0) {
 
 <?php include '../includes/footer.php'; ?>
 
-<!-- Fallback lama (kalau bukan AJAX, misal JS mati) tetap buka modal berdasarkan ?modal=... -->
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     try {
@@ -1380,9 +1347,7 @@ if ($totalRows === 0) {
           alertBox.classList.remove('d-none');
         }
         const btn = document.querySelector('.btn-edit-user[data-id="' + id + '"]');
-        if (btn) {
-          btn.click();
-        }
+        if (btn) btn.click();
       }
     } catch (e) {
       console.error(e);
