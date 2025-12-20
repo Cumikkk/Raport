@@ -27,6 +27,49 @@ $kategoriList = array_values(array_unique($kategoriList));
 <body>
   <?php include '../../includes/navbar.php'; ?>
 
+  <style>
+    .search-wrap {
+      max-width: 300px;
+      width: 100%;
+    }
+
+    .searchbox {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      border: 1px solid #9aa3af;
+      border-radius: 10px;
+      background: #fff;
+      padding: 6px 10px;
+    }
+
+    .searchbox .icon {
+      color: var(--muted);
+    }
+
+    .searchbox input {
+      border: none;
+      outline: none;
+      width: 100%;
+      font-size: 14px;
+      color: var(--ink);
+    }
+
+    .searchbox input::placeholder {
+      color: #9aa3af;
+    }
+
+    .search-perpage-row {
+      flex-direction: column;
+      align-items: stretch !important;
+    }
+
+    .searchbox:focus-within {
+      box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
+    }
+  </style>
+
   <main class="content">
     <div class="cards row" style="margin-top:-50px;">
       <div class="col-12">
@@ -40,19 +83,19 @@ $kategoriList = array_values(array_unique($kategoriList));
               <div class="d-flex flex-wrap gap-2 tombol-aksi">
                 <!-- Tombol TAMBAH (buka modal tambah mapel) -->
                 <button type="button"
-                        class="btn btn-primary btn-md d-flex align-items-center gap-1 p-2 pe-3"
-                        style="border-radius: 5px;"
-                        data-bs-toggle="modal"
-                        data-bs-target="#modalTambahMapel">
+                  class="btn btn-primary btn-md d-flex align-items-center gap-1 p-2 pe-3"
+                  style="border-radius: 5px;"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalTambahMapel">
                   <i class="fa-solid fa-plus fa-lg"></i>
                   Tambah
                 </button>
 
                 <!-- Tombol IMPORT (buka modal import) -->
                 <button type="button"
-                        class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2"
-                        data-bs-toggle="modal"
-                        data-bs-target="#modalImportMapel">
+                  class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalImportMapel">
                   <i class="fa-solid fa-file-arrow-down fa-lg"></i>
                   <span>Import</span>
                 </button>
@@ -63,6 +106,12 @@ $kategoriList = array_values(array_unique($kategoriList));
                   <span>Export</span>
                 </a>
               </div>
+            </div>
+          </div>
+          <div class="search-wrap flex-grow-1">
+            <div class="searchbox" role="search" aria-label="Pencarian guru">
+              <i class="bi bi-search icon"></i>
+              <input type="text" id="searchInput" placeholder="Ketik untuk mencari" autofocus>
             </div>
           </div>
 
@@ -298,7 +347,7 @@ $kategoriList = array_values(array_unique($kategoriList));
 
       dataMapel[category].forEach((mapel, index) => {
         const div = document.createElement('div');
-        div.className = 'd-flex justify-content-between align-items-center border rounded p-2 bg-white shadow-sm mb-2';
+        div.className = 'mapel-item d-flex justify-content-between align-items-center border rounded p-2 bg-white shadow-sm mb-2';
 
         div.innerHTML = `
         <div>
@@ -311,7 +360,7 @@ $kategoriList = array_values(array_unique($kategoriList));
           <button class="btn btn-sm btn-danger" onclick="hapusMapel(${mapel.id_mata_pelajaran})">
             <i class="bi bi-trash"></i> Hapus
           </button>
-        </div>
+        </div
       `;
         mapelContainer.appendChild(div);
       });
@@ -348,6 +397,18 @@ $kategoriList = array_values(array_unique($kategoriList));
     if (kategoriList.length > 0) {
       showMapel(kategoriList[0]);
     }
+
+    document.getElementById('searchInput').addEventListener('keyup', function() {
+      const keyword = this.value.toLowerCase();
+      const items = document.querySelectorAll('#mapelContainer .mapel-item');
+
+      items.forEach(item => {
+        item.classList.toggle(
+          'd-none',
+          !item.textContent.toLowerCase().includes(keyword)
+        );
+      });
+    });
   </script>
 
   <style>

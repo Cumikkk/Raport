@@ -362,6 +362,7 @@ $data = $res->fetch_assoc() ?: [];
       background: #fff;
       font-weight: 600;
       cursor: pointer;
+      transition: background-color .15s ease, opacity .15s ease, transform .15s ease;
     }
 
     .btn-lite:hover { background: #f9fafb; }
@@ -376,6 +377,42 @@ $data = $res->fetch_assoc() ?: [];
       background: #16a34a;
       color: #fff;
       border: none;
+    }
+
+    /* ==================================================
+       FIX: tombol Batal & Gunakan (Crop) jangan berubah saat hover/focus
+       - karena mereka punya background beda (merah/hijau), kita kunci warnanya
+       ================================================== */
+    #btnCancelCrop,
+    #btnApplyCrop {
+      transition: none !important; /* matikan animasi yg bikin terasa hover */
+    }
+
+    /* hover */
+    #btnCancelCrop:hover {
+      background: #dc2626 !important;
+      color: #fff !important;
+      opacity: 1 !important;
+      transform: none !important;
+      box-shadow: none !important;
+      filter: none !important;
+    }
+    #btnApplyCrop:hover {
+      background: #16a34a !important;
+      color: #fff !important;
+      opacity: 1 !important;
+      transform: none !important;
+      box-shadow: none !important;
+      filter: none !important;
+    }
+
+    /* focus (kadang terlihat seperti hover saat klik) */
+    #btnCancelCrop:focus,
+    #btnCancelCrop:focus-visible,
+    #btnApplyCrop:focus,
+    #btnApplyCrop:focus-visible {
+      outline: none !important;
+      box-shadow: none !important;
     }
   </style>
 
@@ -541,7 +578,8 @@ $data = $res->fetch_assoc() ?: [];
                   <div class="hint">Gambar pratinjau akan berubah saat Anda memilih file (hasil crop).</div>
                 </div>
 
-                <hr style="border:none;border-top:1px solid #eee;margin:18px 0">
+                <hr style="border:none;border-top:1px solid #eee;margin:10px 0 12px">
+
                 <h2 class="section-title">Ringkasan</h2>
                 <div style="font-size:14px;color:#374151;display:grid;gap:8px">
                   <div><strong>Nama:</strong> <?= htmlspecialchars($data['nama_sekolah'] ?? '-') ?></div>
@@ -826,8 +864,6 @@ $data = $res->fetch_assoc() ?: [];
       btnCancel && btnCancel.addEventListener('click', cancelCrop);
       btnClose && btnClose.addEventListener('click', cancelCrop);
 
-      // klik luar box (opsional): tidak aku aktifkan biar tidak kebablasan, tetap via tombol
-
       // apply crop -> replace file input dengan hasil crop + update preview
       btnApply && btnApply.addEventListener('click', () => {
         if (!cropper || !lastSelectedFile) return;
@@ -865,7 +901,6 @@ $data = $res->fetch_assoc() ?: [];
           cleanupUrl();
           closeOverlay();
 
-          // lastSelectedFile biar aman
           lastSelectedFile = null;
         }, mime, 0.92);
       });
@@ -879,12 +914,10 @@ $data = $res->fetch_assoc() ?: [];
       if (!alerts.length) return;
 
       alerts.forEach(alert => {
-        // Auto hilang setelah 4 detik
         const timer = setTimeout(() => {
           alert.classList.add('alert-hide');
         }, 4000);
 
-        // Tombol X untuk menutup
         const close = alert.querySelector('.close-btn');
         if (close) {
           close.addEventListener('click', (e) => {
