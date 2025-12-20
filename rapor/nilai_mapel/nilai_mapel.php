@@ -453,7 +453,7 @@ $q->close();
 
             <div class="mt-3 d-flex justify-content-start">
               <a href="mapel.php" class="btn btn-danger px-4 py-2 d-flex align-items-center gap-2" style="border-radius: 6px;">
-                <i class="bi bi-arrow-left-circle"></i>Back
+                <i class="bi bi-arrow-left-circle"></i>Kembali
               </a>
             </div>
 
