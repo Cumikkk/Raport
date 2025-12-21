@@ -10,19 +10,6 @@ if (empty($_SESSION['csrf'])) {
 }
 $csrf = $_SESSION['csrf'] ?? '';
 
-/* Join catatan terbaru per siswa dari cetak_rapor */
-$joinCrLatest = "
-  LEFT JOIN (
-    SELECT crx.id_siswa, crx.catatan_wali_kelas
-    FROM cetak_rapor crx
-    INNER JOIN (
-      SELECT id_siswa, MAX(id_cetak_rapor) AS max_id
-      FROM cetak_rapor
-      GROUP BY id_siswa
-    ) last ON last.id_siswa = crx.id_siswa AND last.max_id = crx.id_cetak_rapor
-  ) cr ON s.id_siswa = cr.id_siswa
-";
-
 // ===== Parameter =====
 $q       = isset($_GET['q']) ? trim($_GET['q']) : '';
 $perPage = isset($_GET['per']) ? (int)$_GET['per'] : 10;
@@ -35,7 +22,6 @@ if ($q !== '') {
   $sqlCount = "SELECT COUNT(*) AS total
                FROM siswa s
                LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
-               $joinCrLatest
                WHERE (s.nama_siswa LIKE CONCAT('%', ?, '%')
                       OR s.no_absen_siswa LIKE CONCAT('%', ?, '%')
                       OR s.no_induk_siswa LIKE CONCAT('%', ?, '%'))";
@@ -47,8 +33,7 @@ if ($q !== '') {
 } else {
   $sqlCount = "SELECT COUNT(*) AS total
                FROM siswa s
-               LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
-               $joinCrLatest";
+               LEFT JOIN kelas k ON s.id_kelas = k.id_kelas";
   $stmtC = $koneksi->prepare($sqlCount);
   if ($stmtC === false) {
     die('Prepare failed: ' . $koneksi->error);
@@ -69,11 +54,9 @@ if ($q !== '') {
             s.no_absen_siswa,
             s.nama_siswa,
             s.no_induk_siswa,
-            k.nama_kelas,
-            cr.catatan_wali_kelas
+            k.nama_kelas
           FROM siswa s
           LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
-          $joinCrLatest
           WHERE (s.nama_siswa LIKE CONCAT('%', ?, '%')
                  OR s.no_absen_siswa LIKE CONCAT('%', ?, '%')
                  OR s.no_induk_siswa LIKE CONCAT('%', ?, '%'))
@@ -90,11 +73,9 @@ if ($q !== '') {
             s.no_absen_siswa,
             s.nama_siswa,
             s.no_induk_siswa,
-            k.nama_kelas,
-            cr.catatan_wali_kelas
+            k.nama_kelas
           FROM siswa s
           LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
-          $joinCrLatest
           ORDER BY s.no_absen_siswa ASC
           LIMIT ? OFFSET ?";
   $stmt = $koneksi->prepare($sql);
@@ -215,14 +196,13 @@ include '../../includes/navbar.php';
                   <th>Nama</th>
                   <th>NISN</th>
                   <th>Kelas</th>
-                  <th>Komentar</th>
                   <th>Aksi</th>
                 </tr>
               </thead>
               <tbody id="tbodyData" class="text-center">
                 <?php if (empty($rows)): ?>
                   <tr>
-                    <td colspan="6" class="text-center text-muted py-4">Tidak ada data.</td>
+                    <td colspan="5" class="text-center text-muted py-4">Tidak ada data.</td>
                   </tr>
                 <?php else: ?>
                   <?php foreach ($rows as $d): ?>
@@ -231,7 +211,6 @@ include '../../includes/navbar.php';
                       <td><?= htmlspecialchars($d['nama_siswa']); ?></td>
                       <td><?= htmlspecialchars($d['no_induk_siswa']); ?></td>
                       <td><?= htmlspecialchars($d['nama_kelas'] ?? '-'); ?></td>
-                      <td class="text-start"><?= nl2br(htmlspecialchars($d['catatan_wali_kelas'] ?? '')); ?></td>
                       <td>
                         <a href="preview_rapor.php?id=<?= (int)$d['id_siswa']; ?>" class="btn btn-info btn-sm">
                           <i class="fa-solid fa-eye fa-lg"></i> Preview
@@ -311,7 +290,7 @@ include '../../includes/navbar.php';
 
     function renderRows(data) {
       if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Data Tidak di Temukan</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Data Tidak di Temukan</td></tr>';
         return;
       }
 
@@ -322,7 +301,6 @@ include '../../includes/navbar.php';
         const nisn = escapeHtml(r.no_induk_siswa || '');
         const kelas = escapeHtml(r.nama_kelas || '-');
         const kelasAttr = escapeHtml(r.nama_kelas || '');
-        const catatanSafe = escapeHtml(r.catatan_wali_kelas || '').replace(/\r\n|\r|\n/g, '<br>');
 
         html += `
         <tr data-kelas="${kelasAttr}">
@@ -330,7 +308,6 @@ include '../../includes/navbar.php';
           <td>${nama}</td>
           <td>${nisn}</td>
           <td>${kelas}</td>
-          <td class="text-start">${catatanSafe}</td>
           <td>
             <a href="preview_rapor.php?id=${r.id_siswa}" class="btn btn-info btn-sm">
               <i class="fa-solid fa-eye fa-lg"></i> Preview
@@ -419,15 +396,14 @@ include '../../includes/navbar.php';
       const rows = tbody.querySelectorAll('tr');
       rows.forEach(row => {
         const cells = row.querySelectorAll('td');
-        if (cells.length < 5) return;
+        if (cells.length < 4) return;
 
         const absenText = cells[0].textContent || '';
         const namaText = cells[1].textContent || '';
         const nisnText = cells[2].textContent || '';
         const kelasText = cells[3].textContent || '';
-        const komText = cells[4].textContent || '';
 
-        const rowText = (absenText + ' ' + namaText + ' ' + nisnText + ' ' + kelasText + ' ' + komText).toLowerCase();
+        const rowText = (absenText + ' ' + namaText + ' ' + nisnText + ' ' + kelasText).toLowerCase();
         const kelasAttr = (row.dataset.kelas || '').toLowerCase();
 
         const matchesFilter = (!t || rowText.includes(t)) && (!k || kelasAttr.includes(k));
@@ -441,7 +417,6 @@ include '../../includes/navbar.php';
           cells[1].innerHTML = highlightText(namaText, sRaw);
           cells[2].innerHTML = highlightText(nisnText, sRaw);
           cells[3].innerHTML = highlightText(kelasText, sRaw);
-          cells[4].innerHTML = highlightText(komText, sRaw);
 
           if (sRaw) row.classList.add('row-highlight');
           else row.classList.remove('row-highlight');

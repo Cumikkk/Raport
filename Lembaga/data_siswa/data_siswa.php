@@ -10,18 +10,6 @@ if (empty($_SESSION['csrf'])) {
 }
 $csrf = $_SESSION['csrf'] ?? '';
 
-$joinCrLatest = "
-  LEFT JOIN (
-    SELECT crx.id_siswa, crx.catatan_wali_kelas
-    FROM cetak_rapor crx
-    INNER JOIN (
-      SELECT id_siswa, MAX(id_cetak_rapor) AS max_id
-      FROM cetak_rapor
-      GROUP BY id_siswa
-    ) last ON last.id_siswa = crx.id_siswa AND last.max_id = crx.id_cetak_rapor
-  ) cr ON s.id_siswa = cr.id_siswa
-";
-
 // ===== Parameter =====
 $q       = isset($_GET['q']) ? trim($_GET['q']) : '';
 $perPage = isset($_GET['per']) ? (int)$_GET['per'] : 10;
@@ -34,7 +22,6 @@ if ($q !== '') {
   // cari di nama, absen, nisn
   $sqlCount = "SELECT COUNT(*) AS total FROM siswa s 
                LEFT JOIN kelas k ON s.id_kelas = k.id_kelas 
-               $joinCrLatest
                WHERE (s.nama_siswa LIKE CONCAT('%', ?, '%')
                       OR s.no_absen_siswa LIKE CONCAT('%', ?, '%')
                       OR s.no_induk_siswa LIKE CONCAT('%', ?, '%'))";
@@ -45,8 +32,7 @@ if ($q !== '') {
   $stmtC->bind_param('sss', $q, $q, $q);
 } else {
   $sqlCount = "SELECT COUNT(*) AS total FROM siswa s
-               LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
-               $joinCrLatest";
+               LEFT JOIN kelas k ON s.id_kelas = k.id_kelas";
   $stmtC = $koneksi->prepare($sqlCount);
   if ($stmtC === false) {
     die('Prepare failed: ' . $koneksi->error);
@@ -62,10 +48,9 @@ $stmtC->close();
 
 // ===== Ambil data halaman ini =====
 if ($q !== '') {
-  $sql = "SELECT s.*, k.nama_kelas, cr.catatan_wali_kelas
+  $sql = "SELECT s.*, k.nama_kelas
           FROM siswa s
           LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
-          $joinCrLatest
           WHERE (s.nama_siswa LIKE CONCAT('%', ?, '%')
                  OR s.no_absen_siswa LIKE CONCAT('%', ?, '%')
                  OR s.no_induk_siswa LIKE CONCAT('%', ?, '%'))
@@ -77,10 +62,9 @@ if ($q !== '') {
   }
   $stmt->bind_param('sssii', $q, $q, $q, $perPage, $offset);
 } else {
-  $sql = "SELECT s.*, k.nama_kelas, cr.catatan_wali_kelas
+  $sql = "SELECT s.*, k.nama_kelas
           FROM siswa s
           LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
-          $joinCrLatest
           ORDER BY s.no_absen_siswa ASC
           LIMIT ? OFFSET ?";
   $stmt = $koneksi->prepare($sql);
@@ -199,15 +183,11 @@ include '../../includes/navbar.php';
                     <th>Nama</th>
                     <th>NISN</th>
                     <th>Kelas</th>
-                    <th>Komentar</th>
                     <th>Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="tbodyData">
-                  <?php
-                  foreach ($rows as $data):
-                    $catatanRaw = $data['catatan_wali_kelas'] ?? '';
-                  ?>
+                  <?php foreach ($rows as $data): ?>
                     <tr
                       data-kelas="<?= htmlspecialchars($data['id_kelas']) ?>"
                       data-tingkat="<?= htmlspecialchars($data['tingkat'] ?? '') ?>"
@@ -215,8 +195,7 @@ include '../../includes/navbar.php';
                       data-nama="<?= htmlspecialchars($data['nama_siswa']) ?>"
                       data-nisn="<?= htmlspecialchars($data['no_induk_siswa']) ?>"
                       data-absen="<?= htmlspecialchars($data['no_absen_siswa']) ?>"
-                      data-id_kelas="<?= htmlspecialchars($data['id_kelas']) ?>"
-                      data-catatan="<?= htmlspecialchars($catatanRaw) ?>">
+                      data-id_kelas="<?= htmlspecialchars($data['id_kelas']) ?>">
                       <td class="text-center">
                         <input type="checkbox" name="id_siswa[]" class="row-check" value="<?= (int)$data['id_siswa'] ?>">
                       </td>
@@ -224,7 +203,6 @@ include '../../includes/navbar.php';
                       <td><?= htmlspecialchars($data['nama_siswa']) ?></td>
                       <td class="text-center"><?= htmlspecialchars($data['no_induk_siswa']) ?></td>
                       <td class="text-center"><?= htmlspecialchars($data['nama_kelas'] ?? '-') ?></td>
-                      <td><?= nl2br(htmlspecialchars($catatanRaw)) ?></td>
                       <td class="text-center">
                         <button type="button" class="btn btn-warning btn-sm btn-edit-siswa">
                           <i class="bi bi-pencil-square"></i> Edit
@@ -313,10 +291,6 @@ include '../../includes/navbar.php';
               ?>
             </select>
           </div>
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Catatan Wali Kelas</label>
-            <textarea name="catatan_wali_kelas" class="form-control" rows="3"></textarea>
-          </div>
         </div>
 
         <div class="modal-footer">
@@ -369,11 +343,6 @@ include '../../includes/navbar.php';
               }
               ?>
             </select>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Catatan Wali Kelas</label>
-            <textarea name="catatan_wali_kelas" id="edit_catatan_wali_kelas" class="form-control" rows="3"></textarea>
           </div>
         </div>
 
@@ -535,7 +504,7 @@ include '../../includes/navbar.php';
 
     function renderRows(data, startNumber, keyword = '') {
       if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">Data Tidak di Temukan</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Data Tidak di Temukan</td></tr>';
         deleteBtn.disabled = true;
         return;
       }
@@ -544,8 +513,6 @@ include '../../includes/navbar.php';
       for (const r of data) {
         const nama = highlightText(r.nama_siswa || '', keyword);
         const nisn = highlightText(r.no_induk_siswa || '', keyword);
-        const komentar = highlightText(r.catatan_wali_kelas || '', keyword);
-        const catatanRaw = r.catatan_wali_kelas || '';
 
         html += `
         <tr
@@ -556,14 +523,12 @@ include '../../includes/navbar.php';
           data-nisn="${escapeHtml(r.no_induk_siswa || '')}"
           data-absen="${escapeHtml(r.no_absen_siswa || '')}"
           data-id_kelas="${escapeHtml(r.id_kelas || '')}"
-          data-catatan="${escapeHtml(catatanRaw)}"
         >
           <td class="text-center"><input type="checkbox" class="row-check" name="id_siswa[]" value="${r.id_siswa}"></td>
           <td class="text-center">${escapeHtml(r.no_absen_siswa || '')}</td>
           <td>${nama}</td>
           <td class="text-center">${nisn}</td>
           <td class="text-center">${escapeHtml(r.nama_kelas || '-')}</td>
-          <td>${komentar}</td>
           <td class="text-center">
             <button type="button" class="btn btn-warning btn-sm btn-edit-siswa">
               <i class="bi bi-pencil-square"></i> Edit
@@ -699,13 +664,11 @@ include '../../includes/navbar.php';
       const nisn = row.dataset.nisn || '';
       const absen = row.dataset.absen || '';
       const idKelas = row.dataset.id_kelas || '';
-      const catatan = row.dataset.catatan || '';
 
       document.getElementById('edit_id_siswa').value = id;
       document.getElementById('edit_nama_siswa').value = nama;
       document.getElementById('edit_no_induk_siswa').value = nisn;
       document.getElementById('edit_no_absen_siswa').value = absen;
-      document.getElementById('edit_catatan_wali_kelas').value = catatan;
       document.getElementById('edit_id_kelas').value = idKelas;
 
       const modalEl = document.getElementById('modalEditSiswa');

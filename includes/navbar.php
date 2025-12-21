@@ -30,10 +30,7 @@ if ($roleKey === 'guru') {
     <img src="/RAPORT/assets/img/logo/logo navbar.png" alt="Logo" class="dashboard-logo">
   </div>
 
-  <!-- Tombol logout desktop -->
-  <a href="/RAPORT/logout.php" class="logout-btn btn-danger desktop-only" style="text-decoration:none;padding:8px 12px;border-radius:6px;color:#fff;">
-    <i class="fas fa-right-from-bracket"></i> Logout
-  </a>
+  <!-- Tombol logout desktop DIHILANGKAN -->
 </header>
 
 <!-- Overlay -->
