@@ -219,6 +219,7 @@ if ($totalRows === 0) {
       color: #333 !important;
     }
 
+    /* ✅ select perPage (dipakai di bawah / pager-group) */
     #perPage {
       border: 1px solid var(--ring);
       border-radius: 10px;
@@ -226,11 +227,13 @@ if ($totalRows === 0) {
       font-size: 14px;
       color: var(--ink);
       background-color: #fff;
+      width: 120px;
+      min-width: 120px;
     }
 
     #perPage:focus {
       box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
-      border-color: --brand;
+      border-color: var(--brand);
     }
 
     .page-info-text strong {
@@ -291,7 +294,7 @@ if ($totalRows === 0) {
       opacity: 1;
     }
 
-    /* TRANSISI TABEL + OVERLAY LOADING (SAMAKAN DENGAN DATA_USER) */
+    /* TRANSISI TABEL + OVERLAY LOADING (SAMAKAN) */
     #ekstraTbody {
       transition:
         opacity 0.25s ease,
@@ -328,6 +331,38 @@ if ($totalRows === 0) {
     .table-loading-overlay.show {
       opacity: 1;
       pointer-events: auto;
+    }
+
+    /* ✅ Pagination group (samakan dengan data_rapor) */
+    .pager-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      gap: 10px;
+    }
+
+    .pager-group {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 10px 12px;
+      border: 1px solid rgba(0, 0, 0, .12);
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .pager-group .pagination {
+      margin: 0;
+      justify-content: center;
+    }
+
+    .pager-sep {
+      width: 1px;
+      height: 34px;
+      background: rgba(0, 0, 0, .15);
     }
 
     @media (max-width: 520px) {
@@ -374,6 +409,30 @@ if ($totalRows === 0) {
         flex-direction: column;
         align-items: stretch !important;
       }
+
+      .pager-sep {
+        display: none;
+      }
+
+      .pager-group {
+        width: 100%;
+      }
+
+      #paginationWrap {
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 4px !important;
+      }
+
+      #paginationWrap .page-link {
+        padding: 4px 8px;
+        font-size: 13px;
+      }
+
+      #pageInfo {
+        font-size: 13px;
+        white-space: normal;
+      }
     }
 
     .searchbox:focus-within {
@@ -413,23 +472,13 @@ if ($totalRows === 0) {
               </div>
 
               <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-2">
-                <!-- Search + per page -->
-                <div class="d-flex search-perpage-row align-items-md-center gap-2 flex-grow-1">
+                <!-- ✅ Search saja (data/hal dipindah ke bawah) -->
+                <div class="d-flex align-items-md-center gap-2 flex-grow-1">
                   <div class="search-wrap flex-grow-1">
                     <div class="searchbox" role="search" aria-label="Pencarian ekstrakurikuler">
                       <i class="bi bi-search icon"></i>
                       <input type="text" id="searchInput" placeholder="Ketik untuk mencari" autofocus>
                     </div>
-                  </div>
-
-                  <div class="d-flex align-items-center gap-2">
-                    <select id="perPage" class="form-select form-select-sm" style="width:auto;">
-                      <?php foreach ($allowedPer as $opt): ?>
-                        <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>>
-                          <?= $opt ?>/hal
-                        </option>
-                      <?php endforeach; ?>
-                    </select>
                   </div>
                 </div>
 
@@ -501,7 +550,6 @@ if ($totalRows === 0) {
                         <td data-label="Nama Ekstrakurikuler"><?= $nama ?></td>
                         <td data-label="Aksi">
                           <div class="d-flex gap-2 justify-content-center flex-wrap">
-                            <!-- Edit pakai modal -->
                             <button type="button"
                               class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-edit-ekstra"
                               data-id="<?= $id ?>"
@@ -509,7 +557,6 @@ if ($totalRows === 0) {
                               <i class="bi bi-pencil-square"></i> Edit
                             </button>
 
-                            <!-- Hapus pakai modal konfirmasi -->
                             <button type="button"
                               class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-delete-single"
                               data-id="<?= $id ?>"
@@ -536,13 +583,26 @@ if ($totalRows === 0) {
               </button>
             </div>
 
-            <!-- Info & Pagination -->
-            <div class="mt-3 d-flex flex-column align-items-center gap-1">
-              <nav id="paginationWrap" class="d-flex justify-content-center"></nav>
-              <div id="pageInfo" class="page-info-text text-muted text-center mt-2">
-                Menampilkan <?= $shown ?> dari <?= $totalRows ?> data • Halaman <?= $pageDisplayCurrent ?> / <?= $pageDisplayTotal ?>
+            <!-- ✅ Pagination + data/hal nyatu (samakan) -->
+            <nav aria-label="Page navigation" class="mt-3">
+              <div class="pager-area">
+                <div class="pager-group">
+                  <ul class="pagination mb-0" id="paginationWrap"></ul>
+
+                  <div class="pager-sep" aria-hidden="true"></div>
+
+                  <select id="perPage" class="form-select form-select-sm">
+                    <?php foreach ($allowedPer as $opt): ?>
+                      <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>><?= $opt ?>/hal</option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+
+                <div id="pageInfo" class="page-info-text text-muted text-center">
+                  Menampilkan <?= $shown ?> dari <?= $totalRows ?> data • Halaman <?= $pageDisplayCurrent ?> / <?= $pageDisplayTotal ?>
+                </div>
               </div>
-            </div>
+            </nav>
           </div>
 
         </div><!-- /.card -->
@@ -561,7 +621,6 @@ if ($totalRows === 0) {
         <form id="formTambahEkstra" action="proses_tambah_data_ekstra.php" method="POST" autocomplete="off">
           <div class="modal-body">
 
-            <!-- ALERT ERROR DI DALAM MODAL (AJAX / FALLBACK) -->
             <div id="addEkstraAlert" class="alert alert-danger mb-2" style="display:none;">
               <span class="close-btn">&times;</span>
               <span class="alert-message"></span>
@@ -608,7 +667,6 @@ if ($totalRows === 0) {
           <input type="hidden" name="id_ekstra" id="edit_id_ekstra">
           <div class="modal-body">
 
-            <!-- ALERT ERROR DI DALAM MODAL (AJAX / FALLBACK) -->
             <div id="editEkstraAlert" class="alert alert-danger mb-2" style="display:none;">
               <span class="close-btn">&times;</span>
               <span class="alert-message"></span>
@@ -641,7 +699,7 @@ if ($totalRows === 0) {
     </div>
   </div>
 
-  <!-- MODAL IMPORT EKSTRA (DISAMAKAN DENGAN DATA GURU) -->
+  <!-- MODAL IMPORT EKSTRA -->
   <div class="modal fade" id="modalImportEkstra" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content">
@@ -662,7 +720,6 @@ if ($totalRows === 0) {
           autocomplete="off">
           <div class="modal-body pt-3">
 
-            <!-- Info box langkah-langkah -->
             <div class="mb-3 p-3 rounded-3" style="background:#f9fafb;border:1px solid #e5e7eb;">
               <div class="d-flex align-items-start gap-2">
                 <div class="mt-1">
@@ -684,7 +741,6 @@ if ($totalRows === 0) {
               </div>
             </div>
 
-            <!-- Baris: tombol download template -->
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
               <span class="text-muted" style="font-size:13px;">
                 Klik tombol di samping untuk mengunduh template Excel.
@@ -700,7 +756,6 @@ if ($totalRows === 0) {
 
             <hr class="my-2">
 
-            <!-- Input file -->
             <div class="mb-2">
               <label for="excelFileEkstra" class="form-label fw-semibold mb-1">
                 Upload File Excel
@@ -741,7 +796,7 @@ if ($totalRows === 0) {
               </small>
             </div>
 
-          </div><!-- /.modal-body -->
+          </div>
 
           <div class="modal-footer d-flex justify-content-between">
             <button type="button"
@@ -760,7 +815,7 @@ if ($totalRows === 0) {
     </div>
   </div>
 
-  <!-- MODAL KONFIRMASI HAPUS (single & bulk) -->
+  <!-- MODAL KONFIRMASI HAPUS -->
   <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
@@ -790,7 +845,6 @@ if ($totalRows === 0) {
   </div>
 
   <script>
-    // helper import modal
     function toggleClearButtonEkstraImport() {
       const fileInput = document.getElementById('excelFileEkstra');
       const clearBtn = document.getElementById('clearFileBtnEkstraImport');
@@ -816,8 +870,13 @@ if ($totalRows === 0) {
 
       const checkAll = document.getElementById('checkAll');
       const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+
+      // ✅ perPage sekarang ada di bawah (pager-group)
       const perPageSelect = document.getElementById('perPage');
+
+      // ✅ paginationWrap sekarang <ul> langsung
       const paginationWrap = document.getElementById('paginationWrap');
+
       const pageInfo = document.getElementById('pageInfo');
       const csrfToken = '<?= htmlspecialchars($csrf, ENT_QUOTES, "UTF-8"); ?>';
 
@@ -845,85 +904,9 @@ if ($totalRows === 0) {
         });
       }
 
-      function showGlobalAlert(kind, message) {
-        const container = document.getElementById('ajaxAlertContainer');
-        if (!container) return;
-
-        const icon = kind === 'success' ? '✅ ' : '❌ ';
-        const cls = kind === 'success' ? 'alert-success' : 'alert-danger';
-
-        container.innerHTML = `
-          <div class="alert ${cls} alert-page">
-            <span class="close-btn">&times;</span>
-            ${icon}${message}
-          </div>
-        `;
-
-        const alertEl = container.querySelector('.alert');
-        const closeBtn = container.querySelector('.close-btn');
-
-        let timer = setTimeout(() => {
-          alertEl.classList.add('alert-hide');
-        }, 4000);
-
-        if (closeBtn) {
-          closeBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            alertEl.classList.add('alert-hide');
-            clearTimeout(timer);
-          });
-        }
-      }
-
-      // === helper: alert di dalam modal (auto-hide + tombol X + transisi) ===
-      function showModalAlert(alertEl, message) {
-        if (!alertEl) return;
-
-        const msgSpan = alertEl.querySelector('.alert-message');
-        if (msgSpan) {
-          msgSpan.textContent = message;
-        } else {
-          alertEl.textContent = message;
-        }
-
-        alertEl.style.display = 'block';
-        alertEl.classList.remove('alert-hide');
-
-        if (alertEl.dataset.timerId) {
-          clearTimeout(Number(alertEl.dataset.timerId));
-        }
-
-        const closeBtn = alertEl.querySelector('.close-btn');
-        if (closeBtn && !closeBtn.dataset.bound) {
-          closeBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            alertEl.classList.add('alert-hide');
-            setTimeout(() => {
-              alertEl.style.display = 'none';
-            }, 400);
-            if (alertEl.dataset.timerId) {
-              clearTimeout(Number(alertEl.dataset.timerId));
-              alertEl.dataset.timerId = '';
-            }
-          });
-          closeBtn.dataset.bound = '1';
-        }
-
-        const tid = setTimeout(() => {
-          alertEl.classList.add('alert-hide');
-          setTimeout(() => {
-            alertEl.style.display = 'none';
-          }, 400);
-        }, MODAL_ALERT_MS);
-
-        alertEl.dataset.timerId = String(tid);
-      }
-
       function showDeleteConfirm(message, handler) {
         if (!confirmModalEl || !confirmBodyEl || !confirmBtn) {
-          if (confirm(message)) {
-            handler();
-          }
+          if (confirm(message)) handler();
           return;
         }
 
@@ -931,9 +914,7 @@ if ($totalRows === 0) {
         pendingDeleteHandler = handler;
 
         confirmBtn.onclick = function() {
-          if (pendingDeleteHandler) {
-            pendingDeleteHandler();
-          }
+          if (pendingDeleteHandler) pendingDeleteHandler();
           if (typeof bootstrap !== 'undefined') {
             const m = bootstrap.Modal.getOrCreateInstance(confirmModalEl);
             m.hide();
@@ -944,9 +925,7 @@ if ($totalRows === 0) {
           const m = bootstrap.Modal.getOrCreateInstance(confirmModalEl);
           m.show();
         } else {
-          if (confirm(message)) {
-            handler();
-          }
+          if (confirm(message)) handler();
         }
       }
 
@@ -978,13 +957,10 @@ if ($totalRows === 0) {
 
       function attachCheckboxEvents() {
         const boxes = getRowCheckboxes();
-        boxes.forEach(box => {
-          box.addEventListener('change', updateBulkUI);
-        });
+        boxes.forEach(box => box.addEventListener('change', updateBulkUI));
         updateBulkUI();
       }
 
-      // EDIT: isi modal edit ekstra
       function attachEditModalEvents() {
         const editButtons = document.querySelectorAll('.btn-edit-ekstra');
         const modalEl = document.getElementById('modalEditEkstra');
@@ -1023,7 +999,6 @@ if ($totalRows === 0) {
         });
       }
 
-      // HAPUS SATU EKSTRA
       function attachSingleDeleteEvents() {
         const buttons = document.querySelectorAll('.btn-delete-single');
         buttons.forEach(btn => {
@@ -1031,7 +1006,6 @@ if ($totalRows === 0) {
             e.preventDefault();
             const id = btn.getAttribute('data-id');
             const label = btn.getAttribute('data-label') || 'ekstrakurikuler ini';
-
             if (!id) return;
 
             showDeleteConfirm(`Yakin ingin menghapus ekstrakurikuler "${label}"?`, () => {
@@ -1058,6 +1032,7 @@ if ($totalRows === 0) {
         });
       }
 
+      // ✅ Pagination: langsung isi <ul id="paginationWrap">
       function buildPagination(totalRows, page, perPage) {
         currentTotalRows = totalRows;
         currentPage = page;
@@ -1079,36 +1054,35 @@ if ($totalRows === 0) {
 
         const pageDisplayCurrent = totalRows === 0 ? 0 : page;
         const pageDisplayTotal = totalRows === 0 ? 0 : totalPages;
+
         pageInfo.innerHTML =
           `Menampilkan <strong>${shown}</strong> dari <strong>${totalRows}</strong> data • 
-          Halaman <strong>${pageDisplayCurrent}</strong> / <strong>${pageDisplayTotal}</strong>`;
-
-        let html = '<ul class="pagination mb-0">';
+           Halaman <strong>${pageDisplayCurrent}</strong> / <strong>${pageDisplayTotal}</strong>`;
 
         const isFirst = (page <= 1);
         const isLast = (page >= totalPages);
 
-        html += `<li class="page-item${isFirst ? ' disabled' : ''}">
-                   <button class="page-link page-btn" type="button" data-page="1">&laquo; First</button>
-                 </li>`;
+        let html = '';
 
         html += `<li class="page-item${isFirst ? ' disabled' : ''}">
-                   <button class="page-link page-btn" type="button" data-page="${page - 1}">&lsaquo; Prev</button>
-                 </li>`;
+                  <button class="page-link page-btn" type="button" data-page="1">&laquo; First</button>
+                </li>`;
+
+        html += `<li class="page-item${isFirst ? ' disabled' : ''}">
+                  <button class="page-link page-btn" type="button" data-page="${page - 1}">&lsaquo; Prev</button>
+                </li>`;
 
         html += `<li class="page-item active">
-                   <button class="page-link" type="button" data-page="${page}">${page}</button>
-                 </li>`;
+                  <button class="page-link" type="button" data-page="${page}">${page}</button>
+                </li>`;
 
         html += `<li class="page-item${isLast ? ' disabled' : ''}">
-                   <button class="page-link page-btn" type="button" data-page="${page + 1}">Next &rsaquo;</button>
-                 </li>`;
+                  <button class="page-link page-btn" type="button" data-page="${page + 1}">Next &rsaquo;</button>
+                </li>`;
 
         html += `<li class="page-item${isLast ? ' disabled' : ''}">
-                   <button class="page-link page-btn" type="button" data-page="${totalPages}">Last &raquo;</button>
-                 </li>`;
-
-        html += '</ul>';
+                  <button class="page-link page-btn" type="button" data-page="${totalPages}">Last &raquo;</button>
+                </li>`;
 
         paginationWrap.innerHTML = html;
 
@@ -1116,25 +1090,19 @@ if ($totalRows === 0) {
           btn.addEventListener('click', () => {
             const target = parseInt(btn.getAttribute('data-page') || '1', 10);
             if (isNaN(target) || target < 1 || target === currentPage) return;
-            // Pagination: overlay + scroll halus
             doSearch(currentQuery, target, currentPerPage, true);
           });
         });
 
-        if (perPageSelect) {
-          perPageSelect.value = String(perPage);
-        }
+        if (perPageSelect) perPageSelect.value = String(perPage);
       }
 
       checkAll.addEventListener('change', () => {
         const boxes = getRowCheckboxes();
-        boxes.forEach(b => {
-          b.checked = checkAll.checked;
-        });
+        boxes.forEach(b => b.checked = checkAll.checked);
         updateBulkUI();
       });
 
-      // HAPUS TERPILIH
       bulkDeleteBtn.addEventListener('click', () => {
         const boxes = getRowCheckboxes().filter(b => b.checked);
         if (boxes.length === 0) return;
@@ -1166,25 +1134,19 @@ if ($totalRows === 0) {
       });
 
       function setLoading(useScroll) {
-        if (useScroll) {
-          scrollToTable();
-        }
+        if (useScroll) scrollToTable();
         if (tbody) {
           tbody.classList.remove('tbody-loaded');
           tbody.classList.add('tbody-loading');
         }
-        if (loadingOverlay) {
-          loadingOverlay.classList.add('show');
-        }
+        if (loadingOverlay) loadingOverlay.classList.add('show');
       }
 
       function finishLoading() {
-        if (loadingOverlay) {
-          loadingOverlay.classList.remove('show');
-        }
+        if (loadingOverlay) loadingOverlay.classList.remove('show');
         if (!tbody) return;
         tbody.classList.remove('tbody-loading');
-        void tbody.offsetHeight; // reflow kecil
+        void tbody.offsetHeight;
         tbody.classList.add('tbody-loaded');
       }
 
@@ -1221,6 +1183,7 @@ if ($totalRows === 0) {
               const pg = parseInt(metaRow.getAttribute('data-page') || '1', 10);
               const pp = parseInt(metaRow.getAttribute('data-per') || String(currentPerPage), 10);
               metaRow.parentNode.removeChild(metaRow);
+
               buildPagination(
                 isNaN(total) ? 0 : total,
                 isNaN(pg) ? 1 : pg,
@@ -1244,7 +1207,6 @@ if ($totalRows === 0) {
       input.addEventListener('input', () => {
         clearTimeout(typingTimer);
         typingTimer = setTimeout(() => {
-          // Search: halus tanpa scroll
           doSearch(input.value, 1, currentPerPage, false);
         }, debounceMs);
       });
@@ -1254,166 +1216,17 @@ if ($totalRows === 0) {
           const val = parseInt(perPageSelect.value || '10', 10);
           if (isNaN(val) || val <= 0) return;
           currentPerPage = val;
-          // Ganti per halaman: overlay + scroll
           doSearch(currentQuery, 1, currentPerPage, true);
         });
       }
 
-      // ===== AJAX SUBMIT: TAMBAH EKSTRA =====
-      const formTambah = document.getElementById('formTambahEkstra');
-      const addAlert = document.getElementById('addEkstraAlert');
-      const modalTambahEl = document.getElementById('modalTambahEkstra');
-
-      if (formTambah) {
-        formTambah.addEventListener('submit', (e) => {
-          e.preventDefault();
-
-          if (!formTambah.checkValidity()) {
-            formTambah.reportValidity();
-            return;
-          }
-
-          if (addAlert) {
-            addAlert.style.display = 'none';
-            addAlert.classList.remove('alert-hide');
-            const msgSpan = addAlert.querySelector('.alert-message');
-            if (msgSpan) msgSpan.textContent = '';
-            if (addAlert.dataset.timerId) {
-              clearTimeout(Number(addAlert.dataset.timerId));
-              addAlert.dataset.timerId = '';
-            }
-          }
-
-          const fd = new FormData(formTambah);
-
-          fetch('proses_tambah_data_ekstra.php', {
-              method: 'POST',
-              body: fd,
-              headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-              }
-            })
-            .then(r => r.json())
-            .then(data => {
-              if (!data || typeof data !== 'object') {
-                throw new Error('Respon tidak valid');
-              }
-
-              if (data.success) {
-                if (typeof bootstrap !== 'undefined' && modalTambahEl) {
-                  const m = bootstrap.Modal.getOrCreateInstance(modalTambahEl);
-                  m.hide();
-                }
-                formTambah.reset();
-                showGlobalAlert('success', data.message || 'Data ekstrakurikuler berhasil disimpan.');
-                // refresh tabel: overlay + scroll halus
-                doSearch(currentQuery, currentPage, currentPerPage, true);
-              } else {
-                const msg = (data.errors && data.errors.length) ?
-                  data.errors.join(' ') :
-                  (data.message || 'Terjadi kesalahan.');
-                if (addAlert) {
-                  showModalAlert(addAlert, msg);
-                }
-              }
-            })
-            .catch(err => {
-              console.error(err);
-              if (addAlert) {
-                showModalAlert(addAlert, 'Terjadi kesalahan jaringan. Silakan coba lagi.');
-              }
-            });
-        });
-      }
-
-      // ===== AJAX SUBMIT: EDIT EKSTRA =====
-      const formEdit = document.getElementById('formEditEkstra');
-      const editAlert = document.getElementById('editEkstraAlert');
-      const modalEditEl = document.getElementById('modalEditEkstra');
-
-      if (formEdit) {
-        formEdit.addEventListener('submit', (e) => {
-          e.preventDefault();
-
-          if (!formEdit.checkValidity()) {
-            formEdit.reportValidity();
-            return;
-          }
-
-          if (editAlert) {
-            editAlert.style.display = 'none';
-            editAlert.classList.remove('alert-hide');
-            const msgSpan = editAlert.querySelector('.alert-message');
-            if (msgSpan) msgSpan.textContent = '';
-            if (editAlert.dataset.timerId) {
-              clearTimeout(Number(editAlert.dataset.timerId));
-              editAlert.dataset.timerId = '';
-            }
-          }
-
-          const fd = new FormData(formEdit);
-
-          fetch('proses_edit_data_ekstra.php', {
-              method: 'POST',
-              body: fd,
-              headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-              }
-            })
-            .then(r => r.json())
-            .then(data => {
-              if (!data || typeof data !== 'object') {
-                throw new Error('Respon tidak valid');
-              }
-
-              if (data.success) {
-                if (typeof bootstrap !== 'undefined' && modalEditEl) {
-                  const m = bootstrap.Modal.getOrCreateInstance(modalEditEl);
-                  m.hide();
-                }
-                showGlobalAlert('success', data.message || 'Data ekstrakurikuler berhasil diperbarui.');
-                // refresh tabel: overlay + scroll halus
-                doSearch(currentQuery, currentPage, currentPerPage, true);
-              } else {
-                const msg = (data.errors && data.errors.length) ?
-                  data.errors.join(' ') :
-                  (data.message || 'Terjadi kesalahan.');
-                if (editAlert) {
-                  showModalAlert(editAlert, msg);
-                }
-              }
-            })
-            .catch(err => {
-              console.error(err);
-              if (editAlert) {
-                showModalAlert(editAlert, 'Terjadi kesalahan jaringan. Silakan coba lagi.');
-              }
-            });
-        });
-      }
-
-      // ===== VALIDASI FORM IMPORT (seperti di guru) =====
-      const formImportEkstra = document.getElementById('formImportEkstra');
-      const btnSubmitImportEkstra = document.getElementById('btnSubmitImportEkstra');
-      if (formImportEkstra && btnSubmitImportEkstra) {
-        btnSubmitImportEkstra.addEventListener('click', (e) => {
-          if (!formImportEkstra.checkValidity()) {
-            e.preventDefault();
-            formImportEkstra.reportValidity();
-          }
-        });
-      }
-
-      // Inisialisasi pertama kali
+      // Inisialisasi
       attachCheckboxEvents();
       attachEditModalEvents();
       attachSingleDeleteEvents();
       buildPagination(currentTotalRows, currentPage, currentPerPage);
 
-      // pastikan state awal tbody dianggap "loaded"
-      if (tbody) {
-        tbody.classList.add('tbody-loaded');
-      }
+      if (tbody) tbody.classList.add('tbody-loaded');
     })();
   </script>
 
@@ -1437,98 +1250,6 @@ if ($totalRows === 0) {
           });
         }
       });
-    });
-  </script>
-
-  <script>
-    // Fallback: kalau non-AJAX pakai ?add_err / ?edit_err → tetap tampil di modal + auto-hide + tombol X + transisi
-    document.addEventListener('DOMContentLoaded', () => {
-      <?php if (isset($_GET['add_err']) && $_GET['add_err'] !== ''): ?>
-          (function() {
-            const alertEl = document.getElementById('addEkstraAlert');
-            if (alertEl) {
-              const msgSpan = alertEl.querySelector('.alert-message');
-              if (msgSpan) {
-                msgSpan.textContent = '<?= htmlspecialchars($_GET['add_err'], ENT_QUOTES, 'UTF-8'); ?>';
-              } else {
-                alertEl.textContent = '<?= htmlspecialchars($_GET['add_err'], ENT_QUOTES, 'UTF-8'); ?>';
-              }
-              alertEl.style.display = 'block';
-              alertEl.classList.remove('alert-hide');
-
-              const timer = setTimeout(() => {
-                alertEl.classList.add('alert-hide');
-                setTimeout(() => {
-                  alertEl.style.display = 'none';
-                }, 400);
-              }, 4000);
-
-              const closeBtn = alertEl.querySelector('.close-btn');
-              if (closeBtn) {
-                closeBtn.addEventListener('click', (e) => {
-                  e.preventDefault();
-                  alertEl.classList.add('alert-hide');
-                  setTimeout(() => {
-                    alertEl.style.display = 'none';
-                  }, 400);
-                  clearTimeout(timer);
-                });
-              }
-            }
-            const modalEl = document.getElementById('modalTambahEkstra');
-            if (typeof bootstrap !== 'undefined' && modalEl) {
-              const m = bootstrap.Modal.getOrCreateInstance(modalEl);
-              m.show();
-            }
-          })();
-      <?php endif; ?>
-
-      <?php if (isset($_GET['edit_err'], $_GET['edit_id']) && $_GET['edit_err'] !== ''): ?>
-          (function() {
-            const alertEl = document.getElementById('editEkstraAlert');
-            if (alertEl) {
-              const msgSpan = alertEl.querySelector('.alert-message');
-              if (msgSpan) {
-                msgSpan.textContent = '<?= htmlspecialchars($_GET['edit_err'], ENT_QUOTES, 'UTF-8'); ?>';
-              } else {
-                alertEl.textContent = '<?= htmlspecialchars($_GET['edit_err'], ENT_QUOTES, 'UTF-8'); ?>';
-              }
-              alertEl.style.display = 'block';
-              alertEl.classList.remove('alert-hide');
-
-              const timer = setTimeout(() => {
-                alertEl.classList.add('alert-hide');
-                setTimeout(() => {
-                  alertEl.style.display = 'none';
-                }, 400);
-              }, 4000);
-
-              const closeBtn = alertEl.querySelector('.close-btn');
-              if (closeBtn) {
-                closeBtn.addEventListener('click', (e) => {
-                  e.preventDefault();
-                  alertEl.classList.add('alert-hide');
-                  setTimeout(() => {
-                    alertEl.style.display = 'none';
-                  }, 400);
-                  clearTimeout(timer);
-                });
-              }
-            }
-
-            // buka modal edit + isi data via klik tombol edit terkait
-            const btn = document.querySelector('.btn-edit-ekstra[data-id="<?= (int)$_GET['edit_id']; ?>"]');
-            if (btn) {
-              btn.click();
-            } else {
-              const modalEl = document.getElementById('modalEditEkstra');
-              if (typeof bootstrap !== 'undefined' && modalEl) {
-                const m = bootstrap.Modal.getOrCreateInstance(modalEl);
-                m.show();
-              }
-            }
-          })();
-      <?php endif; ?>
     });
   </script>
 
