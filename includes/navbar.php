@@ -12,7 +12,7 @@ $username_display = $_SESSION['username'] ?? 'Guest';
 // Tentukan "Home" sesuai role
 $homeLink = '/RAPORT/includes/dashboard.php';
 if ($roleKey === 'guru') {
-  $homeLink = '/RAPORT/Lembaga/data_kelas/datakelas.php';
+  $homeLink = '/RAPORT/includes/dashboard.php';
 }
 ?>
 
@@ -85,8 +85,7 @@ if ($roleKey === 'guru') {
       </a>
 
     <?php elseif ($roleKey === 'guru'): ?>
-      <!-- Untuk guru: hanya tampilkan menu Data Siswa tanpa dropdown -->
-      <a href="/RAPORT/Lembaga/data_siswa/data_siswa.php"
+      <a href="/RAPORT/Lembaga/data_siswa/guru/data_siswa.php"
         class="<?= str_contains($current_url, 'data_siswa') ? 'active' : '' ?>">
         <i class="fas fa-users"></i><span>Data Siswa</span>
       </a>
