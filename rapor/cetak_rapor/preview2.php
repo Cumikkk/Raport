@@ -341,7 +341,6 @@ $logoPath = '../../Lembaga/data_sekolah/uploads/' . $logoFile;
       font-weight: bold;
     }
     .kop-logo {
-      margin-left: 20px;
       position: absolute;
       left: 0;
       top: 0;
@@ -408,7 +407,6 @@ $logoPath = '../../Lembaga/data_sekolah/uploads/' . $logoFile;
       max-width: 100%;
       min-height: 45px; /* lebih pendek agar hemat ruang */
       font-size: 8px;
-      padding: 3px;
       white-space: pre-wrap;
     word-break: break-all;
     }
@@ -440,7 +438,8 @@ $logoPath = '../../Lembaga/data_sekolah/uploads/' . $logoFile;
     }
   </style>
 </head>
-<body onload="window.print()"> 
+<!-- <body onload="window.print()"> -->
+<body>
   <div class="page">
 
     <!-- KOP -->
@@ -449,9 +448,9 @@ $logoPath = '../../Lembaga/data_sekolah/uploads/' . $logoFile;
         <img src="<?= htmlspecialchars($logoPath); ?>" alt="Logo">
       </div>
       <div class="kop-text fw-bold">
-        <div class="nama-sekolah">YAYASAN PENDIDIKAN ISLAM "NURUL HUDA SEDATI"</div>
+        <div class="yayasan">YAYASAN PENDIDIKAN ISLAM "NURUL HUDA SEDATI"</div>
         <div class="nama-sekolah">MADRASAH ALIYAH NURUL HUDA SEDATI</div>
-        <div class="yayasan">TERAKREDITASI A</div>
+        <div class="akreditasi">TERAKREDITASI A</div>
         <div class="akreditasi">
           NSM: <?= htmlspecialchars($sekolah['nsm_sekolah'] ?? ''); ?>
           &nbsp; NPSN: <?= htmlspecialchars($sekolah['npsn_sekolah'] ?? ''); ?>

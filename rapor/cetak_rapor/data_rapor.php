@@ -212,7 +212,7 @@ include '../../includes/navbar.php';
                       <td><?= htmlspecialchars($d['no_induk_siswa']); ?></td>
                       <td><?= htmlspecialchars($d['nama_kelas'] ?? '-'); ?></td>
                       <td>
-                        <a href="preview_rapor.php?id=<?= (int)$d['id_siswa']; ?>" class="btn btn-info btn-sm">
+                        <a href="preview.php?id=<?= (int)$d['id_siswa']; ?>" class="btn btn-info btn-sm">
                           <i class="fa-solid fa-eye fa-lg"></i> Preview
                         </a>
                         <a href="print_rapor.php?id=<?= (int)$d['id_siswa']; ?>" class="btn btn-primary btn-sm">
@@ -309,10 +309,10 @@ include '../../includes/navbar.php';
           <td>${nisn}</td>
           <td>${kelas}</td>
           <td>
-            <a href="preview_rapor.php?id=${r.id_siswa}" class="btn btn-info btn-sm">
+            <a href="preview.php?id=${r.id_siswa}" class="btn btn-info btn-sm" target="_blank">
               <i class="fa-solid fa-eye fa-lg"></i> Preview
             </a>
-            <a href="print_rapor.php?id=${r.id_siswa}" class="btn btn-primary btn-sm">
+            <a href="print_rapor.php?id=${r.id_siswa}" class="btn btn-primary btn-sm" target="_blank">
               <i class="fa-solid fa-print fa-lg"></i> Print
             </a>
           </td>

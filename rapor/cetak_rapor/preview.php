@@ -145,9 +145,8 @@ if ($resAbs) {
 }
 
 /* =========================
- * PENGATURAN CETAK + CATATAN WALAS (DARI cetak_rapor)
+ * CATATAN WALAS (OPSIONAL)
  * ========================= */
-
 // Ambil pengaturan_cetak_rapor (satu baris terakhir)
 $pengaturanCetak = [
   'id_pengaturan_cetak_rapor' => null,
@@ -187,7 +186,6 @@ if ($tanggal_cetak_indo === '') {
   $tanggal_cetak_indo = date('j F Y');
 }
 
-// Ambil catatan_wali_kelas terbaru dari cetak_rapor (jika ada)
 $catatan_walas = '';
 $stmtCR = $koneksi->prepare("SELECT catatan_wali_kelas FROM cetak_rapor WHERE id_siswa = ? ORDER BY id_cetak_rapor DESC LIMIT 1");
 if ($stmtCR) {
@@ -258,7 +256,7 @@ function mapRumpunMapel($namaMapel) {
   }
   
   $pai = [
-    'al-quran hadist',
+    'Al-Quran Hadist',
     'akidah akhlak',
     'fiqih',
     'sejarah kebudayaan islam',
@@ -267,7 +265,6 @@ function mapRumpunMapel($namaMapel) {
   if (in_array($key, $pai, true)) {
     return 'Pendidikan Agama Islam ';
   }
-
   $ips = [
     'sosiologi',
     'ekonomi',
@@ -278,8 +275,8 @@ function mapRumpunMapel($namaMapel) {
   if (in_array($key, $ips, true)) {
     return 'Ilmu Pengetahuan Sosial ';
   }
+  // Rumpun lain bisa ditambahkan di sini jika dibutuhkan
 
-  // Default / tidak punya rumpun khusus
   return 'Mandiri';
 }
 
@@ -316,21 +313,21 @@ $logoPath = '../../Lembaga/data_sekolah/uploads/' . $logoFile;
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Cetak Rapor (Landscape) - <?= htmlspecialchars($dataSiswa['nama_siswa']); ?></title>
+  <title>Cetak Rapor - <?= htmlspecialchars($dataSiswa['nama_siswa']); ?></title>
   <style>
     * { box-sizing: border-box; }
     body {
       font-family: "Times New Roman", serif;
-      font-size: 9px; /* lebih kecil agar muat lebih banyak baris */
+      font-size: 11px;
       margin: 0;
       padding: 0;
     }
-    /* LAYOUT LANDSCAPE: lebar 297mm, tinggi 210mm */
     .page {
-        width: 297mm;
-        height: 210mm;
-        padding: 6mm 8mm 22mm 8mm; /* padding atas/bawah diperkecil */
+        width: 210mm;
+        height: 297mm;
+        padding: 10mm;
         position: relative;
+        padding-bottom: 45mm;
     }
     .kop {
       text-align: center;
@@ -341,7 +338,6 @@ $logoPath = '../../Lembaga/data_sekolah/uploads/' . $logoFile;
       font-weight: bold;
     }
     .kop-logo {
-      margin-left: 20px;
       position: absolute;
       left: 0;
       top: 0;
@@ -367,14 +363,14 @@ $logoPath = '../../Lembaga/data_sekolah/uploads/' . $logoFile;
 
     .judul-rapor {
       text-align: center;
-      margin: 2px 0 4px;
+      margin: 6px 0 8px;
       font-weight: bold;
       text-transform: uppercase;
     }
 
     .identitas {
-      margin-bottom: 4px;
-      font-size: 9px;
+      margin-bottom: 8px;
+      font-size: 11px;
       font-weight: bold;
     }
     .identitas-table { width: 100%; border:none; }
@@ -386,39 +382,37 @@ $logoPath = '../../Lembaga/data_sekolah/uploads/' . $logoFile;
     }
     th, td {
       border: 1px solid #000;
-      padding: 1px 2px; /* padding sel diperkecil */
+      padding: 2px 3px;
     }
     th { text-align: center; }
 
     .nilai-table th,
-    .nilai-table td { font-size: 8px; line-height: 1.1; }
+    .nilai-table td { font-size: 10px; }
     .nilai-table .mapel { text-align: left; }
 
     .bottom {
-      margin-top: 4px;
+      margin-top: 8px;
       display: flex;
       gap: 8px;
     }
-    .bottom .left  { flex: 1; }
-    .bottom .right { flex: 0 0 60%; max-width: 60%; margin-left: 10px; }
-    .small { font-size: 8px; }
+    .bottom .left  { flex: 0 0 60%; max-width: 60%; }
+    .bottom .right { flex: 1; margin-left: 10px; }
+    .small { font-size: 10px; }
 
     .catatan {
       border: 1px solid #000;
-      max-width: 100%;
-      min-height: 45px; /* lebih pendek agar hemat ruang */
-      font-size: 8px;
-      padding: 3px;
+      min-height: 80px;
+      padding: 4px;
+      font-size: 10px;
       white-space: pre-wrap;
-    word-break: break-all;
+      word-break: break-all;
     }
-
 
     .ttd {
         position: absolute;
-        bottom: 6mm;
-        left: 8mm;
-        right: 8mm;
+        bottom: 10mm;
+        left: 10mm;
+        right: 10mm;
     }
     .ttd-table {
       width: 100%;
@@ -427,12 +421,12 @@ $logoPath = '../../Lembaga/data_sekolah/uploads/' . $logoFile;
     .ttd-table td {
       border: none;
       text-align: center;
-      padding: 1px 3px;
+      padding: 2px 4px;
     }
 
     @page {
-      size: A4 landscape;
-      margin: 6mm 6mm 6mm 8mm; /* margin print diperkecil */
+      size: A4;
+      margin: 10mm 10mm 10mm 15mm;
     }
     @media print {
       body  { margin: 0; }
@@ -440,7 +434,8 @@ $logoPath = '../../Lembaga/data_sekolah/uploads/' . $logoFile;
     }
   </style>
 </head>
-<body onload="window.print()"> 
+<!-- <body onload="window.print()"> -->
+<body>
   <div class="page">
 
     <!-- KOP -->
@@ -449,9 +444,9 @@ $logoPath = '../../Lembaga/data_sekolah/uploads/' . $logoFile;
         <img src="<?= htmlspecialchars($logoPath); ?>" alt="Logo">
       </div>
       <div class="kop-text fw-bold">
-        <div class="nama-sekolah">YAYASAN PENDIDIKAN ISLAM "NURUL HUDA SEDATI"</div>
+        <div class="yayasan">YAYASAN PENDIDIKAN ISLAM "NURUL HUDA SEDATI"</div>
         <div class="nama-sekolah">MADRASAH ALIYAH NURUL HUDA SEDATI</div>
-        <div class="yayasan">TERAKREDITASI A</div>
+        <div class="akreditasi">TERAKREDITASI A</div>
         <div class="akreditasi">
           NSM: <?= htmlspecialchars($sekolah['nsm_sekolah'] ?? ''); ?>
           &nbsp; NPSN: <?= htmlspecialchars($sekolah['npsn_sekolah'] ?? ''); ?>
@@ -486,186 +481,166 @@ $logoPath = '../../Lembaga/data_sekolah/uploads/' . $logoFile;
       </table>
     </section>
 
-    <!-- NILAI AKADEMIK -->
-    <section class="nilai">
-      <table class="nilai-table">
-        <thead>
-          <tr>
-            <th rowspan="3" style="width:25px;">No</th>
-            <th rowspan="3" style="width:220px;">Mata Pelajaran</th>
-            <th colspan="16">FORMATIF</th>
-            <th colspan="4">SUMATIF</th>
-            <th rowspan="3" style="width:40px;">
-              SUMATIF TENGAH<br>SEMESTER
-            </th>
-          </tr>
-          <tr>
-            <th colspan="4" style="font-size: 9px;">LINGKUP MATERI 1</th>
-            <th colspan="4" style="font-size: 9px;">LINGKUP MATERI 2</th>
-            <th colspan="4" style="font-size: 9px;">LINGKUP MATERI 3</th>
-            <th colspan="4" style="font-size: 9px;">LINGKUP MATERI 4</th>
-            <th colspan="4" style="font-size: 9px;">LINGKUP MATERI</th>
-          </tr>
-          <tr>
-            <?php for ($i = 0; $i < 4; $i++): ?>
-              <th>TP1</th>
-              <th>TP2</th>
-              <th>TP3</th>
-              <th>TP4</th>
-            <?php endfor; ?>
-            <th>LM1</th>
-            <th>LM2</th>
-            <th>LM3</th>
-            <th>LM4</th>
-          </tr>
-        </thead>
+<!-- NILAI AKADEMIK -->
+<section class="nilai">
+  <table class="nilai-table">
+    <thead>
+      <tr>
+        <th rowspan="3" style="width:25px;">No</th>
+        <th rowspan="3" style="width:220px;">Mata Pelajaran</th>
+        <th colspan="16">FORMATIF</th>
+        <th colspan="4">SUMATIF</th>
+        <th rowspan="3" style="width:40px;">
+          SUMATIF TENGAH<br>SEMESTER
+        </th>
+      </tr>
+      <tr>
+        <th colspan="4" style="font-size: 9px;">LINGKUP MATERI 1</th>
+        <th colspan="4" style="font-size: 9px;">LINGKUP MATERI 2</th>
+        <th colspan="4" style="font-size: 9px;">LINGKUP MATERI 3</th>
+        <th colspan="4" style="font-size: 9px;">LINGKUP MATERI 4</th>
+        <th colspan="4" style="font-size: 9px;">LINGKUP MATERI</th>
+      </tr>
+      <tr>
+        <?php for ($i = 0; $i < 4; $i++): ?>
+          <th>TP1</th>
+          <th>TP2</th>
+          <th>TP3</th>
+          <th>TP4</th>
+        <?php endfor; ?>
+        <th>LM1</th>
+        <th>LM2</th>
+        <th>LM3</th>
+        <th>LM4</th>
+      </tr>
+    </thead>
         <tbody>
           <?php
-          $no = 1;
+$no = 1;
 
-          $renderKelompok = function ($label, $rows) use (&$no) {
-            if (!$rows) return;
+$renderKelompok = function ($label, $rows) use (&$no) {
+  if (!$rows) return;
 
-            $labelTampil = mapLabelKelompok($label);
+  $labelTampil = mapLabelKelompok($label);
 
-            echo '<tr><td colspan="23" style="font-weight:bold;text-align:left;">'
-               . htmlspecialchars($labelTampil)
-               . '</td></tr>';
+echo '<tr><td colspan="23" style="font-weight:bold;text-align:left;">'
+   . htmlspecialchars($labelTampil)
+   . '</td></tr>';
 
-            // Pisahkan: tanpa rumpun (Mandiri) vs punya rumpun (IPA, dst)
-            $tanpaRumpun = [];
-            $byRumpun    = [];
 
-            foreach ($rows as $r) {
-              $rumpun = mapRumpunMapel($r['nama_mata_pelajaran'] ?? '');
-              if ($rumpun === 'Mandiri') {
-                $tanpaRumpun[] = $r;               // dianggap mapel biasa
-              } else {
-                if (!isset($byRumpun[$rumpun])) {
-                  $byRumpun[$rumpun] = [];
-                }
-                $byRumpun[$rumpun][] = $r;
-              }
-            }
+  // Pisahkan: tanpa rumpun (Mandiri) vs punya rumpun (IPA, dst)
+  $tanpaRumpun = [];
+  $byRumpun    = [];
 
-            // Fungsi kecil untuk cetak 1 baris mapel
-            $printRow = function($r) use (&$no) {
-              echo '<tr>';
-              echo '<td style="text-align:center;">' . $no++ . '</td>';
-              echo '<td class="mapel">' . htmlspecialchars($r['nama_mata_pelajaran']) . '</td>';
+  foreach ($rows as $r) {
+    $rumpun = mapRumpunMapel($r['nama_mata_pelajaran'] ?? '');
+    if ($rumpun === 'Mandiri') {
+      $tanpaRumpun[] = $r;               // dianggap mapel biasa
+    } else {
+      if (!isset($byRumpun[$rumpun])) {
+        $byRumpun[$rumpun] = [];
+      }
+      $byRumpun[$rumpun][] = $r;
+    }
+  }
 
-              $cols = [
-                // FORMATIF LM1–4 (TP1–TP4)
-                'tp1_lm1','tp2_lm1','tp3_lm1','tp4_lm1',
-                'tp1_lm2','tp2_lm2','tp3_lm2','tp4_lm2',
-                'tp1_lm3','tp2_lm3','tp3_lm3','tp4_lm3',
-                'tp1_lm4','tp2_lm4','tp3_lm4','tp4_lm4',
-                // SUMATIF LM1–4
-                'sumatif_lm1','sumatif_lm2','sumatif_lm3','sumatif_lm4',
-              ];
+  // Fungsi kecil untuk cetak 1 baris mapel
+  $printRow = function($r) use (&$no) {
+    echo '<tr>';
+    echo '<td style="text-align:center;">' . $no++ . '</td>';
+    echo '<td class="mapel">' . htmlspecialchars($r['nama_mata_pelajaran']) . '</td>';
 
-              foreach ($cols as $c) {
-                $v = safeInt($r[$c] ?? '');
-                echo '<td style="text-align:center;">' . ($v === '' ? '' : $v) . '</td>';
-              }
+    $cols = [
+      // FORMATIF LM1–4 (TP1–TP4)
+      'tp1_lm1','tp2_lm1','tp3_lm1','tp4_lm1',
+      'tp1_lm2','tp2_lm2','tp3_lm2','tp4_lm2',
+      'tp1_lm3','tp2_lm3','tp3_lm3','tp4_lm3',
+      'tp1_lm4','tp2_lm4','tp3_lm4','tp4_lm4',
+      // SUMATIF LM1–4
+      'sumatif_lm1','sumatif_lm2','sumatif_lm3','sumatif_lm4',
+    ];
 
-              $sts = safeInt($r['sumatif_tengah_semester'] ?? '');
-              echo '<td style="text-align:center;">' . ($sts === '' ? '' : $sts) . '</td>';
-              echo '</tr>';
-            };
+    foreach ($cols as $c) {
+      $v = safeInt($r[$c] ?? '');
+      echo '<td style="text-align:center;">' . ($v === '' ? '' : $v) . '</td>';
+    }
 
-            // 1) Cetak dulu mapel tanpa rumpun (Mandiri)
-            foreach ($tanpaRumpun as $r) {
-              $printRow($r);
-            }
+    $sts = safeInt($r['sumatif_tengah_semester'] ?? '');
+    echo '<td style="text-align:center;">' . ($sts === '' ? '' : $sts) . '</td>';
+    echo '</tr>';
+  };
 
-            // 2) Baru di bawahnya: rumpun khusus (IPA, PAI, IPS, dst)
-            $prioritas = [
-              'Ilmu Pengetahuan Alam ',
-              'Pendidikan Agama Islam ',
-              'Ilmu Pengetahuan Sosial ',
-            ];
+  // 1) Cetak dulu mapel tanpa rumpun (Mandiri) -> tercampur dengan mapel lain biasa
+  foreach ($tanpaRumpun as $r) {
+    $printRow($r);
+  }
 
-            $orderedRumpun = [];
-            foreach ($prioritas as $rp) {
-              if (isset($byRumpun[$rp])) {
-                $orderedRumpun[$rp] = $byRumpun[$rp];
-              }
-            }
-            foreach ($byRumpun as $rp => $list) {
-              if (!isset($orderedRumpun[$rp])) {
-                $orderedRumpun[$rp] = $list;
-              }
-            }
+  // 2) Baru di bawahnya: rumpun khusus (IPA, dst)
+  //    Atur prioritas kalau perlu
+  $prioritas = [
+    'Ilmu Pengetahuan Alam (IPA)',
+    // nanti bisa tambah rumpun lain di sini
+  ];
 
-            foreach ($orderedRumpun as $rumpunLabel => $list) {
-              if (!$list) continue;
+  $orderedRumpun = [];
+  foreach ($prioritas as $rp) {
+    if (isset($byRumpun[$rp])) {
+      $orderedRumpun[$rp] = $byRumpun[$rp];
+    }
+  }
+  foreach ($byRumpun as $rp => $list) {
+    if (!isset($orderedRumpun[$rp])) {
+      $orderedRumpun[$rp] = $list;
+    }
+  }
 
-              echo '<tr><td colspan="23" style="text-align:left; padding-left:12px;">'
-                 . htmlspecialchars($rumpunLabel)
-                 . '</td></tr>';
+  foreach ($orderedRumpun as $rumpunLabel => $list) {
+    if (!$list) continue;
 
-              foreach ($list as $r) {
-                $printRow($r);
-              }
-            }
-          };
+    // Sub‑header rumpun (tanpa kata Mandiri karena Mandiri sudah di atas)
+    echo '<tr><td colspan="23" style="text-align:left; padding-left:12px;">'
+       . htmlspecialchars($rumpunLabel)
+       . '</td></tr>';
 
-          $ordered = [];
+    foreach ($list as $r) {
+      $printRow($r);
+    }
+  }
+};
+$ordered = [];
 
-          foreach ($kelompokMapel as $label => $rows) {
-            $prio = 99;
-            $lower = strtolower($label);
+foreach ($kelompokMapel as $label => $rows) {
+  $prio = 99;
+  $lower = strtolower($label);
 
-            if (strpos($lower, 'kelompok a') !== false || strpos($lower, 'wajib') !== false) {
-              $prio = 1;
-            } elseif (strpos($lower, 'kelompok b') !== false || strpos($lower, 'pilihan') !== false) {
-              $prio = 2;
-            } elseif (strpos($lower, 'kelompok c') !== false || strpos($lower, 'lokal') !== false) {
-              $prio = 3;
-            } elseif (strpos($lower, 'kelompok d') !== false || strpos($lower, 'peminatan') !== false) {
-              $prio = 4;
-            }
+  if (strpos($lower, 'kelompok a') !== false || strpos($lower, 'wajib') !== false) {
+    $prio = 1;
+  } elseif (strpos($lower, 'kelompok b') !== false || strpos($lower, 'pilihan') !== false) {
+    $prio = 2;
+  } elseif (strpos($lower, 'kelompok c') !== false || strpos($lower, 'lokal') !== false) {
+    $prio = 3;
+  } elseif (strpos($lower, 'kelompok d') !== false || strpos($lower, 'peminatan') !== false) {
+    $prio = 4;
+  }
 
-            $ordered[$prio . '_' . $label] = [$label, $rows];
-          }
+  $ordered[$prio . '_' . $label] = [$label, $rows];
+}
 
-          ksort($ordered);
-          foreach ($ordered as $item) {
-            [$label, $rows] = $item;
-            $renderKelompok($label, $rows);
-          }
-          ?>
+
+ksort($ordered);
+foreach ($ordered as $item) {
+  [$label, $rows] = $item;
+  $renderKelompok($label, $rows);
+}
+?>
         </tbody>
       </table>
     </section>
 
-    <!-- BAGIAN BAWAH: ABSENSI & CATATAN + EKSKUL -->
+    <!-- BAGIAN BAWAH: EKSKUL, ABSENSI, CATATAN -->
     <section class="bottom">
       <div class="left">
-        <h4 style="margin:6px 0 2px; font-size:10px;">Ekstrakurikuler</h4>
-        <table class="small">
-          <thead>
-            <tr>
-              <th style="width:25px;">No</th>
-              <th>Ekstrakulikuler</th>
-              <th style="width:60px;">Nilai</th>
-            </tr>
-          </thead>
-          <tbody>
-            <?php if (empty($nilaiEkstra)): ?>
-              <tr><td colspan="3" style="text-align:center;">-</td></tr>
-            <?php else: $i = 1; foreach ($nilaiEkstra as $e): ?>
-              <tr>
-                <td style="text-align:center;"><?= $i++; ?></td>
-                <td><?= htmlspecialchars($e['nama_ekstrakurikuler']); ?></td>
-                <td style="text-align:center;"><?= htmlspecialchars($e['nilai_ekstrakurikuler']); ?></td>
-              </tr>
-            <?php endforeach; endif; ?>
-          </tbody>
-        </table>
-
-        <h4 style="margin:6px 0 2px; font-size:10px;">Absensi</h4>
+        <h4 style="margin:8px 0 4px; font-size:11px;">Absensi</h4>
         <table class="small">
           <thead>
             <tr>
@@ -692,16 +667,41 @@ $logoPath = '../../Lembaga/data_sekolah/uploads/' . $logoFile;
             </tr>
           </tbody>
         </table>
-      </div>
 
-      <div class="right">
-        <h4 style="margin:6px 0 2px; font-size:10px;">Catatan Wali Kelas</h4>
+        <h4 style="margin:8px 0; font-size:11px;">Catatan Wali Kelas</h4>
         <div class="catatan">
           <?= nl2br(htmlspecialchars($catatan_walas)); ?>
         </div>
+      </div>
+
+      <div class="right">
+        <h4 style="margin:8px 0 4px; font-size:11px;">Ekstrakurikuler</h4>
+        <table class="small">
+          <thead>
+            <tr>
+              <th style="width:25px;">No</th>
+              <th>Ekstrakulikuler</th>
+              <th style="width:60px;">Nilai</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php if (empty($nilaiEkstra)): ?>
+              <tr><td colspan="3" style="text-align:center;">-</td></tr>
+            <?php else: $i = 1; foreach ($nilaiEkstra as $e): ?>
+              <tr>
+                <td style="text-align:center;"><?= $i++; ?></td>
+                <td><?= htmlspecialchars($e['nama_ekstrakurikuler']); ?></td>
+                <td style="text-align:center;"><?= htmlspecialchars($e['nilai_ekstrakurikuler']); ?></td>
+              </tr>
+            <?php endforeach; endif; ?>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
     <!-- TANDA TANGAN -->
-        <table class="ttd-table" style="margin:8px 0 2px 20px; font-size:10px;">
+    <footer class="ttd">
+      <table class="ttd-table" >
         <tr>            
           <td colspan="3" style="text-align:left;">Mengetahui,</td>
         </tr>
@@ -709,7 +709,7 @@ $logoPath = '../../Lembaga/data_sekolah/uploads/' . $logoFile;
           <td style="text-align:left; vertical-align:top;">
             Orang Tua / Wali Peserta Didik
           </td>
-          <td style="text-align:center; vertical-align:top; width:40%;">
+          <td style="text-align:center; vertical-align:top; width:55%;">
             Kepala Madrasah
           </td>
           <td style="text-align:left; vertical-align:top;">
@@ -719,7 +719,7 @@ $logoPath = '../../Lembaga/data_sekolah/uploads/' . $logoFile;
           </td>
         </tr>
         <tr>
-          <td style="height:35px;"></td>
+          <td style="height:45px;"></td>
           <td></td>
           <td></td>
         </tr>
@@ -733,9 +733,8 @@ $logoPath = '../../Lembaga/data_sekolah/uploads/' . $logoFile;
           </td>
         </tr>
       </table>
-      </div>
-    </section>
+    </footer>
+
   </div>
 </body>
 </html>
-
