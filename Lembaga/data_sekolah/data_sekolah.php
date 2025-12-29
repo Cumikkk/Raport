@@ -266,7 +266,6 @@ $data = $res->fetch_assoc() ?: [];
 
       padding: var(--gap);
       margin-top: var(--gap);
-      /* ✅ jarak dari elemen sebelumnya */
 
       border-radius: var(--radius);
       border: 1px solid rgba(0, 0, 0, 0.08);
@@ -394,6 +393,11 @@ $data = $res->fetch_assoc() ?: [];
       align-items: center;
     }
 
+    /* ==================================================
+       ✅ FIX SESUAI REQUEST:
+       - TANPA ANIMASI
+       - CUKUP WARNA SAAT HOVER
+       ================================================== */
     .btn-lite {
       padding: 10px 14px;
       border-radius: 10px;
@@ -401,33 +405,57 @@ $data = $res->fetch_assoc() ?: [];
       background: #fff;
       font-weight: 600;
       cursor: pointer;
-      transition: background-color .15s ease, opacity .15s ease, transform .15s ease;
+      transition: none !important;
+      /* ✅ matikan animasi */
     }
 
+    /* tombol bantu: Zoom/Putar/Reset */
     .btn-lite:hover {
-      background: #f9fafb;
+      background: #e0f2fe;
+      /* biru muda jelas */
+      border-color: #38bdf8;
+      /* biru lebih tegas */
+      color: #0f172a;
+      /* teks tetap jelas */
     }
 
     .btn-danger-lite {
       background: #dc2626;
       color: #fff;
       border: none;
+      transition: none !important;
+      /* ✅ matikan animasi */
     }
 
     .btn-success-lite {
       background: #16a34a;
       color: #fff;
       border: none;
+      transition: none !important;
+      /* ✅ matikan animasi */
     }
 
-    /* FIX: tombol Batal & Gunakan (Crop) jangan berubah saat hover/focus */
+    /* hover tombol merah/hijau: lebih “nyala” */
+    .btn-danger-lite:hover {
+      background: #b91c1c;
+      /* merah lebih gelap -> ketara */
+      color: #fff;
+    }
+
+    .btn-success-lite:hover {
+      background: #15803d;
+      /* hijau lebih gelap -> ketara */
+      color: #fff;
+    }
+
+    /* FIX sebelumnya: tetap kunci warna tombol Batal & Gunakan */
     #btnCancelCrop,
     #btnApplyCrop {
       transition: none !important;
     }
 
     #btnCancelCrop:hover {
-      background: #dc2626 !important;
+      background: #b91c1c !important;
       color: #fff !important;
       opacity: 1 !important;
       transform: none !important;
@@ -436,7 +464,7 @@ $data = $res->fetch_assoc() ?: [];
     }
 
     #btnApplyCrop:hover {
-      background: #16a34a !important;
+      background: #15803d !important;
       color: #fff !important;
       opacity: 1 !important;
       transform: none !important;
@@ -491,67 +519,38 @@ $data = $res->fetch_assoc() ?: [];
 
                   <div>
                     <label class="form-label">Nama Sekolah <span class="req">*</span></label>
-                    <input
-                      type="text"
-                      name="nama_sekolah"
-                      class="form-control"
-                      required
-                      autocomplete="organization"
+                    <input type="text" name="nama_sekolah" class="form-control" required autocomplete="organization"
                       value="<?= htmlspecialchars($data['nama_sekolah'] ?? '') ?>">
                   </div>
 
                   <div class="form-row cols-2">
                     <div>
                       <label class="form-label">NSM <span class="req">*</span></label>
-                      <input
-                        type="text"
-                        name="nsm_sekolah"
-                        class="form-control"
-                        inputmode="numeric"
-                        required
+                      <input type="text" name="nsm_sekolah" class="form-control" inputmode="numeric" required
                         value="<?= htmlspecialchars($data['nsm_sekolah'] ?? '') ?>">
                     </div>
                     <div>
                       <label class="form-label">NPSN <span class="req">*</span></label>
-                      <input
-                        type="text"
-                        name="npsn_sekolah"
-                        class="form-control"
-                        inputmode="numeric"
-                        required
+                      <input type="text" name="npsn_sekolah" class="form-control" inputmode="numeric" required
                         value="<?= htmlspecialchars($data['npsn_sekolah'] ?? '') ?>">
                     </div>
                   </div>
 
                   <div>
                     <label class="form-label">Alamat <span class="req">*</span></label>
-                    <textarea
-                      name="alamat_sekolah"
-                      class="form-control"
-                      rows="2"
-                      autocomplete="street-address"
+                    <textarea name="alamat_sekolah" class="form-control" rows="2" autocomplete="street-address"
                       required><?= htmlspecialchars($data['alamat_sekolah'] ?? '') ?></textarea>
                   </div>
 
                   <div class="form-row cols-2">
                     <div>
                       <label class="form-label">Telepon <span class="req">*</span></label>
-                      <input
-                        type="text"
-                        name="no_telepon_sekolah"
-                        class="form-control"
-                        inputmode="tel"
-                        placeholder="08xxxxxxxxxx"
-                        required
+                      <input type="text" name="no_telepon_sekolah" class="form-control" inputmode="tel" placeholder="08xxxxxxxxxx" required
                         value="<?= htmlspecialchars($data['no_telepon_sekolah'] ?? '') ?>">
                     </div>
                     <div>
                       <label class="form-label">Kecamatan <span class="req">*</span></label>
-                      <input
-                        type="text"
-                        name="kecamatan_sekolah"
-                        class="form-control"
-                        required
+                      <input type="text" name="kecamatan_sekolah" class="form-control" required
                         value="<?= htmlspecialchars($data['kecamatan_sekolah'] ?? '') ?>">
                     </div>
                   </div>
@@ -559,48 +558,29 @@ $data = $res->fetch_assoc() ?: [];
                   <div class="form-row cols-2">
                     <div>
                       <label class="form-label">Kabupaten/Kota <span class="req">*</span></label>
-                      <input
-                        type="text"
-                        name="kabupaten_atau_kota_sekolah"
-                        class="form-control"
-                        required
+                      <input type="text" name="kabupaten_atau_kota_sekolah" class="form-control" required
                         value="<?= htmlspecialchars($data['kabupaten_atau_kota_sekolah'] ?? '') ?>">
                     </div>
                     <div>
                       <label class="form-label">Provinsi <span class="req">*</span></label>
-                      <input
-                        type="text"
-                        name="provinsi_sekolah"
-                        class="form-control"
-                        required
+                      <input type="text" name="provinsi_sekolah" class="form-control" required
                         value="<?= htmlspecialchars($data['provinsi_sekolah'] ?? '') ?>">
                     </div>
                   </div>
 
                   <div>
                     <label class="form-label">Logo Sekolah (opsional)</label>
-                    <input
-                      type="file"
-                      name="logo_sekolah"
-                      id="logoInput"
-                      class="form-control"
+                    <input type="file" name="logo_sekolah" id="logoInput" class="form-control"
                       accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
                     <div class="hint">Format: JPG/PNG/WebP · Maks 10MB. (akan muncul crop sebelum upload)</div>
                   </div>
 
                   <div class="actions">
                     <label class="form-label" style="display:flex;align-items:center;gap:8px">
-                      <input
-                        class="form-check-input"
-                        type="checkbox"
-                        value="1"
-                        id="confirm"
-                        required>
+                      <input class="form-check-input" type="checkbox" value="1" id="confirm" required>
                       <span>Saya yakin akan menyimpan perubahan</span>
                     </label>
-                    <button type="submit" class="btn btn-success" style="margin-top:10px">
-                      Simpan
-                    </button>
+                    <button type="submit" class="btn btn-success" style="margin-top:10px">Simpan</button>
                   </div>
                 </form>
               </div>
@@ -609,8 +589,7 @@ $data = $res->fetch_assoc() ?: [];
               <div class="card">
                 <h2 class="section-title">Logo</h2>
                 <div class="logo-wrap">
-                  <img
-                    id="logoPreview"
+                  <img id="logoPreview"
                     src="uploads/<?= htmlspecialchars(($data['logo_sekolah'] ?? '') ?: 'default.png') ?>"
                     class="logo-preview"
                     alt="Logo Sekolah">
@@ -703,11 +682,10 @@ $data = $res->fetch_assoc() ?: [];
     // --- VALIDASI WAJIB ISI SEMUA INPUT + ERROR MERAH & SCROLL KE PERTAMA YANG KOSONG ---
     document.addEventListener("DOMContentLoaded", () => {
       const form = document.getElementById("formSekolah");
-      const inputs = form.querySelectorAll(".form-control:not([type='file'])"); // semua input kecuali file
+      const inputs = form.querySelectorAll(".form-control:not([type='file'])");
       const checkbox = document.getElementById("confirm");
       const btnSubmit = form.querySelector("button[type='submit']");
 
-      // Tambahkan elemen error-text di bawah setiap input/textarea
       inputs.forEach(inp => {
         const err = document.createElement("div");
         err.className = "error-text";
@@ -720,23 +698,17 @@ $data = $res->fetch_assoc() ?: [];
         const empty = inp.value.trim() === "";
         if (empty) {
           inp.classList.add("error");
-          if (err && err.classList.contains("error-text")) {
-            err.style.display = "block";
-          }
+          if (err && err.classList.contains("error-text")) err.style.display = "block";
         } else {
           inp.classList.remove("error");
-          if (err && err.classList.contains("error-text")) {
-            err.style.display = "none";
-          }
+          if (err && err.classList.contains("error-text")) err.style.display = "none";
         }
       }
 
       function checkAllFilled() {
         let all = true;
         inputs.forEach(inp => {
-          if (inp.value.trim() === "") {
-            all = false;
-          }
+          if (inp.value.trim() === "") all = false;
         });
         return all;
       }
@@ -761,28 +733,22 @@ $data = $res->fetch_assoc() ?: [];
         }
       }
 
-      // Awal: set state (kasih merah kalau ada yang kosong)
       checkbox.disabled = true;
       btnSubmit.disabled = true;
       btnSubmit.style.opacity = "0.6";
       btnSubmit.style.cursor = "not-allowed";
       updateState();
 
-      // Event: setiap ketik input
       inputs.forEach(inp => {
         inp.addEventListener("input", () => {
           setFieldState(inp);
           updateState();
         });
-        inp.addEventListener("blur", () => {
-          setFieldState(inp);
-        });
+        inp.addEventListener("blur", () => setFieldState(inp));
       });
 
-      // Event: checkbox diubah
       checkbox.addEventListener("change", updateState);
 
-      // Safety: kalau tetap submit & ada yang kosong -> scroll ke field pertama yang kosong
       form.addEventListener("submit", (e) => {
         if (!checkAllFilled()) {
           e.preventDefault();
@@ -867,12 +833,10 @@ $data = $res->fetch_assoc() ?: [];
         lastSelectedFile = null;
       }
 
-      // ketika pilih file -> tampilkan overlay crop
       input.addEventListener('change', (e) => {
         const f = e.target.files && e.target.files[0];
         if (!f) return;
 
-        // validasi tipe gambar
         const okTypes = ['image/jpeg', 'image/png', 'image/webp'];
         if (!okTypes.includes(f.type)) {
           showUiAlert('danger', '❌ Format gambar harus JPG / PNG / WebP.');
@@ -880,7 +844,6 @@ $data = $res->fetch_assoc() ?: [];
           return;
         }
 
-        // validasi ukuran (10MB)
         const max = 10 * 1024 * 1024;
         if (f.size > max) {
           showUiAlert('danger', '❌ Ukuran logo melebihi 10MB.');
@@ -894,10 +857,8 @@ $data = $res->fetch_assoc() ?: [];
         objectUrl = URL.createObjectURL(f);
         cropImg.src = objectUrl;
 
-        // buka overlay dulu, baru init cropper setelah image siap
         openOverlay();
 
-        // init cropper setelah image load
         cropImg.onload = () => {
           destroyCropper();
           cropper = new Cropper(cropImg, {
@@ -911,13 +872,11 @@ $data = $res->fetch_assoc() ?: [];
         };
       });
 
-      // tombol bantu
       btnZoomIn && btnZoomIn.addEventListener('click', () => cropper && cropper.zoom(0.1));
       btnZoomOut && btnZoomOut.addEventListener('click', () => cropper && cropper.zoom(-0.1));
       btnRotate && btnRotate.addEventListener('click', () => cropper && cropper.rotate(90));
       btnReset && btnReset.addEventListener('click', () => cropper && cropper.reset());
 
-      // batal / close
       function cancelCrop() {
         destroyCropper();
         cleanupUrl();
@@ -928,7 +887,6 @@ $data = $res->fetch_assoc() ?: [];
       btnCancel && btnCancel.addEventListener('click', cancelCrop);
       btnClose && btnClose.addEventListener('click', cancelCrop);
 
-      // apply crop
       btnApply && btnApply.addEventListener('click', () => {
         if (!cropper || !lastSelectedFile) return;
 
@@ -972,7 +930,6 @@ $data = $res->fetch_assoc() ?: [];
   </script>
 
   <script>
-    // --- AUTO DISMISS ALERT + TOMBOL X ---
     document.addEventListener('DOMContentLoaded', () => {
       const alerts = document.querySelectorAll('.alert');
       if (!alerts.length) return;
