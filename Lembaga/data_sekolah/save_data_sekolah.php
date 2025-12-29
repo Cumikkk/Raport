@@ -1,5 +1,4 @@
 <?php
-
 require_once '../../koneksi.php';
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $koneksi->set_charset('utf8mb4');

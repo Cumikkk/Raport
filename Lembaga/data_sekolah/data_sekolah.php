@@ -30,6 +30,9 @@ $data = $res->fetch_assoc() ?: [];
       --warn: #f59e0b;
       --danger: #dc2626;
       --radius: 14px;
+
+      /* ✅ JARAK GLOBAL (samakan atas/bawah/kiri/kanan) */
+      --gap: 20px;
     }
 
     body {
@@ -37,18 +40,29 @@ $data = $res->fetch_assoc() ?: [];
       background: var(--bg);
     }
 
+    /* ==================================================
+       FIX: HILANGKAN CARD PUTIH TEMPLATE (biar tidak dobel)
+       ================================================== */
+    .dk-content-box {
+      background: transparent !important;
+      box-shadow: none !important;
+      border: 0 !important;
+      padding: 0 !important;
+    }
+
     /* wrapper utama supaya konten selalu di tengah area konten */
     .sekolah-wrapper {
       max-width: 1100px;
       margin: 0 auto;
-      padding: 24px 20px;
+      padding: var(--gap);
+      /* ✅ semua sisi sama */
     }
 
     .page-title {
       display: flex;
       align-items: center;
       gap: 12px;
-      margin-bottom: 18px;
+      margin-bottom: var(--gap);
     }
 
     .page-title h1 {
@@ -67,12 +81,14 @@ $data = $res->fetch_assoc() ?: [];
       background: var(--card);
       border-radius: var(--radius);
       box-shadow: 0 6px 18px rgba(0, 0, 0, .06);
-      padding: 22px;
+      padding: var(--gap);
+      /* ✅ konsisten */
     }
 
     .grid {
       display: grid;
-      gap: 18px;
+      gap: var(--gap);
+      /* ✅ konsisten */
     }
 
     @media (min-width: 900px) {
@@ -163,15 +179,16 @@ $data = $res->fetch_assoc() ?: [];
     .stack {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: var(--gap);
+      /* ✅ konsisten */
     }
 
     .alert {
       padding: 12px 14px;
       border-radius: 12px;
-      margin-bottom: 16px;
+      margin-bottom: var(--gap);
+      /* ✅ konsisten */
       font-size: 14px;
-      /* transition untuk efek menghilang halus */
       transition:
         opacity 0.4s ease,
         transform 0.4s ease,
@@ -182,7 +199,6 @@ $data = $res->fetch_assoc() ?: [];
       max-height: 200px;
       overflow: hidden;
       position: relative;
-      /* untuk posisi tombol X */
     }
 
     .alert-success {
@@ -197,7 +213,6 @@ $data = $res->fetch_assoc() ?: [];
       color: #991b1b;
     }
 
-    /* kelas untuk menyembunyikan alert (dipakai JS) */
     .alert-hide {
       opacity: 0;
       transform: translateY(-4px);
@@ -207,7 +222,6 @@ $data = $res->fetch_assoc() ?: [];
       padding-bottom: 0;
     }
 
-    /* Tombol X di alert */
     .alert .close-btn {
       position: absolute;
       top: 14px;
@@ -239,22 +253,44 @@ $data = $res->fetch_assoc() ?: [];
       background: #fafafa;
     }
 
-    /* Sticky actions on mobile */
+    /* ==================================================
+       Sticky actions: batas jelas + jarak konsisten
+       ================================================== */
     .actions {
       position: sticky;
       bottom: 0;
-      background: var(--card);
-      padding: 12px;
-      border-radius: 12px;
-      box-shadow: 0 -6px 18px rgba(0, 0, 0, .06);
+      z-index: 5;
+
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(8px);
+
+      padding: var(--gap);
+      margin-top: var(--gap);
+      /* ✅ jarak dari elemen sebelumnya */
+
+      border-radius: var(--radius);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+
+      box-shadow:
+        0 -10px 24px rgba(0, 0, 0, 0.12),
+        0 2px 10px rgba(0, 0, 0, 0.06);
     }
 
-    /* Small helper for required */
+    .actions::before {
+      content: "";
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      top: -1px;
+      height: 1px;
+      background: rgba(0, 0, 0, 0.10);
+      border-radius: 999px;
+    }
+
     .req {
       color: #e11d48;
     }
 
-    /* Error styling */
     .form-control.error {
       border-color: #dc2626;
       background-color: #fef2f2;
@@ -268,12 +304,12 @@ $data = $res->fetch_assoc() ?: [];
     }
 
     /* ============================
-       TAMBAHAN: CROP OVERLAY (CUSTOM)
+       CROP OVERLAY (CUSTOM)
        ============================ */
     .crop-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,.55);
+      background: rgba(0, 0, 0, .55);
       display: none;
       align-items: center;
       justify-content: center;
@@ -289,7 +325,7 @@ $data = $res->fetch_assoc() ?: [];
       width: min(980px, 100%);
       background: #fff;
       border-radius: 14px;
-      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
       overflow: hidden;
     }
 
@@ -316,7 +352,10 @@ $data = $res->fetch_assoc() ?: [];
       cursor: pointer;
       opacity: .7;
     }
-    .crop-close:hover { opacity: 1; }
+
+    .crop-close:hover {
+      opacity: 1;
+    }
 
     .crop-body {
       padding: 14px 16px;
@@ -365,7 +404,9 @@ $data = $res->fetch_assoc() ?: [];
       transition: background-color .15s ease, opacity .15s ease, transform .15s ease;
     }
 
-    .btn-lite:hover { background: #f9fafb; }
+    .btn-lite:hover {
+      background: #f9fafb;
+    }
 
     .btn-danger-lite {
       background: #dc2626;
@@ -379,16 +420,12 @@ $data = $res->fetch_assoc() ?: [];
       border: none;
     }
 
-    /* ==================================================
-       FIX: tombol Batal & Gunakan (Crop) jangan berubah saat hover/focus
-       - karena mereka punya background beda (merah/hijau), kita kunci warnanya
-       ================================================== */
+    /* FIX: tombol Batal & Gunakan (Crop) jangan berubah saat hover/focus */
     #btnCancelCrop,
     #btnApplyCrop {
-      transition: none !important; /* matikan animasi yg bikin terasa hover */
+      transition: none !important;
     }
 
-    /* hover */
     #btnCancelCrop:hover {
       background: #dc2626 !important;
       color: #fff !important;
@@ -397,6 +434,7 @@ $data = $res->fetch_assoc() ?: [];
       box-shadow: none !important;
       filter: none !important;
     }
+
     #btnApplyCrop:hover {
       background: #16a34a !important;
       color: #fff !important;
@@ -406,7 +444,6 @@ $data = $res->fetch_assoc() ?: [];
       filter: none !important;
     }
 
-    /* focus (kadang terlihat seperti hover saat klik) */
     #btnCancelCrop:focus,
     #btnCancelCrop:focus-visible,
     #btnApplyCrop:focus,
@@ -422,8 +459,7 @@ $data = $res->fetch_assoc() ?: [];
         <div class="container-fluid py-3">
           <div class="sekolah-wrapper">
 
-            <div class="page-title">
-            </div>
+            <div class="page-title"></div>
 
             <?php if (isset($_GET['status'])): ?>
               <?php if ($_GET['status'] === 'success'): ?>
@@ -439,6 +475,9 @@ $data = $res->fetch_assoc() ?: [];
                 </div>
               <?php endif; ?>
             <?php endif; ?>
+
+            <!-- ✅ ALERT UI UNTUK VALIDASI JS -->
+            <div id="jsAlertContainer"></div>
 
             <div class="grid">
               <!-- Kiri: Form utama -->
@@ -635,6 +674,32 @@ $data = $res->fetch_assoc() ?: [];
   </div>
 
   <script>
+    function showUiAlert(type, message) {
+      const container = document.getElementById('jsAlertContainer');
+      if (!container) return;
+
+      const el = document.createElement('div');
+      el.className = `alert alert-${type}`;
+      el.innerHTML = `<span class="close-btn">&times;</span>${message}`;
+
+      container.prepend(el);
+
+      const timer = setTimeout(() => {
+        el.classList.add('alert-hide');
+      }, 4000);
+
+      const close = el.querySelector('.close-btn');
+      if (close) {
+        close.addEventListener('click', (e) => {
+          e.preventDefault();
+          el.classList.add('alert-hide');
+          clearTimeout(timer);
+        });
+      }
+    }
+  </script>
+
+  <script>
     // --- VALIDASI WAJIB ISI SEMUA INPUT + ERROR MERAH & SCROLL KE PERTAMA YANG KOSONG ---
     document.addEventListener("DOMContentLoaded", () => {
       const form = document.getElementById("formSekolah");
@@ -810,7 +875,7 @@ $data = $res->fetch_assoc() ?: [];
         // validasi tipe gambar
         const okTypes = ['image/jpeg', 'image/png', 'image/webp'];
         if (!okTypes.includes(f.type)) {
-          alert('Format gambar harus JPG/PNG/WebP.');
+          showUiAlert('danger', '❌ Format gambar harus JPG / PNG / WebP.');
           resetFileInput();
           return;
         }
@@ -818,7 +883,7 @@ $data = $res->fetch_assoc() ?: [];
         // validasi ukuran (10MB)
         const max = 10 * 1024 * 1024;
         if (f.size > max) {
-          alert('Ukuran logo melebihi 10MB.');
+          showUiAlert('danger', '❌ Ukuran logo melebihi 10MB.');
           resetFileInput();
           return;
         }
@@ -841,7 +906,6 @@ $data = $res->fetch_assoc() ?: [];
             autoCropArea: 1,
             background: false,
             responsive: true,
-            // logo umumnya kotak
             aspectRatio: 1
           });
         };
@@ -853,7 +917,7 @@ $data = $res->fetch_assoc() ?: [];
       btnRotate && btnRotate.addEventListener('click', () => cropper && cropper.rotate(90));
       btnReset && btnReset.addEventListener('click', () => cropper && cropper.reset());
 
-      // batal / close: jangan upload file mentah
+      // batal / close
       function cancelCrop() {
         destroyCropper();
         cleanupUrl();
@@ -864,7 +928,7 @@ $data = $res->fetch_assoc() ?: [];
       btnCancel && btnCancel.addEventListener('click', cancelCrop);
       btnClose && btnClose.addEventListener('click', cancelCrop);
 
-      // apply crop -> replace file input dengan hasil crop + update preview
+      // apply crop
       btnApply && btnApply.addEventListener('click', () => {
         if (!cropper || !lastSelectedFile) return;
 
@@ -882,21 +946,21 @@ $data = $res->fetch_assoc() ?: [];
         canvas.toBlob((blob) => {
           if (!blob) return;
 
-          // buat file baru hasil crop
           const ext = (mime === 'image/jpeg') ? 'jpg' : (mime === 'image/webp') ? 'webp' : 'png';
-          const newFile = new File([blob], 'logo-crop.' + ext, { type: mime });
+          const newFile = new File([blob], 'logo-crop.' + ext, {
+            type: mime
+          });
 
-          // inject ke input type=file
           const dt = new DataTransfer();
           dt.items.add(newFile);
           input.files = dt.files;
 
-          // update preview kanan
           const previewUrl = URL.createObjectURL(newFile);
           imgPreview.src = previewUrl;
           imgPreview.onload = () => URL.revokeObjectURL(previewUrl);
 
-          // tutup overlay + bersihkan cropper/url asli
+          showUiAlert('success', '✅ Logo berhasil diproses. Jangan lupa klik Simpan.');
+
           destroyCropper();
           cleanupUrl();
           closeOverlay();
