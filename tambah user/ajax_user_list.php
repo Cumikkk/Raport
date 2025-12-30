@@ -5,11 +5,12 @@ $search = isset($_GET['q']) ? trim($_GET['q']) : '';
 $like   = "%{$search}%";
 
 // Pagination params
-$allowedPer = [10, 20, 50, 100];
+$allowedPer = [10, 20, 50, 100, 1000000]; // ✅ tambah "Semua"
 $perPage    = isset($_GET['per']) ? (int)$_GET['per'] : 10;
 if (!in_array($perPage, $allowedPer, true)) {
     $perPage = 10;
 }
+
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($page < 1) $page = 1;
 
@@ -105,7 +106,6 @@ else:
             </td>
             <td data-label="Aksi">
                 <div class="d-flex gap-2 justify-content-center flex-wrap">
-                    <!-- Sama seperti di data_user.php: pakai modal edit -->
                     <button type="button"
                         class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-edit-user"
                         data-id="<?= (int)$row['id_user'] ?>"
@@ -115,7 +115,6 @@ else:
                         <i class="bi bi-pencil-square"></i> Edit
                     </button>
 
-                    <!-- Hapus pakai modal konfirmasi custom (bukan confirm bawaan browser) -->
                     <button type="button"
                         class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-delete-single"
                         data-href="hapus_data_user.php?id=<?= (int)$row['id_user'] ?>"

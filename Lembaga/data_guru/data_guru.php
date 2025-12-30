@@ -4,7 +4,9 @@ require_once '../../koneksi.php';
 include '../../includes/header.php';
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
-$koneksi->set_charset('utf8mb4');
+
+// ✅ aman untuk mysqli procedural
+mysqli_set_charset($koneksi, 'utf8mb4');
 
 // Session + CSRF untuk bulk delete
 if (session_status() === PHP_SESSION_NONE) {
@@ -144,6 +146,8 @@ if ($totalRows === 0) {
 
     .content {
       padding: clamp(12px, 2vw, 20px);
+      padding-bottom: 260px;
+      /* ✅ ruang bawah agar dropdown perPage tidak kebuka ke atas */
       color: var(--text);
     }
 
@@ -616,7 +620,6 @@ if ($totalRows === 0) {
                   <ul class="pagination mb-0" id="paginationWrap"></ul>
                   <div class="pager-sep" aria-hidden="true"></div>
 
-                  <!-- ✅ perPage tambah opsi "Semua" -->
                   <select id="perPage" class="form-select form-select-sm per-select">
                     <?php foreach ($allowedPer as $opt): ?>
                       <?php if ($opt === 0): ?>
@@ -1072,7 +1075,6 @@ if ($totalRows === 0) {
         });
       }
 
-      // ✅ buildPagination dukung perPage=0 (Semua)
       function buildPagination(totalRows, page, perPage) {
         currentTotalRows = totalRows;
         currentPage = page;
@@ -1107,7 +1109,6 @@ if ($totalRows === 0) {
         };
 
         let html = '';
-
         const isFirst = allMode ? true : (page <= 1);
         const isLast = allMode ? true : (page >= totalPages);
 
@@ -1130,7 +1131,7 @@ if ($totalRows === 0) {
         paginationUl.querySelectorAll('a[data-page]').forEach(a => {
           a.addEventListener('click', (e) => {
             e.preventDefault();
-            if (allMode) return; // ✅ di mode semua, tidak perlu pindah halaman
+            if (allMode) return;
             const target = parseInt(a.getAttribute('data-page') || '1', 10);
             if (isNaN(target) || target < 1 || target === currentPage) return;
             doSearch(currentQuery, target, currentPerPage, true);
@@ -1254,8 +1255,6 @@ if ($totalRows === 0) {
           const val = parseInt(perPageSelect.value || '10', 10);
           if (isNaN(val) || val < 0) return;
           currentPerPage = val;
-
-          // ✅ kalau pilih Semua → page selalu 1
           doSearch(currentQuery, 1, currentPerPage, true);
         });
       }
@@ -1323,8 +1322,6 @@ if ($totalRows === 0) {
               bootstrap.Modal.getOrCreateInstance(modalTambahEl).hide();
             }
             formTambah.reset();
-
-            // ✅ reload tabel tetap pakai currentPerPage (bisa 0)
             doSearch(currentQuery, 1, currentPerPage, true);
             showTopAlert(data.type || 'success', data.msg || 'Berhasil.');
           });

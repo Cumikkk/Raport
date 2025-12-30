@@ -16,7 +16,7 @@ $search = isset($_GET['q']) ? trim($_GET['q']) : '';
 $like   = "%{$search}%";
 
 // Pagination server-side (untuk tampilan awal sebelum AJAX)
-$allowedPer = [10, 20, 50, 100];
+$allowedPer = [10, 20, 50, 100, 1000000]; // ✅ tambah "Semua"
 $perPage    = isset($_GET['per']) ? (int)$_GET['per'] : 10;
 if (!in_array($perPage, $allowedPer, true)) {
   $perPage = 10;
@@ -107,6 +107,8 @@ if ($totalRows === 0) {
 
   .content {
     padding: clamp(12px, 2vw, 20px);
+    padding-bottom: 260px;
+    /* ✅ ruang bawah agar dropdown perPage kebuka ke bawah */
     color: var(--text);
   }
 
@@ -296,14 +298,15 @@ if ($totalRows === 0) {
     font-size: 0.95rem;
   }
 
-  /* ALERT */
+  /* ===========================
+     ✅ ALERT ANIMATION
+     =========================== */
   .alert {
     padding: 12px 14px;
     border-radius: 12px;
     margin-bottom: 20px;
     font-size: 14px;
-    transition: opacity 0.4s ease, transform 0.4s ease, max-height 0.4s ease, margin 0.4s ease, padding-top 0.4s ease, padding-bottom 0.4s ease;
-    max-height: 200px;
+    max-height: 220px;
     overflow: hidden;
     position: relative;
   }
@@ -320,9 +323,27 @@ if ($totalRows === 0) {
     color: #991b1b;
   }
 
+  .alert-anim {
+    opacity: 0;
+    transform: translateY(-8px);
+    transition:
+      opacity 0.35s ease,
+      transform 0.35s ease,
+      max-height 0.35s ease,
+      margin 0.35s ease,
+      padding-top 0.35s ease,
+      padding-bottom 0.35s ease;
+    will-change: opacity, transform;
+  }
+
+  .alert-show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
   .alert-hide {
     opacity: 0;
-    transform: translateY(-4px);
+    transform: translateY(-6px);
     max-height: 0;
     margin: 0;
     padding-top: 0;
@@ -338,13 +359,14 @@ if ($totalRows === 0) {
     opacity: 0.6;
     font-size: 18px;
     line-height: 1;
+    user-select: none;
   }
 
   .alert .close-btn:hover {
     opacity: 1;
   }
 
-  /* ✅ PAGINATION GROUP (Referensi 2) */
+  /* ✅ PAGINATION GROUP */
   .pager-area {
     display: flex;
     flex-direction: column;
@@ -387,7 +409,6 @@ if ($totalRows === 0) {
     width: 100%;
   }
 
-  /* Mobile “card table” */
   @media (max-width: 520px) {
     table.table thead {
       display: none;
@@ -433,7 +454,6 @@ if ($totalRows === 0) {
       align-items: stretch !important;
     }
 
-    /* di mobile: separator disembunyikan */
     .pager-sep {
       display: none;
     }
@@ -452,16 +472,16 @@ if ($totalRows === 0) {
   <div class="row g-3">
     <div class="col-12">
 
-      <!-- CONTAINER ALERT GLOBAL (sukses/gagal umum) -->
+      <!-- CONTAINER ALERT GLOBAL -->
       <div id="globalAlertContainer">
         <?php if (isset($_GET['status'])): ?>
           <?php if ($_GET['status'] === 'success'): ?>
-            <div class="alert alert-success">
+            <div class="alert alert-success alert-anim">
               <span class="close-btn">&times;</span>
               ✅ <?= htmlspecialchars($_GET['msg'] ?? 'Operasi berhasil.', ENT_QUOTES, 'UTF-8'); ?>
             </div>
           <?php else: ?>
-            <div class="alert alert-danger">
+            <div class="alert alert-danger alert-anim">
               <span class="close-btn">&times;</span>
               ❌ <?= htmlspecialchars($_GET['msg'] ?? 'Terjadi kesalahan.', ENT_QUOTES, 'UTF-8'); ?>
             </div>
@@ -470,8 +490,6 @@ if ($totalRows === 0) {
       </div>
 
       <div class="card shadow-sm">
-
-        <!-- TOP BAR -->
         <div class="top-bar p-3 p-md-4">
           <div class="d-flex flex-column gap-3 w-100">
             <div>
@@ -479,7 +497,6 @@ if ($totalRows === 0) {
             </div>
 
             <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-2">
-              <!-- ✅ Search saja (perPage dipindah ke bawah) -->
               <div class="d-flex search-perpage-row align-items-md-center gap-2 flex-grow-1">
                 <div class="search-wrap flex-grow-1">
                   <div class="searchbox" role="search" aria-label="Pencarian user">
@@ -489,7 +506,6 @@ if ($totalRows === 0) {
                 </div>
               </div>
 
-              <!-- Tombol Tambah User -> modal -->
               <div class="d-flex justify-content-md-end">
                 <button type="button"
                   class="btn btn-brand btn-sm d-inline-flex align-items-center gap-2 px-3"
@@ -504,7 +520,6 @@ if ($totalRows === 0) {
 
         <div class="card-body pt-0">
           <div class="table-responsive" id="userTableWrap">
-            <!-- OVERLAY LOADING -->
             <div class="table-loading-overlay" id="tableLoadingOverlay">
               <div class="spinner-border spinner-border-sm me-2" role="status"></div>
               <span style="font-size:13px;">Sedang memuat data…</span>
@@ -543,14 +558,11 @@ if ($totalRows === 0) {
                       <td data-label="Password">
                         <?php
                         $pwd = $row['password_user'] ?? '';
-                        if ($pwd === '') {
-                          echo '-';
-                        } else {
-                        ?>
+                        if ($pwd === '') echo '-';
+                        else { ?>
                           <div class="d-inline-flex align-items-center gap-1 password-cell">
                             <span class="password-text" data-visible="0">••••••</span>
-                            <button
-                              type="button"
+                            <button type="button"
                               class="btn btn-sm btn-outline-secondary toggle-password"
                               data-password="<?= htmlspecialchars($pwd, ENT_QUOTES, 'UTF-8') ?>"
                               title="Lihat / sembunyikan password">
@@ -588,7 +600,6 @@ if ($totalRows === 0) {
             </table>
           </div>
 
-          <!-- HAPUS TERPILIH -->
           <div class="mt-3 d-flex justify-content-start">
             <button type="button" id="bulkDeleteBtn"
               class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1"
@@ -597,26 +608,26 @@ if ($totalRows === 0) {
             </button>
           </div>
 
-          <!-- ✅ Pagination + perPage digabung (Referensi 2) -->
           <nav aria-label="Page navigation" class="mt-3">
             <div class="pager-area">
               <div class="pager-group">
-                <!-- kiri: pagination (UL langsung) -->
                 <ul class="pagination mb-0" id="paginationWrap"></ul>
 
                 <div class="pager-sep" aria-hidden="true"></div>
 
-                <!-- kanan: per halaman -->
                 <select id="perPage" class="form-select form-select-sm per-select">
                   <?php foreach ($allowedPer as $opt): ?>
-                    <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>>
-                      <?= $opt ?>/hal
-                    </option>
+                    <?php if ($opt === 1000000): ?>
+                      <option value="1000000" <?= $perPage === 1000000 ? 'selected' : '' ?>>Semua</option>
+                    <?php else: ?>
+                      <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>>
+                        <?= $opt ?>/hal
+                      </option>
+                    <?php endif; ?>
                   <?php endforeach; ?>
                 </select>
               </div>
 
-              <!-- info bawah: center -->
               <p id="pageInfo" class="page-info-text text-muted mb-0 page-info-center">
                 Menampilkan <strong><?= $shown ?></strong> dari <strong><?= $totalRows ?></strong> data •
                 Halaman <strong><?= $pageDisplayCurrent ?></strong> / <strong><?= $pageDisplayTotal ?></strong>
@@ -625,9 +636,9 @@ if ($totalRows === 0) {
           </nav>
 
         </div>
-      </div><!-- /.card -->
-    </div><!-- /.col-12 -->
-  </div><!-- /.row -->
+      </div>
+    </div>
+  </div>
 
   <!-- MODAL TAMBAH USER -->
   <div class="modal fade" id="modalTambahUser" tabindex="-1" aria-hidden="true">
@@ -639,7 +650,7 @@ if ($totalRows === 0) {
         </div>
         <form action="proses_tambah_data_user.php" method="POST" autocomplete="off">
           <div class="modal-body">
-            <div id="addUserAlert" class="alert alert-danger d-none mb-3"></div>
+            <div id="addUserAlert" class="alert alert-danger alert-anim d-none mb-3"></div>
 
             <div class="mb-3">
               <label for="add_role" class="form-label fw-semibold">Role</label>
@@ -655,9 +666,7 @@ if ($totalRows === 0) {
               <select id="add_id_guru" name="id_guru" class="form-select" required>
                 <option value="" disabled selected>-- Pilih Guru --</option>
                 <?php foreach ($guruList as $g): ?>
-                  <option value="<?= (int)$g['id_guru'] ?>">
-                    <?= htmlspecialchars($g['nama_guru']) ?>
-                  </option>
+                  <option value="<?= (int)$g['id_guru'] ?>"><?= htmlspecialchars($g['nama_guru']) ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -696,7 +705,7 @@ if ($totalRows === 0) {
         <form action="proses_edit_data_user.php" method="POST" autocomplete="off">
           <input type="hidden" name="id_user" id="edit_id_user">
           <div class="modal-body">
-            <div id="editUserAlert" class="alert alert-danger d-none mb-3"></div>
+            <div id="editUserAlert" class="alert alert-danger alert-anim d-none mb-3"></div>
 
             <div class="mb-3">
               <label for="edit_role" class="form-label fw-semibold">Role</label>
@@ -712,9 +721,7 @@ if ($totalRows === 0) {
               <select id="edit_id_guru" name="id_guru" class="form-select" required>
                 <option value="" disabled>-- Pilih Guru --</option>
                 <?php foreach ($guruList as $g): ?>
-                  <option value="<?= (int)$g['id_guru'] ?>">
-                    <?= htmlspecialchars($g['nama_guru']) ?>
-                  </option>
+                  <option value="<?= (int)$g['id_guru'] ?>"><?= htmlspecialchars($g['nama_guru']) ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -742,7 +749,7 @@ if ($totalRows === 0) {
     </div>
   </div>
 
-  <!-- MODAL KONFIRMASI HAPUS (untuk single & bulk) -->
+  <!-- MODAL KONFIRMASI HAPUS -->
   <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
@@ -778,8 +785,6 @@ if ($totalRows === 0) {
     const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
 
     const perPageSelect = document.getElementById('perPage');
-
-    // ✅ sekarang paginationWrap adalah UL
     const paginationUl = document.getElementById('paginationWrap');
     const pageInfo = document.getElementById('pageInfo');
 
@@ -793,6 +798,9 @@ if ($totalRows === 0) {
     const editUserAlert = document.getElementById('editUserAlert');
     const globalAlertContainer = document.getElementById('globalAlertContainer');
 
+    const modalAddEl = document.getElementById('modalTambahUser');
+    const modalEditEl = document.getElementById('modalEditUser');
+
     let typingTimer;
     const debounceMs = 250;
     let currentController = null;
@@ -803,6 +811,179 @@ if ($totalRows === 0) {
     let currentTotalRows = <?= (int)$totalRows ?>;
 
     let pendingDeleteHandler = null;
+
+    // ✅ AUTO SCROLL KE ATAS SAAT ALERT MUNCUL
+    function scrollToTopSmooth() {
+      try {
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      } catch (e) {
+        window.scrollTo(0, 0);
+      }
+      // fallback tambahan (beberapa browser)
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }
+
+    // ✅ PAKSA AUTO SCROLL KE ATAS jika ada alert (global / modal)
+    function forceScrollTopOnAlertRender(el) {
+      if (!el) return;
+
+      // Delay kecil supaya DOM sudah ke-render sebelum scroll
+      setTimeout(() => {
+        scrollToTopSmooth();
+
+        // Kalau alert-nya di dalam modal, scroll body modal juga ke atas
+        const modal = el.closest('.modal');
+        if (modal) {
+          const modalBody = modal.querySelector('.modal-body');
+          if (modalBody) {
+            try {
+              modalBody.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+              });
+            } catch (e) {
+              modalBody.scrollTop = 0;
+            }
+          }
+          const modalDialog = modal.querySelector('.modal-dialog');
+          if (modalDialog) {
+            try {
+              modalDialog.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+              });
+            } catch (e) {}
+          }
+        }
+      }, 10);
+    }
+
+    /* ===========================
+       ✅ ALERT HELPERS (AMAN)
+       =========================== */
+    function animateIn(el) {
+      if (!el) return;
+      el.classList.add('alert-anim');
+      requestAnimationFrame(() => el.classList.add('alert-show'));
+      forceScrollTopOnAlertRender(el); // ✅ otomatis scroll saat alert muncul
+    }
+
+    function animateOut(el, after) {
+      if (!el) return;
+      if (!el.isConnected) return;
+      el.classList.remove('alert-show');
+      el.classList.add('alert-hide');
+      setTimeout(() => {
+        if (typeof after === 'function') after();
+      }, 350);
+    }
+
+    function stopAlertTimer(box) {
+      if (!box) return;
+      const t = box.dataset.timerId ? parseInt(box.dataset.timerId, 10) : 0;
+      if (t) {
+        clearTimeout(t);
+        delete box.dataset.timerId;
+      }
+    }
+
+    function clearModalAlert(mode) {
+      const box = (mode === 'add') ? addUserAlert : editUserAlert;
+      if (!box) return;
+      stopAlertTimer(box);
+      box.innerHTML = '';
+      box.classList.add('d-none');
+      box.classList.remove('alert-hide', 'alert-show');
+    }
+
+    function showModalAlert(mode, message) {
+      const box = (mode === 'add') ? addUserAlert : editUserAlert;
+      if (!box) return;
+
+      // ✅ bersihkan timer sebelumnya
+      stopAlertTimer(box);
+
+      box.classList.remove('d-none', 'alert-hide', 'alert-show');
+      box.innerHTML = `<span class="close-btn">&times;</span> ${message}`;
+      animateIn(box);
+
+      const closeBtn = box.querySelector('.close-btn');
+
+      const hide = () => {
+        if (!box.isConnected || box.classList.contains('d-none')) return;
+        animateOut(box, () => {
+          box.classList.add('d-none');
+          box.innerHTML = '';
+          box.classList.remove('alert-hide', 'alert-show');
+          stopAlertTimer(box);
+        });
+      };
+
+      const timer = setTimeout(hide, 4000);
+      box.dataset.timerId = String(timer);
+
+      if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          stopAlertTimer(box);
+          hide();
+        }, {
+          once: true
+        });
+      }
+    }
+
+    function showTopAlert(type, message) {
+      if (!globalAlertContainer) return;
+      const isSuccess = (type === 'success');
+
+      globalAlertContainer.innerHTML =
+        `<div class="alert ${isSuccess ? 'alert-success' : 'alert-danger'} alert-anim">
+        <span class="close-btn">&times;</span>
+        ${isSuccess ? '✅' : '❌'} ${message}
+      </div>`;
+
+      const alertEl = globalAlertContainer.querySelector('.alert');
+      if (!alertEl) return;
+
+      animateIn(alertEl);
+
+      const closeBtn = alertEl.querySelector('.close-btn');
+      const timer = setTimeout(() => animateOut(alertEl), 4000);
+
+      if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          clearTimeout(timer);
+          animateOut(alertEl);
+        });
+      }
+    }
+
+    // ✅ MutationObserver: kalau ada alert global baru (dari operasi apa pun), otomatis scroll ke atas
+    (function observeGlobalAlert() {
+      if (!globalAlertContainer || typeof MutationObserver === 'undefined') return;
+      const obs = new MutationObserver(() => {
+        const al = globalAlertContainer.querySelector('.alert');
+        if (al) forceScrollTopOnAlertRender(al);
+      });
+      obs.observe(globalAlertContainer, {
+        childList: true,
+        subtree: true
+      });
+    })();
+
+    // ✅ saat modal ditutup: matikan timer & bersihkan alert (fix error menghilang)
+    if (modalAddEl && typeof bootstrap !== 'undefined') {
+      modalAddEl.addEventListener('hidden.bs.modal', () => clearModalAlert('add'));
+    }
+    if (modalEditEl && typeof bootstrap !== 'undefined') {
+      modalEditEl.addEventListener('hidden.bs.modal', () => clearModalAlert('edit'));
+    }
 
     function scrollToTable() {
       if (!tableWrap) return;
@@ -900,12 +1081,6 @@ if ($totalRows === 0) {
       });
     }
 
-    function dismissGlobalAlerts() {
-      if (!globalAlertContainer) return;
-      const alerts = globalAlertContainer.querySelectorAll('.alert');
-      alerts.forEach(alert => alert.classList.add('alert-hide'));
-    }
-
     function attachEditModalEvents() {
       const editButtons = document.querySelectorAll('.btn-edit-user');
       const modalEl = document.getElementById('modalEditUser');
@@ -920,7 +1095,6 @@ if ($totalRows === 0) {
       editButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.preventDefault();
-          dismissGlobalAlerts();
 
           const id = btn.getAttribute('data-id') || '';
           const role = btn.getAttribute('data-role') || '';
@@ -945,7 +1119,6 @@ if ($totalRows === 0) {
       buttons.forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.preventDefault();
-          dismissGlobalAlerts();
 
           const href = btn.getAttribute('data-href');
           const label = btn.getAttribute('data-label') || 'user ini';
@@ -957,7 +1130,6 @@ if ($totalRows === 0) {
       });
     }
 
-    // ✅ Build pagination ke <ul id="paginationWrap"> (samakan seperti Absensi)
     function buildPagination(totalRows, page, perPage) {
       currentTotalRows = totalRows;
       currentPage = page;
@@ -1019,9 +1191,7 @@ if ($totalRows === 0) {
 
     checkAll.addEventListener('change', () => {
       const boxes = getRowCheckboxes();
-      boxes.forEach(b => {
-        b.checked = checkAll.checked;
-      });
+      boxes.forEach(b => b.checked = checkAll.checked);
       updateBulkUI();
     });
 
@@ -1106,11 +1276,7 @@ if ($totalRows === 0) {
             const pp = parseInt(metaRow.getAttribute('data-per') || String(currentPerPage), 10);
             metaRow.parentNode.removeChild(metaRow);
 
-            buildPagination(
-              isNaN(total) ? 0 : total,
-              isNaN(pg) ? 1 : pg,
-              isNaN(pp) ? currentPerPage : pp
-            );
+            buildPagination(isNaN(total) ? 0 : total, isNaN(pg) ? 1 : pg, isNaN(pp) ? currentPerPage : pp);
           }
 
           attachCheckboxEvents();
@@ -1127,74 +1293,6 @@ if ($totalRows === 0) {
         });
     }
 
-    // ==== Helper alert modal & global (tetap) ====
-    function clearModalAlert(mode) {
-      const box = (mode === 'add') ? addUserAlert : editUserAlert;
-      if (!box) return;
-      box.innerHTML = '';
-      box.classList.add('d-none');
-      box.classList.remove('alert-hide');
-    }
-
-    function showModalAlert(mode, message) {
-      const box = (mode === 'add') ? addUserAlert : editUserAlert;
-      if (!box) return;
-
-      box.classList.remove('d-none', 'alert-hide');
-      box.innerHTML = `<span class="close-btn">&times;</span> ${message}`;
-
-      const closeBtn = box.querySelector('.close-btn');
-      let closed = false;
-
-      const hide = () => {
-        if (closed) return;
-        closed = true;
-        box.classList.add('alert-hide');
-        setTimeout(() => {
-          box.classList.add('d-none');
-          box.innerHTML = '';
-          box.classList.remove('alert-hide');
-        }, 400);
-      };
-
-      const timer = setTimeout(hide, 4000);
-
-      if (closeBtn) {
-        closeBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          clearTimeout(timer);
-          hide();
-        }, {
-          once: true
-        });
-      }
-    }
-
-    function showTopAlert(type, message) {
-      if (!globalAlertContainer) return;
-      const isSuccess = (type === 'success');
-      globalAlertContainer.innerHTML =
-        `<div class="alert ${isSuccess ? 'alert-success' : 'alert-danger'}">
-          <span class="close-btn">&times;</span>
-          ${isSuccess ? '✅' : '❌'} ${message}
-        </div>`;
-
-      const alert = globalAlertContainer.querySelector('.alert');
-      if (!alert) return;
-      const closeBtn = alert.querySelector('.close-btn');
-      const timer = setTimeout(() => {
-        alert.classList.add('alert-hide');
-      }, 4000);
-
-      if (closeBtn) {
-        closeBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          alert.classList.add('alert-hide');
-          clearTimeout(timer);
-        });
-      }
-    }
-
     function handleFormSubmit(form, mode) {
       clearModalAlert(mode);
 
@@ -1202,8 +1300,7 @@ if ($totalRows === 0) {
       const origHtml = submitBtn ? submitBtn.innerHTML : '';
       if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.innerHTML =
-          '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Menyimpan...';
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Menyimpan...';
       }
 
       fetch(form.action, {
@@ -1218,9 +1315,7 @@ if ($totalRows === 0) {
           return r.json();
         })
         .then(data => {
-          if (!data || typeof data.success === 'undefined') {
-            throw new Error('Respon tidak valid');
-          }
+          if (!data || typeof data.success === 'undefined') throw new Error('Respon tidak valid');
 
           if (!data.success) {
             showModalAlert(mode, data.message || 'Terjadi kesalahan.');
@@ -1228,9 +1323,7 @@ if ($totalRows === 0) {
           }
 
           if (typeof bootstrap !== 'undefined') {
-            const modalEl = mode === 'add' ?
-              document.getElementById('modalTambahUser') :
-              document.getElementById('modalEditUser');
+            const modalEl = mode === 'add' ? modalAddEl : modalEditEl;
             if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).hide();
           }
 
@@ -1253,9 +1346,7 @@ if ($totalRows === 0) {
 
     input.addEventListener('input', () => {
       clearTimeout(typingTimer);
-      typingTimer = setTimeout(() => {
-        doSearch(input.value, 1, currentPerPage, false);
-      }, debounceMs);
+      typingTimer = setTimeout(() => doSearch(input.value, 1, currentPerPage, false), debounceMs);
     });
 
     if (perPageSelect) {
@@ -1274,83 +1365,42 @@ if ($totalRows === 0) {
     attachSingleDeleteEvents();
     buildPagination(currentTotalRows, currentPage, currentPerPage);
 
-    if (tbody) tbody.classList.add('tbody-loaded');
-
     const formAdd = document.querySelector('#modalTambahUser form');
-    if (formAdd) {
-      formAdd.addEventListener('submit', (e) => {
-        e.preventDefault();
-        handleFormSubmit(formAdd, 'add');
-      });
-    }
+    if (formAdd) formAdd.addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleFormSubmit(formAdd, 'add');
+    });
 
     const formEdit = document.querySelector('#modalEditUser form');
-    if (formEdit) {
-      formEdit.addEventListener('submit', (e) => {
-        e.preventDefault();
-        handleFormSubmit(formEdit, 'edit');
+    if (formEdit) formEdit.addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleFormSubmit(formEdit, 'edit');
+    });
+
+    // animasikan alert global yang sudah ada dari PHP
+    document.addEventListener('DOMContentLoaded', () => {
+      const existing = globalAlertContainer ? globalAlertContainer.querySelectorAll('.alert.alert-anim') : [];
+
+      if (existing.length > 0) {
+        // ✅ kalau ada alert dari redirect hapus/tambah/edit dll, auto scroll ke atas
+        scrollToTopSmooth();
+      }
+
+      existing.forEach(alertEl => {
+        animateIn(alertEl);
+        const closeBtn = alertEl.querySelector('.close-btn');
+        const timer = setTimeout(() => animateOut(alertEl), 4000);
+        if (closeBtn) {
+          closeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            clearTimeout(timer);
+            animateOut(alertEl);
+          });
+        }
       });
-    }
+    });
+
   })();
 </script>
 
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const container = document.getElementById('globalAlertContainer');
-    if (!container) return;
-    const alerts = container.querySelectorAll('.alert');
-    if (!alerts.length) return;
-
-    alerts.forEach(alert => {
-      const closeBtn = alert.querySelector('.close-btn');
-      const timer = setTimeout(() => {
-        alert.classList.add('alert-hide');
-      }, 4000);
-
-      if (closeBtn) {
-        closeBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          alert.classList.add('alert-hide');
-          clearTimeout(timer);
-        });
-      }
-    });
-  });
-</script>
-
 <?php include '../includes/footer.php'; ?>
-
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const modalTarget = params.get('modal');
-      const msg = params.get('msg');
-      const id = params.get('id');
-
-      if (!modalTarget || !msg) return;
-
-      if (modalTarget === 'add') {
-        const alertBox = document.getElementById('addUserAlert');
-        if (alertBox) {
-          alertBox.textContent = msg;
-          alertBox.classList.remove('d-none');
-        }
-        const modalEl = document.getElementById('modalTambahUser');
-        if (modalEl && typeof bootstrap !== 'undefined') {
-          bootstrap.Modal.getOrCreateInstance(modalEl).show();
-        }
-      } else if (modalTarget === 'edit' && id) {
-        const alertBox = document.getElementById('editUserAlert');
-        if (alertBox) {
-          alertBox.textContent = msg;
-          alertBox.classList.remove('d-none');
-        }
-        const btn = document.querySelector('.btn-edit-user[data-id="' + id + '"]');
-        if (btn) btn.click();
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  });
-</script>
