@@ -1,105 +1,153 @@
 <?php
 // pages/guru/proses_import_data_guru.php
 require_once '../../koneksi.php';
-
-// LOAD PhpSpreadsheet (sesuaikan path jika perlu)
 require_once '../../vendor/autoload.php';
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$koneksi->set_charset('utf8mb4');
+
+function is_ajax_request(): bool
+{
+  return (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+}
+
+function json_out(array $payload, int $code = 200): void
+{
+  http_response_code($code);
+  header('Content-Type: application/json; charset=utf-8');
+  echo json_encode($payload);
+  exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-  header('Location: data_guru.php?err=' . urlencode('Metode tidak diizinkan.'));
+  $msg = 'Metode tidak diizinkan.';
+  if (is_ajax_request()) json_out(['ok' => false, 'type' => 'danger', 'msg' => $msg], 405);
+  header('Location: data_guru.php?err=' . urlencode($msg));
   exit;
 }
 
 if (!isset($_FILES['excel_file']) || !is_uploaded_file($_FILES['excel_file']['tmp_name'])) {
-  header('Location: data_guru.php?err=' . urlencode('Silakan pilih file Excel terlebih dahulu.'));
+  $msg = 'Silakan pilih file Excel terlebih dahulu.';
+  if (is_ajax_request()) json_out(['ok' => false, 'type' => 'danger', 'msg' => $msg], 422);
+  header('Location: data_guru.php?err=' . urlencode($msg));
   exit;
 }
 
-// Hanya izinkan jabatan ini
 $ALLOWED_JABATAN = ['Kepala Sekolah', 'Guru'];
 
-$success   = 0; // jumlah baris yang berhasil di-insert
-$skipped   = 0; // jumlah baris yang dilewati karena tidak valid
-$emptyRows = 0; // jumlah baris kosong (nama & jabatan kosong)
+$success   = 0;
+$skipped   = 0;
+$emptyRows = 0;
+
+$skippedReasons = [
+  'duplikat' => 0,
+  'jabatan'  => 0,
+  'kepsek'   => 0,
+  'invalid'  => 0,
+];
 
 try {
-  // Baca file Excel yang diupload
+  // cek apakah sudah ada kepala sekolah (sekali saja)
+  $stmtKS = $koneksi->prepare("SELECT COUNT(*) AS cnt FROM guru WHERE jabatan_guru = 'Kepala Sekolah'");
+  $stmtKS->execute();
+  $kepsekExists = ((int)$stmtKS->get_result()->fetch_assoc()['cnt'] > 0);
+  $stmtKS->close();
+
   $spreadsheet = IOFactory::load($_FILES['excel_file']['tmp_name']);
   $sheet       = $spreadsheet->getActiveSheet();
   $highestRow  = $sheet->getHighestRow();
 
-  // Loop mulai dari baris 2 (baris 1 adalah header: nomer, nama guru, jabatan)
-  for ($row = 2; $row <= $highestRow; $row++) {
+  // prepared untuk cek duplikat (case-insensitive)
+  $stmtDup = $koneksi->prepare("SELECT COUNT(*) AS cnt FROM guru WHERE LOWER(nama_guru) = LOWER(?)");
+  // prepared untuk insert
+  $stmtIns = $koneksi->prepare("INSERT INTO guru (nama_guru, jabatan_guru) VALUES (?, ?)");
 
-    // Kolom A = nomer (tidak dipakai untuk insert, hanya untuk referensi kalau dibutuhkan)
-    $no      = trim((string)$sheet->getCell('A' . $row)->getValue());
-    // Kolom B = nama guru
+  for ($row = 2; $row <= $highestRow; $row++) {
     $nama    = trim((string)$sheet->getCell('B' . $row)->getValue());
-    // Kolom C = jabatan
     $jabatan = trim((string)$sheet->getCell('C' . $row)->getValue());
 
-    // Jika baris benar-benar kosong (nama & jabatan kosong) → lewati tanpa dihitung error
     if ($nama === '' && $jabatan === '') {
       $emptyRows++;
       continue;
     }
 
-    // Validasi nama guru tidak boleh kosong
     if ($nama === '') {
       $skipped++;
+      $skippedReasons['invalid']++;
       continue;
     }
 
-    // Normalisasi jabatan (misal user isi "kepala sekolah" semua huruf kecil)
     $jabatanNormalized = ucwords(strtolower($jabatan));
-
     if (!in_array($jabatanNormalized, $ALLOWED_JABATAN, true)) {
-      // Jika tidak valid, baris ini dilewati
       $skipped++;
+      $skippedReasons['jabatan']++;
       continue;
     }
 
-    // Insert ke DB
-    $stmt = $koneksi->prepare("
-      INSERT INTO guru (nama_guru, jabatan_guru)
-      VALUES (?, ?)
-    ");
-    if (!$stmt) {
-      // Jika gagal prepare, anggap baris ini dilewati dan lanjut
+    // cek duplikat nama
+    $stmtDup->bind_param('s', $nama);
+    $stmtDup->execute();
+    $cntDup = (int)$stmtDup->get_result()->fetch_assoc()['cnt'];
+    if ($cntDup > 0) {
       $skipped++;
+      $skippedReasons['duplikat']++;
       continue;
     }
 
-    $stmt->bind_param('ss', $nama, $jabatanNormalized);
+    // kepala sekolah cuma 1 (import: kalau sudah ada → skip)
+    if ($jabatanNormalized === 'Kepala Sekolah' && $kepsekExists) {
+      $skipped++;
+      $skippedReasons['kepsek']++;
+      continue;
+    }
 
-    if ($stmt->execute()) {
+    // insert
+    $stmtIns->bind_param('ss', $nama, $jabatanNormalized);
+    if ($stmtIns->execute()) {
       $success++;
+      if ($jabatanNormalized === 'Kepala Sekolah') {
+        $kepsekExists = true; // setelah sukses insert kepsek, baris kepsek berikutnya skip
+      }
     } else {
       $skipped++;
+      $skippedReasons['invalid']++;
     }
-
-    $stmt->close();
   }
+
+  $stmtDup->close();
+  $stmtIns->close();
 
   // Susun pesan akhir
-  $msgParts = [];
-  $msgParts[] = "Import selesai.";
-  $msgParts[] = "Berhasil: $success baris.";
+  $parts = [];
+  $parts[] = "Import selesai.";
+  $parts[] = "Berhasil: $success baris.";
+
   if ($skipped > 0) {
-    $msgParts[] = "Dilewati (tidak valid): $skipped baris.";
+    $detail = [];
+    if ($skippedReasons['duplikat'] > 0) $detail[] = "duplikat nama: {$skippedReasons['duplikat']}";
+    if ($skippedReasons['kepsek'] > 0)   $detail[] = "kepala sekolah lebih dari 1: {$skippedReasons['kepsek']}";
+    if ($skippedReasons['jabatan'] > 0)  $detail[] = "jabatan tidak valid: {$skippedReasons['jabatan']}";
+    if ($skippedReasons['invalid'] > 0)  $detail[] = "data tidak valid: {$skippedReasons['invalid']}";
+    $parts[] = "Dilewati: $skipped baris (" . implode(', ', $detail) . ").";
   }
+
   if ($emptyRows > 0) {
-    $msgParts[] = "Baris kosong: $emptyRows baris (diabaikan).";
+    $parts[] = "Baris kosong: $emptyRows baris (diabaikan).";
   }
 
-  $msg = implode(' ', $msgParts);
+  $msg = implode(' ', $parts);
 
+  // kalau ada yang di-skip, tipe warning biar kerasa “ada yang dilewati”
+  $type = ($skipped > 0) ? 'warning' : 'success';
+
+  if (is_ajax_request()) json_out(['ok' => true, 'type' => $type, 'msg' => $msg]);
   header('Location: data_guru.php?msg=' . urlencode($msg));
   exit;
 } catch (Throwable $e) {
-  // Jika terjadi error saat baca/parse Excel
-  header('Location: data_guru.php?err=' . urlencode('Gagal memproses file Excel: ' . $e->getMessage()));
+  $msg = 'Gagal memproses file Excel: ' . $e->getMessage();
+  if (is_ajax_request()) json_out(['ok' => false, 'type' => 'danger', 'msg' => $msg], 500);
+  header('Location: data_guru.php?err=' . urlencode($msg));
   exit;
 }

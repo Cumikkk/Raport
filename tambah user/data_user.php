@@ -105,41 +105,9 @@ if ($totalRows === 0) {
     --danger: #dc2626;
   }
 
-  /* ======================================================
-     ✅ RESPONSIVE SPACING (atas/kanan/bawah/kiri bisa beda)
-     ====================================================== */
   .content {
-    padding: 0;
-    /* matikan padding lama supaya jarak dikontrol page-wrap */
+    padding: clamp(12px, 2vw, 20px);
     color: var(--text);
-  }
-
-  /* DESKTOP */
-  .page-wrap {
-    padding-top: 28px;
-    padding-right: 32px;
-    padding-bottom: 24px;
-    padding-left: 20px;
-  }
-
-  /* TABLET */
-  @media (max-width: 992px) {
-    .page-wrap {
-      padding-top: 22px;
-      padding-right: 24px;
-      padding-bottom: 20px;
-      padding-left: 16px;
-    }
-  }
-
-  /* MOBILE */
-  @media (max-width: 576px) {
-    .page-wrap {
-      padding-top: 14px;
-      padding-right: 12px;
-      padding-bottom: 14px;
-      padding-left: 12px;
-    }
   }
 
   .card {
@@ -376,7 +344,7 @@ if ($totalRows === 0) {
     opacity: 1;
   }
 
-  /* ✅ PAGINATION GROUP */
+  /* ✅ PAGINATION GROUP (Referensi 2) */
   .pager-area {
     display: flex;
     flex-direction: column;
@@ -481,324 +449,322 @@ if ($totalRows === 0) {
 </style>
 
 <main class="content">
-  <!-- ✅ Wrapper spacing responsive -->
-  <div class="page-wrap">
+  <div class="row g-3">
+    <div class="col-12">
 
-    <!-- ✅ Hilangkan efek margin negatif row supaya kiri/kanan benar-benar sesuai page-wrap -->
-    <div class="row g-3 mx-0">
-      <div class="col-12 px-0">
-
-        <!-- CONTAINER ALERT GLOBAL (sukses/gagal umum) -->
-        <div id="globalAlertContainer">
-          <?php if (isset($_GET['status'])): ?>
-            <?php if ($_GET['status'] === 'success'): ?>
-              <div class="alert alert-success">
-                <span class="close-btn">&times;</span>
-                ✅ <?= htmlspecialchars($_GET['msg'] ?? 'Operasi berhasil.', ENT_QUOTES, 'UTF-8'); ?>
-              </div>
-            <?php else: ?>
-              <div class="alert alert-danger">
-                <span class="close-btn">&times;</span>
-                ❌ <?= htmlspecialchars($_GET['msg'] ?? 'Terjadi kesalahan.', ENT_QUOTES, 'UTF-8'); ?>
-              </div>
-            <?php endif; ?>
+      <!-- CONTAINER ALERT GLOBAL (sukses/gagal umum) -->
+      <div id="globalAlertContainer">
+        <?php if (isset($_GET['status'])): ?>
+          <?php if ($_GET['status'] === 'success'): ?>
+            <div class="alert alert-success">
+              <span class="close-btn">&times;</span>
+              ✅ <?= htmlspecialchars($_GET['msg'] ?? 'Operasi berhasil.', ENT_QUOTES, 'UTF-8'); ?>
+            </div>
+          <?php else: ?>
+            <div class="alert alert-danger">
+              <span class="close-btn">&times;</span>
+              ❌ <?= htmlspecialchars($_GET['msg'] ?? 'Terjadi kesalahan.', ENT_QUOTES, 'UTF-8'); ?>
+            </div>
           <?php endif; ?>
-        </div>
+        <?php endif; ?>
+      </div>
 
-        <div class="card shadow-sm">
+      <div class="card shadow-sm">
 
-          <!-- TOP BAR -->
-          <div class="top-bar p-3 p-md-4">
-            <div class="d-flex flex-column gap-3 w-100">
-              <div>
-                <h5 class="page-title mb-0 fw-bold fs-4">Data User</h5>
-              </div>
+        <!-- TOP BAR -->
+        <div class="top-bar p-3 p-md-4">
+          <div class="d-flex flex-column gap-3 w-100">
+            <div>
+              <h5 class="page-title mb-0 fw-bold fs-4">Data User</h5>
+            </div>
 
-              <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-2">
-                <!-- ✅ Search saja (perPage dipindah ke bawah) -->
-                <div class="d-flex search-perpage-row align-items-md-center gap-2 flex-grow-1">
-                  <div class="search-wrap flex-grow-1">
-                    <div class="searchbox" role="search" aria-label="Pencarian user">
-                      <i class="bi bi-search icon"></i>
-                      <input type="text" id="searchInput" placeholder="Ketik untuk mencari" autofocus>
-                    </div>
+            <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-2">
+              <!-- ✅ Search saja (perPage dipindah ke bawah) -->
+              <div class="d-flex search-perpage-row align-items-md-center gap-2 flex-grow-1">
+                <div class="search-wrap flex-grow-1">
+                  <div class="searchbox" role="search" aria-label="Pencarian user">
+                    <i class="bi bi-search icon"></i>
+                    <input type="text" id="searchInput" placeholder="Ketik untuk mencari" autofocus>
                   </div>
                 </div>
+              </div>
 
-                <!-- Tombol Tambah User -> modal -->
-                <div class="d-flex justify-content-md-end">
-                  <button type="button"
-                    class="btn btn-brand btn-sm d-inline-flex align-items-center gap-2 px-3"
-                    data-bs-toggle="modal"
-                    data-bs-target="#modalTambahUser">
-                    <i class="bi bi-person-plus"></i> Tambah User
-                  </button>
-                </div>
+              <!-- Tombol Tambah User -> modal -->
+              <div class="d-flex justify-content-md-end">
+                <button type="button"
+                  class="btn btn-brand btn-sm d-inline-flex align-items-center gap-2 px-3"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalTambahUser">
+                  <i class="bi bi-person-plus"></i> Tambah User
+                </button>
               </div>
             </div>
           </div>
+        </div>
 
-          <div class="card-body pt-0">
-            <div class="table-responsive" id="userTableWrap">
-              <!-- OVERLAY LOADING -->
-              <div class="table-loading-overlay" id="tableLoadingOverlay">
-                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-                <span style="font-size:13px;">Sedang memuat data…</span>
-              </div>
+        <div class="card-body pt-0">
+          <div class="table-responsive" id="userTableWrap">
+            <!-- OVERLAY LOADING -->
+            <div class="table-loading-overlay" id="tableLoadingOverlay">
+              <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+              <span style="font-size:13px;">Sedang memuat data…</span>
+            </div>
 
-              <table class="table table-striped table-bordered align-middle mb-0">
-                <thead class="text-center">
+            <table class="table table-striped table-bordered align-middle mb-0">
+              <thead class="text-center">
+                <tr>
+                  <th style="width:50px;" class="text-center">
+                    <input type="checkbox" id="checkAll" title="Pilih Semua">
+                  </th>
+                  <th style="width:70px;">No</th>
+                  <th>Nama Guru</th>
+                  <th>Username</th>
+                  <th>Password</th>
+                  <th>Role</th>
+                  <th style="width:200px;">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="userTbody" class="text-center tbody-loaded">
+                <?php if (mysqli_num_rows($result) === 0): ?>
                   <tr>
-                    <th style="width:50px;" class="text-center">
-                      <input type="checkbox" id="checkAll" title="Pilih Semua">
-                    </th>
-                    <th style="width:70px;">No</th>
-                    <th>Nama Guru</th>
-                    <th>Username</th>
-                    <th>Password</th>
-                    <th>Role</th>
-                    <th style="width:200px;">Aksi</th>
+                    <td colspan="7">Belum ada data</td>
                   </tr>
-                </thead>
-                <tbody id="userTbody" class="text-center tbody-loaded">
-                  <?php if (mysqli_num_rows($result) === 0): ?>
-                    <tr>
-                      <td colspan="7">Belum ada data</td>
-                    </tr>
-                    <?php else:
-                    $no = $offset + 1;
-                    $rowClass = ($search !== '') ? 'highlight-row' : '';
-                    while ($row = mysqli_fetch_assoc($result)): ?>
-                      <tr class="<?= $rowClass; ?>">
-                        <td class="text-center" data-label="Pilih">
-                          <input type="checkbox" class="row-check" value="<?= (int)$row['id_user'] ?>">
-                        </td>
-                        <td data-label="No"><?= $no++; ?></td>
-                        <td data-label="Nama (Guru)"><?= htmlspecialchars($row['nama_guru'] ?? '-') ?></td>
-                        <td data-label="Username"><?= htmlspecialchars($row['username']) ?></td>
-                        <td data-label="Password">
-                          <?php
-                          $pwd = $row['password_user'] ?? '';
-                          if ($pwd === '') {
-                            echo '-';
-                          } else {
-                          ?>
-                            <div class="d-inline-flex align-items-center gap-1 password-cell">
-                              <span class="password-text" data-visible="0">••••••</span>
-                              <button
-                                type="button"
-                                class="btn btn-sm btn-outline-secondary toggle-password"
-                                data-password="<?= htmlspecialchars($pwd, ENT_QUOTES, 'UTF-8') ?>"
-                                title="Lihat / sembunyikan password">
-                                <i class="bi bi-eye"></i>
-                              </button>
-                            </div>
-                          <?php } ?>
-                        </td>
-                        <td data-label="Role">
-                          <span class="badge role-badge"><?= htmlspecialchars($row['role_user']) ?></span>
-                        </td>
-                        <td data-label="Aksi">
-                          <div class="d-flex gap-2 justify-content-center flex-wrap">
-                            <button type="button"
-                              class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-edit-user"
-                              data-id="<?= (int)$row['id_user'] ?>"
-                              data-role="<?= htmlspecialchars($row['role_user'], ENT_QUOTES, 'UTF-8') ?>"
-                              data-id-guru="<?= (int)($row['id_guru'] ?? 0) ?>"
-                              data-username="<?= htmlspecialchars($row['username'], ENT_QUOTES, 'UTF-8') ?>">
-                              <i class="bi bi-pencil-square"></i> Edit
-                            </button>
-
-                            <button type="button"
-                              class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-delete-single"
-                              data-href="hapus_data_user.php?id=<?= (int)$row['id_user'] ?>"
-                              data-label="<?= htmlspecialchars($row['username'], ENT_QUOTES, 'UTF-8') ?>">
-                              <i class="bi bi-trash"></i> Hapus
+                  <?php else:
+                  $no = $offset + 1;
+                  $rowClass = ($search !== '') ? 'highlight-row' : '';
+                  while ($row = mysqli_fetch_assoc($result)): ?>
+                    <tr class="<?= $rowClass; ?>">
+                      <td class="text-center" data-label="Pilih">
+                        <input type="checkbox" class="row-check" value="<?= (int)$row['id_user'] ?>">
+                      </td>
+                      <td data-label="No"><?= $no++; ?></td>
+                      <td data-label="Nama (Guru)"><?= htmlspecialchars($row['nama_guru'] ?? '-') ?></td>
+                      <td data-label="Username"><?= htmlspecialchars($row['username']) ?></td>
+                      <td data-label="Password">
+                        <?php
+                        $pwd = $row['password_user'] ?? '';
+                        if ($pwd === '') {
+                          echo '-';
+                        } else {
+                        ?>
+                          <div class="d-inline-flex align-items-center gap-1 password-cell">
+                            <span class="password-text" data-visible="0">••••••</span>
+                            <button
+                              type="button"
+                              class="btn btn-sm btn-outline-secondary toggle-password"
+                              data-password="<?= htmlspecialchars($pwd, ENT_QUOTES, 'UTF-8') ?>"
+                              title="Lihat / sembunyikan password">
+                              <i class="bi bi-eye"></i>
                             </button>
                           </div>
-                        </td>
-                      </tr>
-                  <?php endwhile;
-                  endif; ?>
-                </tbody>
-              </table>
-            </div>
+                        <?php } ?>
+                      </td>
+                      <td data-label="Role">
+                        <span class="badge role-badge"><?= htmlspecialchars($row['role_user']) ?></span>
+                      </td>
+                      <td data-label="Aksi">
+                        <div class="d-flex gap-2 justify-content-center flex-wrap">
+                          <button type="button"
+                            class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-edit-user"
+                            data-id="<?= (int)$row['id_user'] ?>"
+                            data-role="<?= htmlspecialchars($row['role_user'], ENT_QUOTES, 'UTF-8') ?>"
+                            data-id-guru="<?= (int)($row['id_guru'] ?? 0) ?>"
+                            data-username="<?= htmlspecialchars($row['username'], ENT_QUOTES, 'UTF-8') ?>">
+                            <i class="bi bi-pencil-square"></i> Edit
+                          </button>
 
-            <!-- HAPUS TERPILIH -->
-            <div class="mt-3 d-flex justify-content-start">
-              <button type="button" id="bulkDeleteBtn"
-                class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1"
-                disabled>
-                <i class="bi bi-trash3"></i> <span>Hapus Terpilih</span>
-              </button>
-            </div>
-
-            <!-- ✅ Pagination + perPage digabung -->
-            <nav aria-label="Page navigation" class="mt-3">
-              <div class="pager-area">
-                <div class="pager-group">
-                  <ul class="pagination mb-0" id="paginationWrap"></ul>
-
-                  <div class="pager-sep" aria-hidden="true"></div>
-
-                  <select id="perPage" class="form-select form-select-sm per-select">
-                    <?php foreach ($allowedPer as $opt): ?>
-                      <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>>
-                        <?= $opt ?>/hal
-                      </option>
-                    <?php endforeach; ?>
-                  </select>
-                </div>
-
-                <p id="pageInfo" class="page-info-text text-muted mb-0 page-info-center">
-                  Menampilkan <strong><?= $shown ?></strong> dari <strong><?= $totalRows ?></strong> data •
-                  Halaman <strong><?= $pageDisplayCurrent ?></strong> / <strong><?= $pageDisplayTotal ?></strong>
-                </p>
-              </div>
-            </nav>
-
+                          <button type="button"
+                            class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-delete-single"
+                            data-href="hapus_data_user.php?id=<?= (int)$row['id_user'] ?>"
+                            data-label="<?= htmlspecialchars($row['username'], ENT_QUOTES, 'UTF-8') ?>">
+                            <i class="bi bi-trash"></i> Hapus
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                <?php endwhile;
+                endif; ?>
+              </tbody>
+            </table>
           </div>
-        </div><!-- /.card -->
-      </div><!-- /.col-12 -->
-    </div><!-- /.row -->
 
-    <!-- MODAL TAMBAH USER -->
-    <div class="modal fade" id="modalTambahUser" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Tambah Data User</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
-          </div>
-          <form action="proses_tambah_data_user.php" method="POST" autocomplete="off">
-            <div class="modal-body">
-              <div id="addUserAlert" class="alert alert-danger d-none mb-3"></div>
-
-              <div class="mb-3">
-                <label for="add_role" class="form-label fw-semibold">Role</label>
-                <select id="add_role" name="role" class="form-select" required>
-                  <option value="" disabled selected>-- Pilih Role --</option>
-                  <option value="Admin">Admin</option>
-                  <option value="Guru">Guru</option>
-                </select>
-              </div>
-
-              <div class="mb-3">
-                <label for="add_id_guru" class="form-label fw-semibold">Pilih Guru</label>
-                <select id="add_id_guru" name="id_guru" class="form-select" required>
-                  <option value="" disabled selected>-- Pilih Guru --</option>
-                  <?php foreach ($guruList as $g): ?>
-                    <option value="<?= (int)$g['id_guru'] ?>">
-                      <?= htmlspecialchars($g['nama_guru']) ?>
-                    </option>
-                  <?php endforeach; ?>
-                </select>
-              </div>
-
-              <div class="mb-3">
-                <label for="add_username" class="form-label fw-semibold">Username</label>
-                <input type="text" id="add_username" name="username" maxlength="50" class="form-control" required>
-              </div>
-
-              <div class="mb-3">
-                <label for="add_password_user" class="form-label fw-semibold">Password</label>
-                <input type="password" id="add_password_user" name="password_user" class="form-control" required>
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-dismiss="modal">
-                <i class="bi bi-x-lg"></i> Batal
-              </button>
-              <button type="submit" class="btn btn-brand d-inline-flex align-items-center gap-2">
-                <i class="bi bi-check2-circle"></i> Simpan
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <!-- MODAL EDIT USER -->
-    <div class="modal fade" id="modalEditUser" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Edit Data User</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
-          </div>
-          <form action="proses_edit_data_user.php" method="POST" autocomplete="off">
-            <input type="hidden" name="id_user" id="edit_id_user">
-            <div class="modal-body">
-              <div id="editUserAlert" class="alert alert-danger d-none mb-3"></div>
-
-              <div class="mb-3">
-                <label for="edit_role" class="form-label fw-semibold">Role</label>
-                <select id="edit_role" name="role" class="form-select" required>
-                  <option value="" disabled>-- Pilih Role --</option>
-                  <option value="Admin">Admin</option>
-                  <option value="Guru">Guru</option>
-                </select>
-              </div>
-
-              <div class="mb-3">
-                <label for="edit_id_guru" class="form-label fw-semibold">Pilih Guru</label>
-                <select id="edit_id_guru" name="id_guru" class="form-select" required>
-                  <option value="" disabled>-- Pilih Guru --</option>
-                  <?php foreach ($guruList as $g): ?>
-                    <option value="<?= (int)$g['id_guru'] ?>">
-                      <?= htmlspecialchars($g['nama_guru']) ?>
-                    </option>
-                  <?php endforeach; ?>
-                </select>
-              </div>
-
-              <div class="mb-3">
-                <label for="edit_username" class="form-label fw-semibold">Username</label>
-                <input type="text" id="edit_username" name="username" maxlength="50" class="form-control" required>
-              </div>
-
-              <div class="mb-3">
-                <label for="edit_password_user" class="form-label fw-semibold">Password (opsional)</label>
-                <input type="password" id="edit_password_user" name="password_user" class="form-control" placeholder="Kosongkan jika tidak ingin mengubah password">
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-dismiss="modal">
-                <i class="bi bi-x-lg"></i> Batal
-              </button>
-              <button type="submit" class="btn btn-brand d-inline-flex align-items-center gap-2">
-                <i class="bi bi-save"></i> Simpan Perubahan
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <!-- MODAL KONFIRMASI HAPUS (untuk single & bulk) -->
-    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">
-              <i class="bi bi-exclamation-triangle text-danger me-2"></i> Konfirmasi Hapus
-            </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
-          </div>
-          <div class="modal-body">
-            <p id="confirmDeleteBody" class="mb-0">Yakin ingin menghapus data ini?</p>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
-            <button type="button" class="btn btn-danger d-inline-flex align-items-center gap-2" id="confirmDeleteBtn">
-              <i class="bi bi-trash"></i> Hapus
+          <!-- HAPUS TERPILIH -->
+          <div class="mt-3 d-flex justify-content-start">
+            <button type="button" id="bulkDeleteBtn"
+              class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1"
+              disabled>
+              <i class="bi bi-trash3"></i> <span>Hapus Terpilih</span>
             </button>
           </div>
+
+          <!-- ✅ Pagination + perPage digabung (Referensi 2) -->
+          <nav aria-label="Page navigation" class="mt-3">
+            <div class="pager-area">
+              <div class="pager-group">
+                <!-- kiri: pagination (UL langsung) -->
+                <ul class="pagination mb-0" id="paginationWrap"></ul>
+
+                <div class="pager-sep" aria-hidden="true"></div>
+
+                <!-- kanan: per halaman -->
+                <select id="perPage" class="form-select form-select-sm per-select">
+                  <?php foreach ($allowedPer as $opt): ?>
+                    <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>>
+                      <?= $opt ?>/hal
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+
+              <!-- info bawah: center -->
+              <p id="pageInfo" class="page-info-text text-muted mb-0 page-info-center">
+                Menampilkan <strong><?= $shown ?></strong> dari <strong><?= $totalRows ?></strong> data •
+                Halaman <strong><?= $pageDisplayCurrent ?></strong> / <strong><?= $pageDisplayTotal ?></strong>
+              </p>
+            </div>
+          </nav>
+
+        </div>
+      </div><!-- /.card -->
+    </div><!-- /.col-12 -->
+  </div><!-- /.row -->
+
+  <!-- MODAL TAMBAH USER -->
+  <div class="modal fade" id="modalTambahUser" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Tambah Data User</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+        </div>
+        <form action="proses_tambah_data_user.php" method="POST" autocomplete="off">
+          <div class="modal-body">
+            <div id="addUserAlert" class="alert alert-danger d-none mb-3"></div>
+
+            <div class="mb-3">
+              <label for="add_role" class="form-label fw-semibold">Role</label>
+              <select id="add_role" name="role" class="form-select" required>
+                <option value="" disabled selected>-- Pilih Role --</option>
+                <option value="Admin">Admin</option>
+                <option value="Guru">Guru</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="add_id_guru" class="form-label fw-semibold">Pilih Guru</label>
+              <select id="add_id_guru" name="id_guru" class="form-select" required>
+                <option value="" disabled selected>-- Pilih Guru --</option>
+                <?php foreach ($guruList as $g): ?>
+                  <option value="<?= (int)$g['id_guru'] ?>">
+                    <?= htmlspecialchars($g['nama_guru']) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="add_username" class="form-label fw-semibold">Username</label>
+              <input type="text" id="add_username" name="username" maxlength="50" class="form-control" required>
+            </div>
+
+            <div class="mb-3">
+              <label for="add_password_user" class="form-label fw-semibold">Password</label>
+              <input type="password" id="add_password_user" name="password_user" class="form-control" required>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-dismiss="modal">
+              <i class="bi bi-x-lg"></i> Batal
+            </button>
+            <button type="submit" class="btn btn-brand d-inline-flex align-items-center gap-2">
+              <i class="bi bi-check2-circle"></i> Simpan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL EDIT USER -->
+  <div class="modal fade" id="modalEditUser" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Data User</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+        </div>
+        <form action="proses_edit_data_user.php" method="POST" autocomplete="off">
+          <input type="hidden" name="id_user" id="edit_id_user">
+          <div class="modal-body">
+            <div id="editUserAlert" class="alert alert-danger d-none mb-3"></div>
+
+            <div class="mb-3">
+              <label for="edit_role" class="form-label fw-semibold">Role</label>
+              <select id="edit_role" name="role" class="form-select" required>
+                <option value="" disabled>-- Pilih Role --</option>
+                <option value="Admin">Admin</option>
+                <option value="Guru">Guru</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="edit_id_guru" class="form-label fw-semibold">Pilih Guru</label>
+              <select id="edit_id_guru" name="id_guru" class="form-select" required>
+                <option value="" disabled>-- Pilih Guru --</option>
+                <?php foreach ($guruList as $g): ?>
+                  <option value="<?= (int)$g['id_guru'] ?>">
+                    <?= htmlspecialchars($g['nama_guru']) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="edit_username" class="form-label fw-semibold">Username</label>
+              <input type="text" id="edit_username" name="username" maxlength="50" class="form-control" required>
+            </div>
+
+            <div class="mb-3">
+              <label for="edit_password_user" class="form-label fw-semibold">Password (opsional)</label>
+              <input type="password" id="edit_password_user" name="password_user" class="form-control" placeholder="Kosongkan jika tidak ingin mengubah password">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-dismiss="modal">
+              <i class="bi bi-x-lg"></i> Batal
+            </button>
+            <button type="submit" class="btn btn-brand d-inline-flex align-items-center gap-2">
+              <i class="bi bi-save"></i> Simpan Perubahan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL KONFIRMASI HAPUS (untuk single & bulk) -->
+  <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-exclamation-triangle text-danger me-2"></i> Konfirmasi Hapus
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+        </div>
+        <div class="modal-body">
+          <p id="confirmDeleteBody" class="mb-0">Yakin ingin menghapus data ini?</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-danger d-inline-flex align-items-center gap-2" id="confirmDeleteBtn">
+            <i class="bi bi-trash"></i> Hapus
+          </button>
         </div>
       </div>
     </div>
+  </div>
 
-  </div><!-- /.page-wrap -->
 </main>
 
 <script>
@@ -991,7 +957,7 @@ if ($totalRows === 0) {
       });
     }
 
-    // ✅ Build pagination ke <ul id="paginationWrap">
+    // ✅ Build pagination ke <ul id="paginationWrap"> (samakan seperti Absensi)
     function buildPagination(totalRows, page, perPage) {
       currentTotalRows = totalRows;
       currentPage = page;

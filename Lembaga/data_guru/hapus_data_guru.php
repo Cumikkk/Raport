@@ -2,6 +2,9 @@
 // pages/guru/hapus_data_guru.php
 require_once '../../koneksi.php';
 
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$koneksi->set_charset('utf8mb4');
+
 // Start session untuk verifikasi CSRF
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -23,29 +26,23 @@ if (empty($_SESSION['csrf']) || !hash_equals($_SESSION['csrf'], $csrf)) {
     back_with(['err' => 'Token tidak valid. Silakan coba lagi.']);
 }
 
-// Kumpulkan ID dari single delete (id) maupun bulk delete (ids[])
 $rawIds = [];
 
-// dari bulk: ids[]
+// bulk
 if (isset($_POST['ids']) && is_array($_POST['ids'])) {
     foreach ($_POST['ids'] as $rid) {
         $id = (int)$rid;
-        if ($id > 0) {
-            $rawIds[] = $id;
-        }
+        if ($id > 0) $rawIds[] = $id;
     }
 }
 
-// dari single: id
+// single
 if (isset($_POST['id'])) {
     $singleId = (int)$_POST['id'];
-    if ($singleId > 0) {
-        $rawIds[] = $singleId;
-    }
+    if ($singleId > 0) $rawIds[] = $singleId;
 }
 
 $ids = array_values(array_unique($rawIds));
-
 if (empty($ids)) {
     back_with(['err' => 'ID tidak valid.']);
 }
@@ -54,7 +51,6 @@ $deleted = [];
 $skipped = [];
 
 foreach ($ids as $id) {
-    // Cek apakah guru ada
     $stmt = $koneksi->prepare("SELECT id_guru, nama_guru FROM guru WHERE id_guru = ?");
     $stmt->bind_param('i', $id);
     $stmt->execute();
@@ -67,13 +63,11 @@ foreach ($ids as $id) {
 
     $guru = $res->fetch_assoc();
 
-    // Cek dependensi di tabel user
     $stmtU = $koneksi->prepare("SELECT COUNT(*) AS cnt FROM user WHERE id_guru = ?");
     $stmtU->bind_param('i', $id);
     $stmtU->execute();
     $cntU = (int)$stmtU->get_result()->fetch_assoc()['cnt'];
 
-    // Cek dependensi di tabel kelas
     $stmtK = $koneksi->prepare("SELECT COUNT(*) AS cnt FROM kelas WHERE id_guru = ?");
     $stmtK->bind_param('i', $id);
     $stmtK->execute();
@@ -87,7 +81,6 @@ foreach ($ids as $id) {
         continue;
     }
 
-    // Lakukan delete
     $stmtD = $koneksi->prepare("DELETE FROM guru WHERE id_guru = ? LIMIT 1");
     $stmtD->bind_param('i', $id);
     if ($stmtD->execute() && $stmtD->affected_rows > 0) {
@@ -97,7 +90,6 @@ foreach ($ids as $id) {
     }
 }
 
-// Susun pesan
 $params = [];
 
 if (!empty($deleted)) {

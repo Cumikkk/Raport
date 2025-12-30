@@ -30,8 +30,6 @@ $data = $res->fetch_assoc() ?: [];
       --warn: #f59e0b;
       --danger: #dc2626;
       --radius: 14px;
-
-      /* ✅ JARAK GLOBAL (samakan atas/bawah/kiri/kanan) */
       --gap: 20px;
     }
 
@@ -40,9 +38,6 @@ $data = $res->fetch_assoc() ?: [];
       background: var(--bg);
     }
 
-    /* ==================================================
-       FIX: HILANGKAN CARD PUTIH TEMPLATE (biar tidak dobel)
-       ================================================== */
     .dk-content-box {
       background: transparent !important;
       box-shadow: none !important;
@@ -50,12 +45,10 @@ $data = $res->fetch_assoc() ?: [];
       padding: 0 !important;
     }
 
-    /* wrapper utama supaya konten selalu di tengah area konten */
     .sekolah-wrapper {
       max-width: 1100px;
       margin: 0 auto;
       padding: var(--gap);
-      /* ✅ semua sisi sama */
     }
 
     .page-title {
@@ -82,13 +75,11 @@ $data = $res->fetch_assoc() ?: [];
       border-radius: var(--radius);
       box-shadow: 0 6px 18px rgba(0, 0, 0, .06);
       padding: var(--gap);
-      /* ✅ konsisten */
     }
 
     .grid {
       display: grid;
       gap: var(--gap);
-      /* ✅ konsisten */
     }
 
     @media (min-width: 900px) {
@@ -103,7 +94,6 @@ $data = $res->fetch_assoc() ?: [];
       color: #111827;
     }
 
-    /* Ganti .row -> .form-row supaya tidak bentrok dengan Bootstrap */
     .form-row {
       display: grid;
       grid-template-columns: 1fr;
@@ -180,14 +170,12 @@ $data = $res->fetch_assoc() ?: [];
       display: flex;
       flex-direction: column;
       gap: var(--gap);
-      /* ✅ konsisten */
     }
 
     .alert {
       padding: 12px 14px;
       border-radius: 12px;
       margin-bottom: var(--gap);
-      /* ✅ konsisten */
       font-size: 14px;
       transition:
         opacity 0.4s ease,
@@ -199,6 +187,26 @@ $data = $res->fetch_assoc() ?: [];
       max-height: 200px;
       overflow: hidden;
       position: relative;
+      will-change: opacity, transform, max-height;
+    }
+
+    /* ✅ Animasi MUNCUL */
+    .alert-enter {
+      opacity: 0;
+      transform: translateY(-10px);
+      max-height: 0;
+      margin-bottom: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+
+    .alert-enter.alert-enter-active {
+      opacity: 1;
+      transform: translateY(0);
+      max-height: 200px;
+      margin-bottom: var(--gap);
+      padding-top: 12px;
+      padding-bottom: 12px;
     }
 
     .alert-success {
@@ -213,13 +221,14 @@ $data = $res->fetch_assoc() ?: [];
       color: #991b1b;
     }
 
-    .alert-hide {
-      opacity: 0;
-      transform: translateY(-4px);
-      max-height: 0;
-      margin: 0;
-      padding-top: 0;
-      padding-bottom: 0;
+    /* ✅ FIX: selector dibuat 2 class + important biar ngalahin enter-active */
+    .alert.alert-hide {
+      opacity: 0 !important;
+      transform: translateY(-4px) !important;
+      max-height: 0 !important;
+      margin: 0 !important;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
     }
 
     .alert .close-btn {
@@ -253,23 +262,16 @@ $data = $res->fetch_assoc() ?: [];
       background: #fafafa;
     }
 
-    /* ==================================================
-       Sticky actions: batas jelas + jarak konsisten
-       ================================================== */
     .actions {
       position: sticky;
       bottom: 0;
       z-index: 5;
-
       background: rgba(255, 255, 255, 0.92);
       backdrop-filter: blur(8px);
-
       padding: var(--gap);
       margin-top: var(--gap);
-
       border-radius: var(--radius);
       border: 1px solid rgba(0, 0, 0, 0.08);
-
       box-shadow:
         0 -10px 24px rgba(0, 0, 0, 0.12),
         0 2px 10px rgba(0, 0, 0, 0.06);
@@ -302,9 +304,6 @@ $data = $res->fetch_assoc() ?: [];
       color: #b91c1c;
     }
 
-    /* ============================
-       CROP OVERLAY (CUSTOM)
-       ============================ */
     .crop-overlay {
       position: fixed;
       inset: 0;
@@ -393,11 +392,6 @@ $data = $res->fetch_assoc() ?: [];
       align-items: center;
     }
 
-    /* ==================================================
-       ✅ FIX SESUAI REQUEST:
-       - TANPA ANIMASI
-       - CUKUP WARNA SAAT HOVER
-       ================================================== */
     .btn-lite {
       padding: 10px 14px;
       border-radius: 10px;
@@ -406,17 +400,12 @@ $data = $res->fetch_assoc() ?: [];
       font-weight: 600;
       cursor: pointer;
       transition: none !important;
-      /* ✅ matikan animasi */
     }
 
-    /* tombol bantu: Zoom/Putar/Reset */
     .btn-lite:hover {
       background: #e0f2fe;
-      /* biru muda jelas */
       border-color: #38bdf8;
-      /* biru lebih tegas */
       color: #0f172a;
-      /* teks tetap jelas */
     }
 
     .btn-danger-lite {
@@ -424,7 +413,6 @@ $data = $res->fetch_assoc() ?: [];
       color: #fff;
       border: none;
       transition: none !important;
-      /* ✅ matikan animasi */
     }
 
     .btn-success-lite {
@@ -432,23 +420,18 @@ $data = $res->fetch_assoc() ?: [];
       color: #fff;
       border: none;
       transition: none !important;
-      /* ✅ matikan animasi */
     }
 
-    /* hover tombol merah/hijau: lebih “nyala” */
     .btn-danger-lite:hover {
       background: #b91c1c;
-      /* merah lebih gelap -> ketara */
       color: #fff;
     }
 
     .btn-success-lite:hover {
       background: #15803d;
-      /* hijau lebih gelap -> ketara */
       color: #fff;
     }
 
-    /* FIX sebelumnya: tetap kunci warna tombol Batal & Gunakan */
     #btnCancelCrop,
     #btnApplyCrop {
       transition: none !important;
@@ -491,12 +474,12 @@ $data = $res->fetch_assoc() ?: [];
 
             <?php if (isset($_GET['status'])): ?>
               <?php if ($_GET['status'] === 'success'): ?>
-                <div class="alert alert-success">
+                <div class="alert alert-success alert-enter" data-auto-scroll="1">
                   <span class="close-btn">&times;</span>
                   ✅ Data sekolah berhasil disimpan.
                 </div>
               <?php else: ?>
-                <div class="alert alert-danger">
+                <div class="alert alert-danger alert-enter" data-auto-scroll="1">
                   <span class="close-btn">&times;</span>
                   ❌ Gagal menyimpan data sekolah
                   <?= isset($_GET['msg']) ? ': ' . htmlspecialchars($_GET['msg']) : '' ?>.
@@ -508,7 +491,6 @@ $data = $res->fetch_assoc() ?: [];
             <div id="jsAlertContainer"></div>
 
             <div class="grid">
-              <!-- Kiri: Form utama -->
               <div class="card">
                 <h2 class="section-title">Data Sekolah</h2>
                 <form action="save_data_sekolah.php" method="POST" enctype="multipart/form-data" class="stack" id="formSekolah">
@@ -585,7 +567,6 @@ $data = $res->fetch_assoc() ?: [];
                 </form>
               </div>
 
-              <!-- Kanan: Preview Logo & Info -->
               <div class="card">
                 <h2 class="section-title">Logo</h2>
                 <div class="logo-wrap">
@@ -653,25 +634,53 @@ $data = $res->fetch_assoc() ?: [];
   </div>
 
   <script>
+    function animateInAlert(el, doScroll = true) {
+      if (!el) return;
+
+      if (doScroll) {
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      }
+
+      if (!el.classList.contains('alert-enter')) el.classList.add('alert-enter');
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          el.classList.add('alert-enter-active');
+        });
+      });
+    }
+
+    // ✅ FIX: saat hide, buang class enter-active biar ga “ngunci” max-height/padding
+    function hideAlert(el) {
+      if (!el) return;
+      el.classList.remove('alert-enter-active');
+      el.classList.add('alert-hide');
+    }
+
     function showUiAlert(type, message) {
       const container = document.getElementById('jsAlertContainer');
       if (!container) return;
 
       const el = document.createElement('div');
-      el.className = `alert alert-${type}`;
+      el.className = `alert alert-${type} alert-enter`;
       el.innerHTML = `<span class="close-btn">&times;</span>${message}`;
 
       container.prepend(el);
 
+      animateInAlert(el, true);
+
       const timer = setTimeout(() => {
-        el.classList.add('alert-hide');
+        hideAlert(el);
       }, 4000);
 
       const close = el.querySelector('.close-btn');
       if (close) {
         close.addEventListener('click', (e) => {
           e.preventDefault();
-          el.classList.add('alert-hide');
+          hideAlert(el);
           clearTimeout(timer);
         });
       }
@@ -931,19 +940,25 @@ $data = $res->fetch_assoc() ?: [];
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
+      // PHP alert saat page load
+      const firstAlert = document.querySelector('.alert[data-auto-scroll="1"]') || document.querySelector('.alert');
+      if (firstAlert) {
+        animateInAlert(firstAlert, true);
+      }
+
       const alerts = document.querySelectorAll('.alert');
       if (!alerts.length) return;
 
       alerts.forEach(alert => {
         const timer = setTimeout(() => {
-          alert.classList.add('alert-hide');
+          hideAlert(alert);
         }, 4000);
 
         const close = alert.querySelector('.close-btn');
         if (close) {
           close.addEventListener('click', (e) => {
             e.preventDefault();
-            alert.classList.add('alert-hide');
+            hideAlert(alert);
             clearTimeout(timer);
           });
         }

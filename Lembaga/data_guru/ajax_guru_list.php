@@ -2,6 +2,9 @@
 // pages/guru/ajax_guru_list.php
 require_once '../../koneksi.php';
 
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$koneksi->set_charset('utf8mb4');
+
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
@@ -9,14 +12,17 @@ if (session_status() === PHP_SESSION_NONE) {
 $search = isset($_GET['q']) ? trim($_GET['q']) : '';
 $like   = "%{$search}%";
 
+// ✅ perPage dukung 0 = Semua
 $perPage = isset($_GET['per']) ? (int)$_GET['per'] : 10;
-if ($perPage < 1) $perPage = 10;
-if ($perPage > 100) $perPage = 100;
+if ($perPage < 0) $perPage = 10;   // jangan minus
+if ($perPage > 100) $perPage = 100; // batas max, kecuali 0 (semua)
 
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($page < 1) $page = 1;
 
-// Hitung total
+// ==========================
+// Hitung total data
+// ==========================
 if ($search !== '') {
   $countSql = "SELECT COUNT(*) AS total FROM guru WHERE nama_guru LIKE ?";
   $stmtCount = mysqli_prepare($koneksi, $countSql);
@@ -30,33 +36,62 @@ $resCount  = mysqli_stmt_get_result($stmtCount);
 $rowCount  = mysqli_fetch_assoc($resCount);
 $totalRows = (int)($rowCount['total'] ?? 0);
 
-$totalPages = max(1, (int)ceil($totalRows / $perPage));
-if ($page > $totalPages) {
-  $page = $totalPages;
-}
-$offset = ($page - 1) * $perPage;
-
-// Ambil data
-if ($search !== '') {
-  $sql = "
-    SELECT id_guru, nama_guru, jabatan_guru
-    FROM guru
-    WHERE nama_guru LIKE ?
-    ORDER BY nama_guru ASC
-    LIMIT ? OFFSET ?
-  ";
-  $stmt = mysqli_prepare($koneksi, $sql);
-  mysqli_stmt_bind_param($stmt, 'sii', $like, $perPage, $offset);
+// ✅ kalau perPage=0 (Semua) → page=1, offset=0
+if ($perPage === 0) {
+  $page = 1;
+  $offset = 0;
 } else {
-  $sql = "
-    SELECT id_guru, nama_guru, jabatan_guru
-    FROM guru
-    ORDER BY nama_guru ASC
-    LIMIT ? OFFSET ?
-  ";
-  $stmt = mysqli_prepare($koneksi, $sql);
-  mysqli_stmt_bind_param($stmt, 'ii', $perPage, $offset);
+  $totalPages = max(1, (int)ceil($totalRows / $perPage));
+  if ($page > $totalPages) $page = $totalPages;
+  $offset = ($page - 1) * $perPage;
 }
+
+// ==========================
+// Ambil data
+// ==========================
+if ($perPage === 0) {
+  // ✅ Semua data: tanpa LIMIT/OFFSET
+  if ($search !== '') {
+    $sql = "
+      SELECT id_guru, nama_guru, jabatan_guru
+      FROM guru
+      WHERE nama_guru LIKE ?
+      ORDER BY nama_guru ASC
+    ";
+    $stmt = mysqli_prepare($koneksi, $sql);
+    mysqli_stmt_bind_param($stmt, 's', $like);
+  } else {
+    $sql = "
+      SELECT id_guru, nama_guru, jabatan_guru
+      FROM guru
+      ORDER BY nama_guru ASC
+    ";
+    $stmt = mysqli_prepare($koneksi, $sql);
+  }
+} else {
+  // ✅ Normal: pakai LIMIT/OFFSET
+  if ($search !== '') {
+    $sql = "
+      SELECT id_guru, nama_guru, jabatan_guru
+      FROM guru
+      WHERE nama_guru LIKE ?
+      ORDER BY nama_guru ASC
+      LIMIT ? OFFSET ?
+    ";
+    $stmt = mysqli_prepare($koneksi, $sql);
+    mysqli_stmt_bind_param($stmt, 'sii', $like, $perPage, $offset);
+  } else {
+    $sql = "
+      SELECT id_guru, nama_guru, jabatan_guru
+      FROM guru
+      ORDER BY nama_guru ASC
+      LIMIT ? OFFSET ?
+    ";
+    $stmt = mysqli_prepare($koneksi, $sql);
+    mysqli_stmt_bind_param($stmt, 'ii', $perPage, $offset);
+  }
+}
+
 mysqli_stmt_execute($stmt);
 $result = mysqli_stmt_get_result($stmt);
 
@@ -102,4 +137,4 @@ if ($totalRows === 0) {
 }
 
 // meta-row untuk pagination JS
-echo '<tr class="meta-row" data-total="' . $totalRows . '" data-page="' . $page . '" data-per="' . $perPage . '"></tr>';
+echo '<tr class="meta-row" data-total="' . $totalRows . '" data-page="' . (int)$page . '" data-per="' . (int)$perPage . '"></tr>';
