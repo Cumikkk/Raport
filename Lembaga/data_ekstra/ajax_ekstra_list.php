@@ -152,7 +152,7 @@ $no = ($perPage === 0) ? 1 : ($offset + 1);
 $rowClass = ($search !== '') ? 'highlight-row' : '';
 
 if ($totalRows === 0) {
-  echo '<tr><td colspan="4">Belum ada data.</td></tr>';
+  echo '<tr><td colspan="4">Tidak ada data yang cocok.</td></tr>';
 } else {
   while ($row = mysqli_fetch_assoc($result)) {
     $id = (int)$row['id_ekstrakurikuler'];

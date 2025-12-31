@@ -68,7 +68,7 @@ while ($row = mysqli_fetch_assoc($result)) {
 }
 
 if (!$has) {
-  echo '<tr><td colspan="7">Belum ada data.</td></tr>';
+  echo '<tr><td colspan="7">Tidak ada data yang cocok.</td></tr>';
 }
 
 mysqli_stmt_close($stmt);
