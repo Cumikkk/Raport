@@ -755,7 +755,7 @@ if ($totalRows === 0) {
                   </ol>
                   <span class="text-muted">
                     Struktur kolom template:
-                    <strong>A: nomer</strong>, <strong>B: nama guru</strong>, <strong>C: jabatan</strong>
+                    <strong>A: Nomor</strong>, <strong>B: Nama Guru</strong>, <strong>C: Jabatan</strong>
                     (<em>hanya “Kepala Sekolah” atau “Guru”</em>).
                   </span>
                 </div>

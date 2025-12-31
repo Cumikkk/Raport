@@ -542,7 +542,7 @@ if ($totalRows === 0) {
               <tbody id="userTbody" class="text-center tbody-loaded">
                 <?php if (mysqli_num_rows($result) === 0): ?>
                   <tr>
-                    <td colspan="7">Belum ada data</td>
+                    <td colspan="7">Belum ada data.</td>
                   </tr>
                   <?php else:
                   $no = $offset + 1;

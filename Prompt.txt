@@ -1,134 +1,174 @@
-<?php
-require_once '../koneksi.php';
+<!-- ================= ALERT + PAGINATION CONTROLLER ================= -->
 
-$search = isset($_GET['q']) ? trim($_GET['q']) : '';
-$like   = "%{$search}%";
-
-// Pagination params
-$allowedPer = [10, 20, 50, 100];
-$perPage    = isset($_GET['per']) ? (int)$_GET['per'] : 10;
-if (!in_array($perPage, $allowedPer, true)) {
-    $perPage = 10;
+<style>
+/* ================= ALERT ANIMATION ================= */
+.dk-alert {
+  opacity: 0;
+  transform: translateY(-10px);
+  max-height: 240px;
+  overflow: hidden;
+  transition:
+    opacity .35s ease,
+    transform .35s ease,
+    max-height .35s ease,
+    margin .35s ease,
+    padding .35s ease;
 }
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-if ($page < 1) $page = 1;
 
-// Hitung total data untuk query ini
-$countSql = "
-  SELECT COUNT(*) AS total
-  FROM user u
-  LEFT JOIN guru g ON g.id_guru = u.id_guru
-  WHERE u.username LIKE ?
-     OR COALESCE(g.nama_guru,'') LIKE ?
-";
-$stmtCount = mysqli_prepare($koneksi, $countSql);
-mysqli_stmt_bind_param($stmtCount, 'ss', $like, $like);
-mysqli_stmt_execute($stmtCount);
-$resCount  = mysqli_stmt_get_result($stmtCount);
-$rowCount  = mysqli_fetch_assoc($resCount);
-$totalRows = (int)($rowCount['total'] ?? 0);
-
-$totalPages = max(1, (int)ceil($totalRows / $perPage));
-if ($page > $totalPages) {
-    $page = $totalPages;
+.dk-alert.dk-show {
+  opacity: 1;
+  transform: translateY(0);
 }
-$offset = ($page - 1) * $perPage;
 
-// Ambil data per halaman
-$sql = "
-  SELECT 
-    u.id_user, 
-    u.username, 
-    u.password_user,
-    u.role_user, 
-    u.id_guru, 
-    g.nama_guru
-  FROM user u
-  LEFT JOIN guru g ON g.id_guru = u.id_guru
-  WHERE u.username LIKE ?
-     OR COALESCE(g.nama_guru,'') LIKE ?
-  ORDER BY u.id_user DESC
-  LIMIT ? OFFSET ?
-";
-$stmt = mysqli_prepare($koneksi, $sql);
-mysqli_stmt_bind_param($stmt, 'ssii', $like, $like, $perPage, $offset);
-mysqli_stmt_execute($stmt);
-$result = mysqli_stmt_get_result($stmt);
-
-// inject style untuk badge & highlight row jika dimuat via ajax
-echo '<style>
-.role-badge{
-  background:#ecf2ff;
-  color:#0a2a88;
-  border:1px solid #d6e2ff;
-  font-weight:700;
+.dk-alert.dk-hide {
+  opacity: 0;
+  transform: translateY(-6px);
+  max-height: 0;
+  margin: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
 }
-.highlight-row{
-  background-color:#d4edda !important;
-}
-.password-text{
-  font-family:monospace;
-}
-</style>';
 
-// baris meta untuk JS pagination (disembunyikan)
-echo '<tr class="meta-row" style="display:none" 
-        data-total="' . htmlspecialchars((string)$totalRows, ENT_QUOTES, 'UTF-8') . '" 
-        data-page="' . htmlspecialchars((string)$page, ENT_QUOTES, 'UTF-8') . '" 
-        data-per="' . htmlspecialchars((string)$perPage, ENT_QUOTES, 'UTF-8') . '">
-      </tr>';
+/* ================= PAGINATION SPACE ================= */
+/* supaya dropdown data/hal selalu kebuka ke BAWAH */
+.content {
+  padding-bottom: 260px;
+}
+</style>
 
-if (mysqli_num_rows($result) === 0): ?>
-    <tr>
-        <td colspan="7">Tidak ada data yang cocok.</td>
-    </tr>
-    <?php
-else:
-    $no = $offset + 1;
-    $rowClass = ($search !== '') ? 'highlight-row' : '';
-    while ($row = mysqli_fetch_assoc($result)): ?>
-        <tr class="<?= $rowClass; ?>">
-            <td class="text-center" data-label="Pilih">
-                <input type="checkbox" class="row-check" value="<?= (int)$row['id_user'] ?>">
-            </td>
-            <td data-label="No"><?= $no++; ?></td>
-            <td data-label="Nama (Guru)"><?= htmlspecialchars($row['nama_guru'] ?? '-') ?></td>
-            <td data-label="Username"><?= htmlspecialchars($row['username']) ?></td>
-            <td data-label="Password">
-                <?php
-                $pwd = $row['password_user'] ?? '';
-                if ($pwd === '') {
-                    echo '-';
-                } else {
-                ?>
-                    <div class="d-inline-flex align-items-center gap-1 password-cell">
-                        <span class="password-text" data-visible="0">••••••</span>
-                        <button
-                            type="button"
-                            class="btn btn-sm btn-outline-secondary toggle-password"
-                            data-password="<?= htmlspecialchars($pwd, ENT_QUOTES, 'UTF-8') ?>"
-                            title="Lihat / sembunyikan password">
-                            <i class="bi bi-eye"></i>
-                        </button>
-                    </div>
-                <?php
-                }
-                ?>
-            </td>
-            <td data-label="Role">
-                <span class="badge role-badge"><?= htmlspecialchars($row['role_user']) ?></span>
-            </td>
-            <td data-label="Aksi">
-                <div class="d-flex gap-2 justify-content-center flex-wrap">
-                    <a href="proses_edit_data_user.php" class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1">
-                        <i class="bi bi-pencil-square"></i> Edit
-                    </a>
-                    <a href="hapus_data_user.php?id=<?= (int)$row['id_user'] ?>" class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 px-2 py-1"
-                        onclick="return confirm('Yakin ingin menghapus user ini?');">
-                        <i class="bi bi-trash"></i> Hapus
-                    </a>
-                </div>
-            </td>
-        </tr>
-<?php endwhile;
-endif;
+<script>
+// ================= GLOBAL CONFIG =================
+const ALERT_DURATION = 4000;
+
+// ================= ALERT CORE =================
+function alertIn(el) {
+  requestAnimationFrame(() => el.classList.add('dk-show'));
+}
+
+function alertOut(el) {
+  el.classList.add('dk-hide');
+  setTimeout(() => {
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+  }, 450);
+}
+
+function wireAlert(el) {
+  if (!el) return;
+  alertIn(el);
+
+  const timer = setTimeout(() => alertOut(el), ALERT_DURATION);
+
+  const closeBtn = el.querySelector('.close-btn');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      clearTimeout(timer);
+      alertOut(el);
+    });
+  }
+}
+
+// ================= TOP ALERT (AUTO SCROLL) =================
+function showTopAlert(type, message) {
+  const area = document.getElementById('alertAreaTop');
+  if (!area) return;
+
+  const alert = document.createElement('div');
+  alert.className = `dk-alert dk-alert-${type}`;
+  alert.innerHTML = `
+    <span class="close-btn">&times;</span>
+    ${message}
+  `;
+
+  area.prepend(alert);
+  wireAlert(alert);
+
+  // auto scroll ke atas
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  });
+}
+
+// ================= MODAL ALERT (NO ERROR) =================
+function showModalAlert(containerId, type, message) {
+  const box = document.getElementById(containerId);
+  if (!box) return;
+
+  box.innerHTML = '';
+
+  const alert = document.createElement('div');
+  alert.className = `dk-alert dk-alert-${type}`;
+  alert.innerHTML = `
+    <span class="close-btn">&times;</span>
+    ${message}
+  `;
+
+  box.appendChild(alert);
+  wireAlert(alert);
+}
+
+// ================= PAGINATION + PER PAGE =================
+function buildPagination(totalRows, page, perPage) {
+  const paginationWrap = document.getElementById('paginationWrap');
+  const pageInfo = document.getElementById('pageInfo');
+  const perSelect = document.getElementById('perPage');
+
+  const isAll = (parseInt(perPage, 10) === 0);
+  const totalPages = isAll ? 1 : Math.max(1, Math.ceil(totalRows / perPage));
+  page = isAll ? 1 : Math.min(page, totalPages);
+
+  let shown = 0;
+  if (totalRows > 0) {
+    shown = isAll
+      ? totalRows
+      : Math.min(perPage, totalRows - (page - 1) * perPage);
+  }
+
+  pageInfo.innerHTML = `
+    Menampilkan <strong>${shown}</strong> dari <strong>${totalRows}</strong> data •
+    Halaman <strong>${page}</strong> / <strong>${totalPages}</strong>
+  `;
+
+  const makeLi = (disabled, target, label, active = false) => `
+    <li class="page-item ${disabled ? 'disabled' : ''} ${active ? 'active' : ''}">
+      <a href="#" class="page-link" data-page="${target}">${label}</a>
+    </li>
+  `;
+
+  let html = '';
+  html += makeLi(page === 1, 1, '«');
+  html += makeLi(page === 1, page - 1, '‹');
+
+  if (isAll) {
+    html += makeLi(false, 1, '1', true);
+  } else {
+    for (let i = Math.max(1, page - 2); i <= Math.min(totalPages, page + 2); i++) {
+      html += makeLi(false, i, i, i === page);
+    }
+  }
+
+  html += makeLi(page === totalPages, page + 1, '›');
+  html += makeLi(page === totalPages, totalPages, '»');
+
+  paginationWrap.innerHTML = html;
+
+  paginationWrap.querySelectorAll('a[data-page]').forEach(a => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (isAll) return;
+      const target = parseInt(a.dataset.page, 10);
+      if (!isNaN(target)) {
+        doSearch(currentQuery, target, currentPerPage, true);
+      }
+    });
+  });
+
+  perSelect.value = String(perPage);
+}
+
+// ================= INIT EXISTING ALERT =================
+document.querySelectorAll('.dk-alert').forEach(wireAlert);
+</script>
+
+<!-- ================= END ALERT + PAGINATION CONTROLLER ================= -->

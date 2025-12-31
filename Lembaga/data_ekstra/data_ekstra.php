@@ -3,6 +3,11 @@
 require_once '../../koneksi.php';
 include '../../includes/header.php';
 
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+
+// ✅ aman untuk mysqli procedural
+mysqli_set_charset($koneksi, 'utf8mb4');
+
 // Session + CSRF untuk bulk delete
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
@@ -16,8 +21,10 @@ $csrf = $_SESSION['csrf'];
 $search = isset($_GET['q']) ? trim($_GET['q']) : '';
 $like   = "%{$search}%";
 
-$allowedPer = [10, 20, 50, 100];
-$perPage    = isset($_GET['per']) ? (int)$_GET['per'] : 10;
+// ✅ samakan dengan data_guru: 0 = semua
+$allowedPer = [10, 20, 50, 100, 0];
+
+$perPage = isset($_GET['per']) ? (int)$_GET['per'] : 10;
 if (!in_array($perPage, $allowedPer, true)) {
   $perPage = 10;
 }
@@ -39,49 +46,81 @@ $resCount  = mysqli_stmt_get_result($stmtCount);
 $rowCount  = mysqli_fetch_assoc($resCount);
 $totalRows = (int)($rowCount['total'] ?? 0);
 
-$totalPages = max(1, (int)ceil($totalRows / $perPage));
-if ($page > $totalPages) {
-  $page = $totalPages;
-}
-$offset = ($page - 1) * $perPage;
-
-// Ambil data ekstrakurikuler untuk tampilan awal
-if ($search !== '') {
-  $sql = "
-    SELECT id_ekstrakurikuler, nama_ekstrakurikuler
-    FROM ekstrakurikuler
-    WHERE nama_ekstrakurikuler LIKE ?
-    ORDER BY nama_ekstrakurikuler ASC
-    LIMIT ? OFFSET ?
-  ";
-  $stmt = mysqli_prepare($koneksi, $sql);
-  mysqli_stmt_bind_param($stmt, 'sii', $like, $perPage, $offset);
+// ✅ Pagination: kalau perPage=0 berarti tampil semua
+if ($perPage === 0) {
+  $totalPages = 1;
+  $page = 1;
+  $offset = 0;
 } else {
-  $sql = "
-    SELECT id_ekstrakurikuler, nama_ekstrakurikuler
-    FROM ekstrakurikuler
-    ORDER BY nama_ekstrakurikuler ASC
-    LIMIT ? OFFSET ?
-  ";
-  $stmt = mysqli_prepare($koneksi, $sql);
-  mysqli_stmt_bind_param($stmt, 'ii', $perPage, $offset);
+  $totalPages = max(1, (int)ceil($totalRows / $perPage));
+  if ($page > $totalPages) $page = $totalPages;
+  $offset = ($page - 1) * $perPage;
 }
+
+// Ambil data ekstra untuk tampilan awal
+if ($perPage === 0) {
+  // ✅ semua: tanpa LIMIT/OFFSET
+  if ($search !== '') {
+    $sql = "
+      SELECT id_ekstrakurikuler, nama_ekstrakurikuler
+      FROM ekstrakurikuler
+      WHERE nama_ekstrakurikuler LIKE ?
+      ORDER BY nama_ekstrakurikuler ASC
+    ";
+    $stmt = mysqli_prepare($koneksi, $sql);
+    mysqli_stmt_bind_param($stmt, 's', $like);
+  } else {
+    $sql = "
+      SELECT id_ekstrakurikuler, nama_ekstrakurikuler
+      FROM ekstrakurikuler
+      ORDER BY nama_ekstrakurikuler ASC
+    ";
+    $stmt = mysqli_prepare($koneksi, $sql);
+  }
+} else {
+  // ✅ normal: pakai LIMIT/OFFSET
+  if ($search !== '') {
+    $sql = "
+      SELECT id_ekstrakurikuler, nama_ekstrakurikuler
+      FROM ekstrakurikuler
+      WHERE nama_ekstrakurikuler LIKE ?
+      ORDER BY nama_ekstrakurikuler ASC
+      LIMIT ? OFFSET ?
+    ";
+    $stmt = mysqli_prepare($koneksi, $sql);
+    mysqli_stmt_bind_param($stmt, 'sii', $like, $perPage, $offset);
+  } else {
+    $sql = "
+      SELECT id_ekstrakurikuler, nama_ekstrakurikuler
+      FROM ekstrakurikuler
+      ORDER BY nama_ekstrakurikuler ASC
+      LIMIT ? OFFSET ?
+    ";
+    $stmt = mysqli_prepare($koneksi, $sql);
+    mysqli_stmt_bind_param($stmt, 'ii', $perPage, $offset);
+  }
+}
+
 mysqli_stmt_execute($stmt);
 $result = mysqli_stmt_get_result($stmt);
 
 // Info range
 if ($totalRows === 0) {
-  $from = 0;
-  $to   = 0;
   $shown = 0;
   $pageDisplayCurrent = 0;
   $pageDisplayTotal   = 0;
 } else {
-  $from = $offset + 1;
-  $to   = min($offset + $perPage, $totalRows);
-  $shown = $to - $from + 1;
-  $pageDisplayCurrent = $page;
-  $pageDisplayTotal   = $totalPages;
+  if ($perPage === 0) {
+    $shown = $totalRows;
+    $pageDisplayCurrent = 1;
+    $pageDisplayTotal   = 1;
+  } else {
+    $from = $offset + 1;
+    $to   = min($offset + $perPage, $totalRows);
+    $shown = $to - $from + 1;
+    $pageDisplayCurrent = $page;
+    $pageDisplayTotal   = $totalPages;
+  }
 }
 ?>
 
@@ -107,6 +146,8 @@ if ($totalRows === 0) {
 
     .content {
       padding: clamp(12px, 2vw, 20px);
+      padding-bottom: 260px;
+      /* ✅ sama seperti data_guru: ruang bawah agar dropdown perPage tidak kebuka ke atas */
       color: var(--text);
     }
 
@@ -156,6 +197,10 @@ if ($totalRows === 0) {
       color: #9aa3af;
     }
 
+    .searchbox:focus-within {
+      box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
+    }
+
     .table thead th {
       white-space: nowrap;
       background: var(--thead);
@@ -170,6 +215,42 @@ if ($totalRows === 0) {
 
     .highlight-row {
       background-color: #d4edda !important;
+    }
+
+    #ekstraTbody {
+      transition: opacity .25s ease, transform .25s ease;
+    }
+
+    #ekstraTbody.tbody-loading {
+      opacity: .4;
+      transform: scale(.995);
+    }
+
+    #ekstraTbody.tbody-loaded {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    #ekstraTableWrap {
+      position: relative;
+    }
+
+    .table-loading-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, .7);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease;
+      z-index: 2;
+    }
+
+    .table-loading-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
     }
 
     .btn-brand {
@@ -219,7 +300,6 @@ if ($totalRows === 0) {
       color: #333 !important;
     }
 
-    /* ✅ select perPage (dipakai di bawah / pager-group) */
     #perPage {
       border: 1px solid var(--ring);
       border-radius: 10px;
@@ -227,8 +307,6 @@ if ($totalRows === 0) {
       font-size: 14px;
       color: var(--ink);
       background-color: #fff;
-      width: 120px;
-      min-width: 120px;
     }
 
     #perPage:focus {
@@ -237,103 +315,79 @@ if ($totalRows === 0) {
     }
 
     .page-info-text strong {
-      font-size: 0.95rem;
+      font-size: .95rem;
     }
 
-    /* ALERT */
-    .alert {
+    /* ✅ ALERT STYLE (PERSIS POLA DATA_GURU) */
+    .dk-alert {
       padding: 12px 14px;
       border-radius: 12px;
       margin-bottom: 20px;
       font-size: 14px;
-      transition:
-        opacity 0.4s ease,
-        transform 0.4s ease,
-        max-height 0.4s ease,
-        margin 0.4s ease,
-        padding-top 0.4s ease,
-        padding-bottom 0.4s ease;
-      max-height: 200px;
+      max-height: 220px;
       overflow: hidden;
       position: relative;
-    }
-
-    .alert-success {
-      background: #e8f8ee;
-      border: 1px solid #c8efd9;
-      color: #166534;
-    }
-
-    .alert-danger {
-      background: #fdecec;
-      border: 1px solid #f5c2c2;
-      color: #991b1b;
-    }
-
-    .alert-hide {
       opacity: 0;
-      transform: translateY(-4px);
+      transform: translateY(-10px);
+      transition: opacity .35s ease, transform .35s ease,
+        max-height .35s ease, margin .35s ease, padding .35s ease;
+    }
+
+    .dk-alert.dk-show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .dk-alert.dk-hide {
+      opacity: 0;
+      transform: translateY(-6px);
       max-height: 0;
       margin: 0;
       padding-top: 0;
       padding-bottom: 0;
     }
 
-    .alert .close-btn {
+    .dk-alert-success {
+      background: #e8f8ee;
+      border: 1px solid #c8efd9;
+      color: #166534;
+    }
+
+    .dk-alert-danger {
+      background: #fdecec;
+      border: 1px solid #f5c2c2;
+      color: #991b1b;
+    }
+
+    .dk-alert-warning {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      color: #9a3412;
+    }
+
+    .dk-alert .close-btn {
       position: absolute;
       top: 14px;
       right: 14px;
-      font-weight: 700;
+      font-weight: 800;
       cursor: pointer;
-      opacity: 0.6;
+      opacity: .6;
       font-size: 18px;
       line-height: 1;
     }
 
-    .alert .close-btn:hover {
+    .dk-alert .close-btn:hover {
       opacity: 1;
     }
 
-    /* TRANSISI TABEL + OVERLAY LOADING (SAMAKAN) */
-    #ekstraTbody {
-      transition:
-        opacity 0.25s ease,
-        transform 0.25s ease;
-    }
-
-    #ekstraTbody.tbody-loading {
-      opacity: 0.4;
-      transform: scale(0.995);
-    }
-
-    #ekstraTbody.tbody-loaded {
-      opacity: 1;
-      transform: scale(1);
-    }
-
-    #ekstraTableWrap {
+    #alertAreaTop {
       position: relative;
     }
 
-    .table-loading-overlay {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(255, 255, 255, 0.7);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s ease;
-      z-index: 2;
+    .modal-alert-area {
+      margin-bottom: 12px;
     }
 
-    .table-loading-overlay.show {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    /* ✅ Pagination group (samakan dengan data_rapor) */
     .pager-area {
       display: flex;
       flex-direction: column;
@@ -365,7 +419,17 @@ if ($totalRows === 0) {
       background: rgba(0, 0, 0, .15);
     }
 
-    @media (max-width: 520px) {
+    .per-select {
+      width: 120px;
+      min-width: 120px;
+    }
+
+    .page-info-center {
+      text-align: center;
+      width: 100%;
+    }
+
+    @media (max-width:520px) {
       table.table thead {
         display: none;
       }
@@ -396,18 +460,13 @@ if ($totalRows === 0) {
 
       table.table tbody td::before {
         content: attr(data-label);
-        font-weight: 700;
+        font-weight: 800;
         color: var(--ink);
       }
 
       .table .btn {
         width: 100%;
         margin-top: 6px;
-      }
-
-      .search-perpage-row {
-        flex-direction: column;
-        align-items: stretch !important;
       }
 
       .pager-sep {
@@ -417,26 +476,6 @@ if ($totalRows === 0) {
       .pager-group {
         width: 100%;
       }
-
-      #paginationWrap {
-        flex-wrap: wrap !important;
-        justify-content: center !important;
-        gap: 4px !important;
-      }
-
-      #paginationWrap .page-link {
-        padding: 4px 8px;
-        font-size: 13px;
-      }
-
-      #pageInfo {
-        font-size: 13px;
-        white-space: normal;
-      }
-    }
-
-    .searchbox:focus-within {
-      box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
     }
   </style>
 
@@ -444,23 +483,22 @@ if ($totalRows === 0) {
     <div class="row g-3">
       <div class="col-12">
 
-        <!-- CONTAINER ALERT UNTUK AJAX -->
-        <div id="ajaxAlertContainer"></div>
+        <!-- ALERT TOP (redirect / ajax) -->
+        <div id="alertAreaTop">
+          <?php if (isset($_GET['msg']) && $_GET['msg'] !== ''): ?>
+            <div class="dk-alert dk-alert-success" data-auto-hide="4000">
+              <span class="close-btn">&times;</span>
+              ✅ <?= htmlspecialchars($_GET['msg'], ENT_QUOTES, 'UTF-8'); ?>
+            </div>
+          <?php endif; ?>
 
-        <!-- ALERT GLOBAL DARI REDIRECT (hapus, dll) -->
-        <?php if (isset($_GET['msg']) && $_GET['msg'] !== ''): ?>
-          <div class="alert alert-success alert-page">
-            <span class="close-btn">&times;</span>
-            ✅ <?= htmlspecialchars($_GET['msg'], ENT_QUOTES, 'UTF-8'); ?>
-          </div>
-        <?php endif; ?>
-
-        <?php if (isset($_GET['err']) && $_GET['err'] !== ''): ?>
-          <div class="alert alert-danger alert-page">
-            <span class="close-btn">&times;</span>
-            ❌ <?= htmlspecialchars($_GET['err'], ENT_QUOTES, 'UTF-8'); ?>
-          </div>
-        <?php endif; ?>
+          <?php if (isset($_GET['err']) && $_GET['err'] !== ''): ?>
+            <div class="dk-alert dk-alert-danger" data-auto-hide="4000">
+              <span class="close-btn">&times;</span>
+              ❌ <?= htmlspecialchars($_GET['err'], ENT_QUOTES, 'UTF-8'); ?>
+            </div>
+          <?php endif; ?>
+        </div>
 
         <div class="card shadow-sm">
 
@@ -472,17 +510,15 @@ if ($totalRows === 0) {
               </div>
 
               <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-2">
-                <!-- ✅ Search saja (data/hal dipindah ke bawah) -->
                 <div class="d-flex align-items-md-center gap-2 flex-grow-1">
                   <div class="search-wrap flex-grow-1">
-                    <div class="searchbox" role="search" aria-label="Pencarian ekstrakurikuler">
+                    <div class="searchbox" role="search" aria-label="Pencarian ekstra">
                       <i class="bi bi-search icon"></i>
                       <input type="text" id="searchInput" placeholder="Ketik untuk mencari" autofocus>
                     </div>
                   </div>
                 </div>
 
-                <!-- Tombol Tambah / Import / Export -->
                 <div class="d-flex justify-content-md-end flex-wrap gap-2">
                   <button type="button"
                     class="btn btn-brand btn-sm d-inline-flex align-items-center gap-2 px-3"
@@ -510,7 +546,6 @@ if ($totalRows === 0) {
 
           <div class="card-body pt-0">
             <div class="table-responsive" id="ekstraTableWrap">
-              <!-- OVERLAY LOADING -->
               <div class="table-loading-overlay" id="tableLoadingOverlay">
                 <div class="spinner-border spinner-border-sm me-2" role="status"></div>
                 <span style="font-size:13px;">Sedang memuat data…</span>
@@ -528,14 +563,11 @@ if ($totalRows === 0) {
                   </tr>
                 </thead>
                 <tbody id="ekstraTbody" class="text-center tbody-loaded">
-                  <?php
-                  if ($totalRows === 0):
-                  ?>
+                  <?php if ($totalRows === 0): ?>
                     <tr>
                       <td colspan="4">Belum ada data.</td>
                     </tr>
-                    <?php
-                  else:
+                    <?php else:
                     $no = $offset + 1;
                     $rowClass = ($search !== '') ? 'highlight-row' : '';
                     while ($row = mysqli_fetch_assoc($result)):
@@ -566,15 +598,12 @@ if ($totalRows === 0) {
                           </div>
                         </td>
                       </tr>
-                  <?php
-                    endwhile;
-                  endif;
-                  ?>
+                  <?php endwhile;
+                  endif; ?>
                 </tbody>
               </table>
             </div>
 
-            <!-- HAPUS TERPILIH -->
             <div class="mt-3 d-flex justify-content-start">
               <button type="button" id="bulkDeleteBtn"
                 class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1"
@@ -583,34 +612,37 @@ if ($totalRows === 0) {
               </button>
             </div>
 
-            <!-- ✅ Pagination + data/hal nyatu (samakan) -->
             <nav aria-label="Page navigation" class="mt-3">
               <div class="pager-area">
                 <div class="pager-group">
                   <ul class="pagination mb-0" id="paginationWrap"></ul>
-
                   <div class="pager-sep" aria-hidden="true"></div>
 
-                  <select id="perPage" class="form-select form-select-sm">
+                  <select id="perPage" class="form-select form-select-sm per-select">
                     <?php foreach ($allowedPer as $opt): ?>
-                      <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>><?= $opt ?>/hal</option>
+                      <?php if ($opt === 0): ?>
+                        <option value="0" <?= $perPage === 0 ? 'selected' : '' ?>>Semua</option>
+                      <?php else: ?>
+                        <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>><?= $opt ?>/hal</option>
+                      <?php endif; ?>
                     <?php endforeach; ?>
                   </select>
                 </div>
 
-                <div id="pageInfo" class="page-info-text text-muted text-center">
-                  Menampilkan <?= $shown ?> dari <?= $totalRows ?> data • Halaman <?= $pageDisplayCurrent ?> / <?= $pageDisplayTotal ?>
-                </div>
+                <p id="pageInfo" class="page-info-text text-muted mb-0 page-info-center">
+                  Menampilkan <strong><?= $shown ?></strong> dari <strong><?= $totalRows ?></strong> data •
+                  Halaman <strong><?= $pageDisplayCurrent ?></strong> / <strong><?= $pageDisplayTotal ?></strong>
+                </p>
               </div>
             </nav>
-          </div>
 
-        </div><!-- /.card -->
-      </div><!-- /.col-12 -->
-    </div><!-- /.row -->
+          </div>
+        </div>
+      </div>
+    </div>
   </main>
 
-  <!-- MODAL TAMBAH EKSTRA -->
+  <!-- MODAL TAMBAH -->
   <div class="modal fade" id="modalTambahEkstra" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
@@ -618,35 +650,23 @@ if ($totalRows === 0) {
           <h5 class="modal-title">Tambah Data Ekstrakurikuler</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
         </div>
+
         <form id="formTambahEkstra" action="proses_tambah_data_ekstra.php" method="POST" autocomplete="off">
           <div class="modal-body">
-
-            <div id="addEkstraAlert" class="alert alert-danger mb-2" style="display:none;">
-              <span class="close-btn">&times;</span>
-              <span class="alert-message"></span>
-            </div>
+            <!-- ✅ alert dalam modal pakai pola guru -->
+            <div id="modalAlertTambah" class="modal-alert-area"></div>
 
             <div class="mb-3">
               <label class="form-label fw-semibold" for="add_nama_ekstra">Nama Ekstrakurikuler</label>
-              <input
-                type="text"
-                id="add_nama_ekstra"
-                name="nama_ekstra"
-                class="form-control"
-                maxlength="100"
-                required
-                placeholder="Nama Ekstrakurikuler">
+              <input type="text" id="add_nama_ekstra" name="nama_ekstra" class="form-control" maxlength="100" required placeholder="Nama Ekstrakurikuler">
             </div>
           </div>
+
           <div class="modal-footer">
-            <button type="button"
-              class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
-              data-bs-dismiss="modal">
+            <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-dismiss="modal">
               <i class="bi bi-x-lg"></i> Batal
             </button>
-            <button type="submit"
-              id="btnSubmitTambahEkstra"
-              class="btn btn-brand d-inline-flex align-items-center gap-2">
+            <button type="submit" id="btnSubmitTambahEkstra" class="btn btn-brand d-inline-flex align-items-center gap-2">
               <i class="bi bi-check2-circle"></i> Simpan
             </button>
           </div>
@@ -655,7 +675,7 @@ if ($totalRows === 0) {
     </div>
   </div>
 
-  <!-- MODAL EDIT EKSTRA -->
+  <!-- MODAL EDIT -->
   <div class="modal fade" id="modalEditEkstra" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
@@ -663,34 +683,23 @@ if ($totalRows === 0) {
           <h5 class="modal-title">Edit Data Ekstrakurikuler</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
         </div>
+
         <form id="formEditEkstra" action="proses_edit_data_ekstra.php" method="POST" autocomplete="off">
           <input type="hidden" name="id_ekstra" id="edit_id_ekstra">
           <div class="modal-body">
-
-            <div id="editEkstraAlert" class="alert alert-danger mb-2" style="display:none;">
-              <span class="close-btn">&times;</span>
-              <span class="alert-message"></span>
-            </div>
+            <div id="modalAlertEdit" class="modal-alert-area"></div>
 
             <div class="mb-3">
               <label class="form-label fw-semibold" for="edit_nama_ekstra">Nama Ekstrakurikuler</label>
-              <input
-                type="text"
-                id="edit_nama_ekstra"
-                name="nama_ekstra"
-                class="form-control"
-                maxlength="100"
-                required>
+              <input type="text" id="edit_nama_ekstra" name="nama_ekstra" class="form-control" maxlength="100" required>
             </div>
           </div>
+
           <div class="modal-footer">
-            <button type="button"
-              class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
-              data-bs-dismiss="modal">
+            <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-dismiss="modal">
               <i class="bi bi-x-lg"></i> Batal
             </button>
-            <button type="submit"
-              class="btn btn-brand d-inline-flex align-items-center gap-2">
+            <button type="submit" class="btn btn-brand d-inline-flex align-items-center gap-2">
               <i class="bi bi-save"></i> Simpan Perubahan
             </button>
           </div>
@@ -699,32 +708,25 @@ if ($totalRows === 0) {
     </div>
   </div>
 
-  <!-- MODAL IMPORT EKSTRA -->
+  <!-- MODAL IMPORT (tetap) -->
   <div class="modal fade" id="modalImportEkstra" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content">
         <div class="modal-header border-0 pb-0">
           <div>
             <h5 class="modal-title fw-semibold">Import Data Ekstrakurikuler</h5>
-            <p class="mb-0 text-muted" style="font-size: 13px;">
-              Gunakan template resmi agar susunan kolom sesuai dengan sistem.
-            </p>
+            <p class="mb-0 text-muted" style="font-size: 13px;">Gunakan template resmi agar susunan kolom sesuai dengan sistem.</p>
           </div>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
         </div>
 
-        <form id="formImportEkstra"
-          action="proses_import_data_ekstra.php"
-          method="POST"
-          enctype="multipart/form-data"
-          autocomplete="off">
+        <form id="formImportEkstra" action="proses_import_data_ekstra.php" method="POST" enctype="multipart/form-data" autocomplete="off">
           <div class="modal-body pt-3">
+            <div id="modalAlertImport" class="modal-alert-area"></div>
 
             <div class="mb-3 p-3 rounded-3" style="background:#f9fafb;border:1px solid #e5e7eb;">
               <div class="d-flex align-items-start gap-2">
-                <div class="mt-1">
-                  <i class="fa-solid fa-circle-info" style="color:#0a4db3;"></i>
-                </div>
+                <div class="mt-1"><i class="fa-solid fa-circle-info" style="color:#0a4db3;"></i></div>
                 <div style="font-size:13px;">
                   <strong>Langkah import data ekstrakurikuler:</strong>
                   <ol class="mb-1 ps-3" style="padding-left:18px;">
@@ -734,79 +736,40 @@ if ($totalRows === 0) {
                   </ol>
                   <span class="text-muted">
                     Struktur kolom template:
-                    <strong>A: nomor</strong>,
-                    <strong>B: nama ekstrakurikuler</strong>.
+                    <strong>A: Nomor</strong>, <strong>B: Nama Ekstrakurikuler</strong>.
                   </span>
                 </div>
               </div>
             </div>
 
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
-              <span class="text-muted" style="font-size:13px;">
-                Klik tombol di samping untuk mengunduh template Excel.
-              </span>
-              <a
-                href="../../assets/templates/template_data_ekstrakurikuler.xlsx"
-                class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2"
-                download>
-                <i class="fa-solid fa-file-excel"></i>
-                <span>Download Template</span>
+              <span class="text-muted" style="font-size:13px;">Klik tombol di samping untuk mengunduh template Excel.</span>
+              <a href="../../assets/templates/template_data_ekstrakurikuler.xlsx" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2" download>
+                <i class="fa-solid fa-file-excel"></i><span>Download Template</span>
               </a>
             </div>
 
             <hr class="my-2">
 
             <div class="mb-2">
-              <label for="excelFileEkstra" class="form-label fw-semibold mb-1">
-                Upload File Excel
-              </label>
+              <label for="excelFileEkstra" class="form-label fw-semibold mb-1">Upload File Excel</label>
               <div class="position-relative d-flex align-items-center">
-                <input
-                  type="file"
-                  class="form-control"
-                  id="excelFileEkstra"
-                  name="excel_file"
-                  accept=".xlsx,.xls"
-                  style="padding-right:35px;"
-                  required
-                  onchange="toggleClearButtonEkstraImport()">
-
-                <button
-                  type="button"
-                  id="clearFileBtnEkstraImport"
-                  onclick="clearFileEkstraImport()"
-                  title="Hapus file"
-                  style="
-                    position:absolute;
-                    right:10px;
-                    background:none;
-                    border:none;
-                    color:#6c757d;
-                    font-size:20px;
-                    line-height:1;
-                    display:none;
-                    cursor:pointer;
-                  ">
-                  &times;
-                </button>
+                <input type="file" class="form-control" id="excelFileEkstra" name="excel_file" accept=".xlsx,.xls"
+                  style="padding-right:35px;" required onchange="toggleClearButtonEkstraImport()">
+                <button type="button" id="clearFileBtnEkstraImport" onclick="clearFileEkstraImport()" title="Hapus file"
+                  style="position:absolute;right:10px;background:none;border:none;color:#6c757d;font-size:20px;line-height:1;display:none;cursor:pointer;">&times;</button>
               </div>
               <small class="text-muted d-block mt-1" style="font-size:12px;">
-                Format yang didukung: <strong>.xlsx</strong> atau <strong>.xls</strong>.
-                Pastikan tidak mengubah urutan kolom di template.
+                Format yang didukung: <strong>.xlsx</strong> atau <strong>.xls</strong>. Pastikan tidak mengubah urutan kolom di template.
               </small>
             </div>
-
           </div>
 
           <div class="modal-footer d-flex justify-content-between">
-            <button type="button"
-              class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
-              data-bs-dismiss="modal">
+            <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-dismiss="modal">
               <i class="fa fa-times"></i> Batal
             </button>
-            <button type="submit"
-              id="btnSubmitImportEkstra"
-              class="btn btn-warning d-inline-flex align-items-center gap-2">
+            <button type="submit" id="btnSubmitImportEkstra" class="btn btn-warning d-inline-flex align-items-center gap-2">
               <i class="fas fa-upload"></i> Upload &amp; Proses
             </button>
           </div>
@@ -820,23 +783,15 @@ if ($totalRows === 0) {
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">
-            <i class="bi bi-exclamation-triangle text-danger me-2"></i> Konfirmasi Hapus
-          </h5>
+          <h5 class="modal-title"><i class="bi bi-exclamation-triangle text-danger me-2"></i> Konfirmasi Hapus</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
         </div>
         <div class="modal-body">
           <p id="confirmDeleteBody" class="mb-0">Yakin ingin menghapus data ini?</p>
         </div>
         <div class="modal-footer">
-          <button type="button"
-            class="btn btn-outline-secondary"
-            data-bs-dismiss="modal">
-            Batal
-          </button>
-          <button type="button"
-            class="btn btn-danger d-inline-flex align-items-center gap-2"
-            id="confirmDeleteBtn">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-danger d-inline-flex align-items-center gap-2" id="confirmDeleteBtn">
             <i class="bi bi-trash"></i> Hapus
           </button>
         </div>
@@ -870,14 +825,11 @@ if ($totalRows === 0) {
 
       const checkAll = document.getElementById('checkAll');
       const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
-
-      // ✅ perPage sekarang ada di bawah (pager-group)
       const perPageSelect = document.getElementById('perPage');
 
-      // ✅ paginationWrap sekarang <ul> langsung
-      const paginationWrap = document.getElementById('paginationWrap');
-
+      const paginationUl = document.getElementById('paginationWrap');
       const pageInfo = document.getElementById('pageInfo');
+
       const csrfToken = '<?= htmlspecialchars($csrf, ENT_QUOTES, "UTF-8"); ?>';
 
       const confirmModalEl = document.getElementById('confirmDeleteModal');
@@ -894,7 +846,102 @@ if ($totalRows === 0) {
       let currentTotalRows = <?= (int)$totalRows ?>;
 
       let pendingDeleteHandler = null;
-      const MODAL_ALERT_MS = 4000;
+
+      // ✅ ikuti data_guru
+      const ALERT_DURATION = 4000;
+
+      function animateAlertIn(el) {
+        if (!el) return;
+        requestAnimationFrame(() => el.classList.add('dk-show'));
+      }
+
+      function animateAlertOut(el) {
+        if (!el) return;
+        el.classList.add('dk-hide');
+        setTimeout(() => {
+          if (el && el.parentNode) el.parentNode.removeChild(el);
+        }, 450);
+      }
+
+      function wireAlert(el) {
+        if (!el) return;
+
+        // ✅ kalau element sudah pernah punya timer, clear dulu
+        if (el._dkTimer) clearTimeout(el._dkTimer);
+
+        animateAlertIn(el);
+
+        const ms = parseInt(el.getAttribute('data-auto-hide') || String(ALERT_DURATION), 10);
+        el._dkTimer = setTimeout(() => animateAlertOut(el), ms);
+
+        const close = el.querySelector('.close-btn');
+        if (close && !close.dataset.bound) {
+          close.dataset.bound = '1';
+          close.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (el._dkTimer) clearTimeout(el._dkTimer);
+            animateAlertOut(el);
+          });
+        }
+      }
+
+      function escapeHtml(str) {
+        return String(str ?? '')
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", "&#039;");
+      }
+
+      // ✅ alert luar (top) sama persis pola guru
+      function showTopAlert(type, message) {
+        const area = document.getElementById('alertAreaTop');
+        if (!area) return;
+
+        const cls = type === 'success' ? 'dk-alert-success' :
+          type === 'warning' ? 'dk-alert-warning' :
+          'dk-alert-danger';
+        const icon = type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '❌';
+
+        const div = document.createElement('div');
+        div.className = `dk-alert ${cls}`;
+        div.setAttribute('data-auto-hide', String(ALERT_DURATION));
+        div.innerHTML = `<span class="close-btn">&times;</span> ${icon} ${escapeHtml(message)}`;
+
+        area.prepend(div);
+        wireAlert(div);
+
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      }
+
+      // ✅ alert modal sama persis pola guru (FIX timer biar ga cepet)
+      function showModalAlert(containerId, type, message) {
+        const box = document.getElementById(containerId);
+        if (!box) return;
+
+        // hapus alert lama biar timer ga numpuk
+        box.innerHTML = '';
+
+        const cls = type === 'success' ? 'dk-alert-success' :
+          type === 'warning' ? 'dk-alert-warning' :
+          'dk-alert-danger';
+        const icon = type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '❌';
+
+        const div = document.createElement('div');
+        div.className = `dk-alert ${cls}`;
+        div.setAttribute('data-auto-hide', String(ALERT_DURATION));
+        div.innerHTML = `<span class="close-btn">&times;</span> ${icon} ${escapeHtml(message)}`;
+
+        box.appendChild(div);
+        wireAlert(div);
+      }
+
+      // wire alert redirect
+      document.querySelectorAll('#alertAreaTop .dk-alert').forEach(wireAlert);
 
       function scrollToTable() {
         if (!tableWrap) return;
@@ -909,21 +956,18 @@ if ($totalRows === 0) {
           if (confirm(message)) handler();
           return;
         }
-
         confirmBodyEl.textContent = message;
         pendingDeleteHandler = handler;
 
         confirmBtn.onclick = function() {
           if (pendingDeleteHandler) pendingDeleteHandler();
           if (typeof bootstrap !== 'undefined') {
-            const m = bootstrap.Modal.getOrCreateInstance(confirmModalEl);
-            m.hide();
+            bootstrap.Modal.getOrCreateInstance(confirmModalEl).hide();
           }
         };
 
         if (typeof bootstrap !== 'undefined') {
-          const m = bootstrap.Modal.getOrCreateInstance(confirmModalEl);
-          m.show();
+          bootstrap.Modal.getOrCreateInstance(confirmModalEl).show();
         } else {
           if (confirm(message)) handler();
         }
@@ -968,32 +1012,21 @@ if ($totalRows === 0) {
 
         const inputId = document.getElementById('edit_id_ekstra');
         const inputNama = document.getElementById('edit_nama_ekstra');
-        const editAlert = document.getElementById('editEkstraAlert');
 
         editButtons.forEach(btn => {
           btn.addEventListener('click', (e) => {
             e.preventDefault();
-
             const id = btn.getAttribute('data-id') || '';
             const nama = btn.getAttribute('data-nama') || '';
 
             if (inputId) inputId.value = id;
             if (inputNama) inputNama.value = nama;
 
-            if (editAlert) {
-              editAlert.style.display = 'none';
-              editAlert.classList.remove('alert-hide');
-              const msgSpan = editAlert.querySelector('.alert-message');
-              if (msgSpan) msgSpan.textContent = '';
-              if (editAlert.dataset.timerId) {
-                clearTimeout(Number(editAlert.dataset.timerId));
-                editAlert.dataset.timerId = '';
-              }
-            }
+            const box = document.getElementById('modalAlertEdit');
+            if (box) box.innerHTML = '';
 
             if (typeof bootstrap !== 'undefined') {
-              const editModal = bootstrap.Modal.getOrCreateInstance(modalEl);
-              editModal.show();
+              bootstrap.Modal.getOrCreateInstance(modalEl).show();
             }
           });
         });
@@ -1032,63 +1065,64 @@ if ($totalRows === 0) {
         });
       }
 
-      // ✅ Pagination: langsung isi <ul id="paginationWrap">
       function buildPagination(totalRows, page, perPage) {
         currentTotalRows = totalRows;
         currentPage = page;
         currentPerPage = perPage;
 
-        const totalPages = Math.max(1, Math.ceil(totalRows / perPage));
-        if (page > totalPages) page = totalPages;
+        const allMode = (parseInt(perPage, 10) === 0);
+        const totalPages = allMode ? 1 : Math.max(1, Math.ceil(totalRows / perPage));
 
-        let from, to, shown;
+        let shown;
         if (totalRows === 0) {
-          from = 0;
-          to = 0;
           shown = 0;
+        } else if (allMode) {
+          shown = totalRows;
+          page = 1;
         } else {
-          from = (page - 1) * perPage + 1;
-          to = Math.min(page * perPage, totalRows);
+          if (page > totalPages) page = totalPages;
+          const from = (page - 1) * perPage + 1;
+          const to = Math.min(page * perPage, totalRows);
           shown = to - from + 1;
         }
 
-        const pageDisplayCurrent = totalRows === 0 ? 0 : page;
+        const pageDisplayCurrent = totalRows === 0 ? 0 : (allMode ? 1 : page);
         const pageDisplayTotal = totalRows === 0 ? 0 : totalPages;
 
         pageInfo.innerHTML =
-          `Menampilkan <strong>${shown}</strong> dari <strong>${totalRows}</strong> data • 
-           Halaman <strong>${pageDisplayCurrent}</strong> / <strong>${pageDisplayTotal}</strong>`;
+          `Menampilkan <strong>${shown}</strong> dari <strong>${totalRows}</strong> data • Halaman <strong>${pageDisplayCurrent}</strong> / <strong>${pageDisplayTotal}</strong>`;
 
-        const isFirst = (page <= 1);
-        const isLast = (page >= totalPages);
+        const makeLi = (disabled, target, text, active = false) => {
+          const cls = ['page-item', disabled ? 'disabled' : '', active ? 'active' : ''].filter(Boolean).join(' ');
+          const aAttr = disabled ? 'tabindex="-1"' : `data-page="${target}"`;
+          return `<li class="${cls}"><a class="page-link" href="#" ${aAttr}>${text}</a></li>`;
+        };
 
         let html = '';
+        const isFirst = allMode ? true : (page <= 1);
+        const isLast = allMode ? true : (page >= totalPages);
 
-        html += `<li class="page-item${isFirst ? ' disabled' : ''}">
-                  <button class="page-link page-btn" type="button" data-page="1">&laquo; First</button>
-                </li>`;
+        html += makeLi(isFirst, 1, '« First');
+        html += makeLi(isFirst, Math.max(1, (allMode ? 1 : page - 1)), '‹ Prev');
 
-        html += `<li class="page-item${isFirst ? ' disabled' : ''}">
-                  <button class="page-link page-btn" type="button" data-page="${page - 1}">&lsaquo; Prev</button>
-                </li>`;
+        if (allMode) {
+          html += makeLi(false, 1, '1', true);
+        } else {
+          const start = Math.max(1, page - 2);
+          const end = Math.min(totalPages, page + 2);
+          for (let i = start; i <= end; i++) html += makeLi(false, i, String(i), i === page);
+        }
 
-        html += `<li class="page-item active">
-                  <button class="page-link" type="button" data-page="${page}">${page}</button>
-                </li>`;
+        html += makeLi(isLast, Math.min(totalPages, (allMode ? 1 : page + 1)), 'Next ›');
+        html += makeLi(isLast, totalPages, 'Last »');
 
-        html += `<li class="page-item${isLast ? ' disabled' : ''}">
-                  <button class="page-link page-btn" type="button" data-page="${page + 1}">Next &rsaquo;</button>
-                </li>`;
+        paginationUl.innerHTML = html;
 
-        html += `<li class="page-item${isLast ? ' disabled' : ''}">
-                  <button class="page-link page-btn" type="button" data-page="${totalPages}">Last &raquo;</button>
-                </li>`;
-
-        paginationWrap.innerHTML = html;
-
-        paginationWrap.querySelectorAll('.page-btn').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const target = parseInt(btn.getAttribute('data-page') || '1', 10);
+        paginationUl.querySelectorAll('a[data-page]').forEach(a => {
+          a.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (allMode) return;
+            const target = parseInt(a.getAttribute('data-page') || '1', 10);
             if (isNaN(target) || target < 1 || target === currentPage) return;
             doSearch(currentQuery, target, currentPerPage, true);
           });
@@ -1108,7 +1142,6 @@ if ($totalRows === 0) {
         if (boxes.length === 0) return;
 
         const count = boxes.length;
-
         const form = document.createElement('form');
         form.method = 'post';
         form.action = 'hapus_data_ekstra.php';
@@ -1160,7 +1193,7 @@ if ($totalRows === 0) {
         const params = new URLSearchParams({
           q: currentQuery,
           page: page || 1,
-          per: perPage || currentPerPage || 10
+          per: perPage ?? currentPerPage ?? 10
         });
 
         fetch('ajax_ekstra_list.php?' + params.toString(), {
@@ -1184,11 +1217,7 @@ if ($totalRows === 0) {
               const pp = parseInt(metaRow.getAttribute('data-per') || String(currentPerPage), 10);
               metaRow.parentNode.removeChild(metaRow);
 
-              buildPagination(
-                isNaN(total) ? 0 : total,
-                isNaN(pg) ? 1 : pg,
-                isNaN(pp) ? currentPerPage : pp
-              );
+              buildPagination(isNaN(total) ? 0 : total, isNaN(pg) ? 1 : pg, isNaN(pp) ? currentPerPage : pp);
             }
 
             attachCheckboxEvents();
@@ -1214,43 +1243,127 @@ if ($totalRows === 0) {
       if (perPageSelect) {
         perPageSelect.addEventListener('change', () => {
           const val = parseInt(perPageSelect.value || '10', 10);
-          if (isNaN(val) || val <= 0) return;
+          if (isNaN(val) || val < 0) return;
           currentPerPage = val;
           doSearch(currentQuery, 1, currentPerPage, true);
         });
       }
 
-      // Inisialisasi
+      // ✅ cek nama duplikat (dipakai saat submit)
+      async function checkNamaDuplikat(nama, excludeId = 0) {
+        const params = new URLSearchParams({
+          action: 'check_name',
+          nama: nama || ''
+        });
+        if (excludeId && Number(excludeId) > 0) params.set('exclude_id', String(excludeId));
+
+        const res = await fetch('ajax_ekstra_list.php?' + params.toString(), {
+          method: 'GET',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        return !!data.exists;
+      }
+
+      // ✅ submit tambah (cek duplikat -> tampil modal alert)
+      const formTambah = document.getElementById('formTambahEkstra');
+      const btnTambah = document.getElementById('btnSubmitTambahEkstra');
+      const modalTambahEl = document.getElementById('modalTambahEkstra');
+
+      if (formTambah) {
+        formTambah.addEventListener('submit', async (e) => {
+          const namaInput = document.getElementById('add_nama_ekstra');
+          const nama = (namaInput ? namaInput.value : '').trim();
+          if (!nama) return;
+
+          e.preventDefault();
+
+          try {
+            if (btnTambah) {
+              btnTambah.disabled = true;
+              btnTambah.dataset.oldHtml = btnTambah.innerHTML;
+              btnTambah.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status"></span> Memproses...`;
+            }
+
+            const exists = await checkNamaDuplikat(nama, 0);
+            if (exists) {
+              showModalAlert('modalAlertTambah', 'danger', 'Nama ekstrakurikuler sudah ada. Silakan gunakan nama lain.');
+              return;
+            }
+
+            // submit normal (sesuai sistem kamu)
+            formTambah.submit();
+          } catch (err) {
+            showModalAlert('modalAlertTambah', 'danger', 'Gagal memvalidasi data. Silakan coba lagi.');
+            console.error(err);
+          } finally {
+            if (btnTambah) {
+              btnTambah.disabled = false;
+              if (btnTambah.dataset.oldHtml) {
+                btnTambah.innerHTML = btnTambah.dataset.oldHtml;
+                delete btnTambah.dataset.oldHtml;
+              }
+            }
+          }
+        });
+      }
+
+      // ✅ submit edit (cek duplikat -> tampil modal alert)
+      const formEdit = document.getElementById('formEditEkstra');
+      const modalEditEl = document.getElementById('modalEditEkstra');
+
+      if (formEdit) {
+        formEdit.addEventListener('submit', async (e) => {
+          const idInput = document.getElementById('edit_id_ekstra');
+          const namaInput = document.getElementById('edit_nama_ekstra');
+
+          const id = idInput ? parseInt(idInput.value || '0', 10) : 0;
+          const nama = (namaInput ? namaInput.value : '').trim();
+          if (!nama) return;
+
+          e.preventDefault();
+
+          const submitBtn = formEdit.querySelector('button[type="submit"]');
+
+          try {
+            if (submitBtn) {
+              submitBtn.disabled = true;
+              submitBtn.dataset.oldHtml = submitBtn.innerHTML;
+              submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status"></span> Memproses...`;
+            }
+
+            const exists = await checkNamaDuplikat(nama, isNaN(id) ? 0 : id);
+            if (exists) {
+              showModalAlert('modalAlertEdit', 'danger', 'Nama ekstrakurikuler sudah ada. Silakan gunakan nama lain.');
+              return;
+            }
+
+            formEdit.submit();
+          } catch (err) {
+            showModalAlert('modalAlertEdit', 'danger', 'Gagal memvalidasi data. Silakan coba lagi.');
+            console.error(err);
+          } finally {
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              if (submitBtn.dataset.oldHtml) {
+                submitBtn.innerHTML = submitBtn.dataset.oldHtml;
+                delete submitBtn.dataset.oldHtml;
+              }
+            }
+          }
+        });
+      }
+
+      // init
       attachCheckboxEvents();
       attachEditModalEvents();
       attachSingleDeleteEvents();
       buildPagination(currentTotalRows, currentPage, currentPerPage);
-
       if (tbody) tbody.classList.add('tbody-loaded');
     })();
-  </script>
-
-  <script>
-    // Auto-hide alert global + tombol X (hanya .alert-page)
-    document.addEventListener('DOMContentLoaded', () => {
-      const alerts = document.querySelectorAll('.alert-page');
-      if (!alerts.length) return;
-
-      alerts.forEach(alert => {
-        const timer = setTimeout(() => {
-          alert.classList.add('alert-hide');
-        }, 4000);
-
-        const close = alert.querySelector('.close-btn');
-        if (close) {
-          close.addEventListener('click', (e) => {
-            e.preventDefault();
-            alert.classList.add('alert-hide');
-            clearTimeout(timer);
-          });
-        }
-      });
-    });
   </script>
 
   <?php include '../../includes/footer.php'; ?>
