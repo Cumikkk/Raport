@@ -1,18 +1,20 @@
 <?php
+// pages/semester/data_semester.php
+
 // ====== CEK PARAMETER ALERT (SETELAH SIMPAN) ======
 $alertMsg = '';
-$alertClass = '';
+$alertType = ''; // success | danger
 
 if (isset($_GET['msg'])) {
   switch ($_GET['msg']) {
     case 'saved':
-      $alertMsg   = 'Pengaturan semester berhasil disimpan.';
-      $alertClass = 'alert-success';
+      $alertMsg  = 'Pengaturan semester berhasil disimpan.';
+      $alertType = 'success';
       break;
 
     case 'error':
-      $alertMsg   = 'Terjadi kesalahan saat menyimpan pengaturan semester.';
-      $alertClass = 'alert-danger';
+      $alertMsg  = 'Terjadi kesalahan saat menyimpan pengaturan semester.';
+      $alertType = 'danger';
       break;
   }
 }
@@ -22,28 +24,93 @@ include '../../includes/header.php';
 
 <body>
 
-  <?php
-  include '../../includes/navbar.php';
-  ?>
+  <?php include '../../includes/navbar.php'; ?>
+
+  <style>
+    /* ===== Alert style (meniru pola di data guru) ===== */
+    .dk-alert {
+      padding: 12px 14px;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      font-size: 14px;
+      max-height: 220px;
+      overflow: hidden;
+      position: relative;
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: opacity .35s ease, transform .35s ease,
+        max-height .35s ease, margin .35s ease, padding .35s ease;
+    }
+
+    .dk-alert.dk-show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .dk-alert.dk-hide {
+      opacity: 0;
+      transform: translateY(-6px);
+      max-height: 0;
+      margin: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+
+    .dk-alert-success {
+      background: #e8f8ee;
+      border: 1px solid #c8efd9;
+      color: #166534;
+    }
+
+    .dk-alert-danger {
+      background: #fdecec;
+      border: 1px solid #f5c2c2;
+      color: #991b1b;
+    }
+
+    .dk-alert .close-btn {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      opacity: .6;
+      font-size: 18px;
+      line-height: 1;
+      user-select: none;
+    }
+
+    .dk-alert .close-btn:hover {
+      opacity: 1;
+    }
+
+    #alertAreaTop {
+      position: relative;
+    }
+  </style>
 
   <div class="dk-page" style="margin-top: 50px;">
     <div class="dk-main">
+
+      <!-- ✅ ALERT DI LUAR BOX/CARD (SEPERTI DATA GURU) -->
+      <div class="container py-3">
+        <div id="alertAreaTop">
+          <?php if ($alertMsg !== ''): ?>
+            <div class="dk-alert <?= $alertType === 'success' ? 'dk-alert-success' : 'dk-alert-danger' ?>" data-auto-hide="5000">
+              <span class="close-btn">&times;</span>
+              <?= $alertType === 'success' ? '✅' : '❌' ?>
+              <?= htmlspecialchars($alertMsg, ENT_QUOTES, 'UTF-8'); ?>
+            </div>
+          <?php endif; ?>
+        </div>
+      </div>
+
       <div class="dk-content-box">
         <div class="container py-4">
           <h4 class="fw-bold mb-4 jus">Data Semester</h4>
 
-          <!-- ALERT NOTIFIKASI (muncul setelah klik simpan) -->
-          <?php if ($alertMsg !== ''): ?>
-            <div id="alertArea">
-              <div class="alert <?= $alertClass ?> alert-dismissible fade show mb-3" role="alert">
-                <?= htmlspecialchars($alertMsg, ENT_QUOTES, 'UTF-8'); ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-              </div>
-            </div>
-          <?php endif; ?>
-
           <!-- Form Simpan -->
-          <form action="semester_proses.php" method="POST">
+          <form action="proses_simpan_data_semester.php" method="POST">
             <div class="mb-3">
               <label class="form-label fw-semibold">Tahun Ajaran Aktif</label>
               <select class="form-select" id="tahunAjaran" name="tahun_ajaran" required>
@@ -93,27 +160,48 @@ include '../../includes/header.php';
           </form>
         </div>
       </div>
+
     </div>
   </div>
 
-  <!-- AUTO HIDE ALERT 5 DETIK (tidak mengubah tampilan) -->
+  <!-- ✅ AUTO HIDE + CLOSE (DK ALERT) -->
   <script>
-    window.addEventListener('DOMContentLoaded', function () {
-      const alerts = document.querySelectorAll('#alertArea .alert');
-      if (!alerts.length) return;
+    (function() {
+      const ALERT_DURATION = 5000;
 
-      setTimeout(() => {
-        alerts.forEach(a => {
-          a.style.transition = 'opacity 0.5s ease';
-          a.style.opacity = '0';
-          setTimeout(() => {
-            if (a.parentNode) a.parentNode.removeChild(a);
-          }, 600);
-        });
-      }, 5000); // 5 detik
-    });
+      function animateAlertIn(el) {
+        if (!el) return;
+        requestAnimationFrame(() => el.classList.add('dk-show'));
+      }
+
+      function animateAlertOut(el) {
+        if (!el) return;
+        el.classList.add('dk-hide');
+        setTimeout(() => {
+          if (el && el.parentNode) el.parentNode.removeChild(el);
+        }, 450);
+      }
+
+      function wireAlert(el) {
+        if (!el) return;
+        animateAlertIn(el);
+
+        const ms = parseInt(el.getAttribute('data-auto-hide') || String(ALERT_DURATION), 10);
+        const timer = setTimeout(() => animateAlertOut(el), ms);
+
+        const close = el.querySelector('.close-btn');
+        if (close) {
+          close.addEventListener('click', (e) => {
+            e.preventDefault();
+            clearTimeout(timer);
+            animateAlertOut(el);
+          });
+        }
+      }
+
+      document.querySelectorAll('#alertAreaTop .dk-alert').forEach(wireAlert);
+    })();
   </script>
 
-  <?php
-  include '../../includes/footer.php';
-  ?>
+  <?php include '../../includes/footer.php'; ?>
+</body>
