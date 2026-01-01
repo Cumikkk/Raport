@@ -1,882 +1,1563 @@
 <?php
-include '../../koneksi.php';
+// pages/siswa/data_siswa.php
+require_once '../../koneksi.php';
+include '../../includes/header.php';
 
-// ====== PROSES DATA (MODE AJAX TANPA OUTPUT HTML) ======
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+mysqli_set_charset($koneksi, 'utf8mb4');
+
+// Session + CSRF untuk bulk delete
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 if (empty($_SESSION['csrf'])) {
   $_SESSION['csrf'] = bin2hex(random_bytes(32));
 }
-$csrf = $_SESSION['csrf'] ?? '';
+$csrf = $_SESSION['csrf'];
 
-// ===== Parameter =====
-$q       = isset($_GET['q']) ? trim($_GET['q']) : '';
+// Search & filter awal
+$search  = isset($_GET['q']) ? trim($_GET['q']) : '';
+$like    = "%{$search}%";
+$tingkat = isset($_GET['tingkat']) ? trim($_GET['tingkat']) : '';
+$idKelasFilter = isset($_GET['kelas']) ? (int)$_GET['kelas'] : 0;
+
+// valid tingkat
+$allowedTingkat = ['', 'X', 'XI', 'XII'];
+if (!in_array($tingkat, $allowedTingkat, true)) $tingkat = '';
+
+// ✅ tambah opsi 0 = semua
+$allowedPer = [10, 20, 50, 100, 0];
 $perPage = isset($_GET['per']) ? (int)$_GET['per'] : 10;
-$perPage = ($perPage >= 1 && $perPage <= 100) ? $perPage : 10;
-$page    = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$page    = max(1, $page);
+if (!in_array($perPage, $allowedPer, true)) $perPage = 10;
 
-// ===== Hitung total =====
-if ($q !== '') {
-  // cari di nama, absen, nisn
-  $sqlCount = "SELECT COUNT(*) AS total FROM siswa s 
-               LEFT JOIN kelas k ON s.id_kelas = k.id_kelas 
-               WHERE (s.nama_siswa LIKE CONCAT('%', ?, '%')
-                      OR s.no_absen_siswa LIKE CONCAT('%', ?, '%')
-                      OR s.no_induk_siswa LIKE CONCAT('%', ?, '%'))";
-  $stmtC = $koneksi->prepare($sqlCount);
-  if ($stmtC === false) {
-    die('Prepare failed: ' . $koneksi->error);
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($page < 1) $page = 1;
+
+/**
+ * Helper bind_param dinamis
+ */
+function bindParamsDynamic(mysqli_stmt $stmt, string $types, array $params): void
+{
+  if ($types === '' || empty($params)) return;
+  $refs = [];
+  $refs[] = &$types;
+  foreach ($params as $k => $v) {
+    $refs[] = &$params[$k];
   }
-  $stmtC->bind_param('sss', $q, $q, $q);
+  call_user_func_array([$stmt, 'bind_param'], $refs);
+}
+
+/**
+ * Build WHERE dinamis
+ */
+$where = [];
+$params = [];
+$types  = '';
+
+if ($search !== '') {
+  $where[] = "(s.nama_siswa LIKE ? OR s.no_absen_siswa LIKE ? OR s.no_induk_siswa LIKE ?)";
+  $params[] = $like;
+  $params[] = $like;
+  $params[] = $like;
+  $types .= 'sss';
+}
+if ($tingkat !== '') {
+  $where[] = "k.tingkat_kelas = ?";
+  $params[] = $tingkat;
+  $types .= 's';
+}
+if ($idKelasFilter > 0) {
+  $where[] = "s.id_kelas = ?";
+  $params[] = $idKelasFilter;
+  $types .= 'i';
+}
+
+$whereSql = '';
+if (!empty($where)) {
+  $whereSql = ' WHERE ' . implode(' AND ', $where);
+}
+
+// Hitung total data
+$countSql = "
+  SELECT COUNT(*) AS total
+  FROM siswa s
+  LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
+  $whereSql
+";
+$stmtCount = mysqli_prepare($koneksi, $countSql);
+bindParamsDynamic($stmtCount, $types, $params);
+mysqli_stmt_execute($stmtCount);
+$resCount  = mysqli_stmt_get_result($stmtCount);
+$rowCount  = mysqli_fetch_assoc($resCount);
+$totalRows = (int)($rowCount['total'] ?? 0);
+
+// ✅ Pagination: kalau perPage=0 berarti tampil semua
+if ($perPage === 0) {
+  $totalPages = 1;
+  $page = 1;
+  $offset = 0;
 } else {
-  $sqlCount = "SELECT COUNT(*) AS total FROM siswa s
-               LEFT JOIN kelas k ON s.id_kelas = k.id_kelas";
-  $stmtC = $koneksi->prepare($sqlCount);
-  if ($stmtC === false) {
-    die('Prepare failed: ' . $koneksi->error);
-  }
+  $totalPages = max(1, (int)ceil($totalRows / $perPage));
+  if ($page > $totalPages) $page = $totalPages;
+  $offset = ($page - 1) * $perPage;
 }
-$stmtC->execute();
-$totalRow = $stmtC->get_result()->fetch_assoc();
-$total = (int)($totalRow['total'] ?? 0);
-$totalPages = max(1, (int)ceil($total / $perPage));
-$page = min($page, $totalPages);
-$offset = ($page - 1) * $perPage;
-$stmtC->close();
 
-// ===== Ambil data halaman ini =====
-if ($q !== '') {
-  $sql = "SELECT s.*, k.nama_kelas
-          FROM siswa s
-          LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
-          WHERE (s.nama_siswa LIKE CONCAT('%', ?, '%')
-                 OR s.no_absen_siswa LIKE CONCAT('%', ?, '%')
-                 OR s.no_induk_siswa LIKE CONCAT('%', ?, '%'))
-          ORDER BY s.no_absen_siswa ASC
-          LIMIT ? OFFSET ?";
-  $stmt = $koneksi->prepare($sql);
-  if ($stmt === false) {
-    die('Prepare failed: ' . $koneksi->error);
-  }
-  $stmt->bind_param('sssii', $q, $q, $q, $perPage, $offset);
+// Ambil data siswa untuk tampilan awal
+$baseSql = "
+  SELECT s.id_siswa, s.nama_siswa, s.no_induk_siswa, s.no_absen_siswa, s.id_kelas,
+         k.nama_kelas, k.tingkat_kelas
+  FROM siswa s
+  LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
+  $whereSql
+  ORDER BY CAST(s.no_absen_siswa AS UNSIGNED) ASC, s.no_absen_siswa ASC
+";
+
+if ($perPage === 0) {
+  $stmt = mysqli_prepare($koneksi, $baseSql);
+  bindParamsDynamic($stmt, $types, $params);
 } else {
-  $sql = "SELECT s.*, k.nama_kelas
-          FROM siswa s
-          LEFT JOIN kelas k ON s.id_kelas = k.id_kelas
-          ORDER BY s.no_absen_siswa ASC
-          LIMIT ? OFFSET ?";
-  $stmt = $koneksi->prepare($sql);
-  if ($stmt === false) {
-    die('Prepare failed: ' . $koneksi->error);
+  $sql = $baseSql . " LIMIT ? OFFSET ?";
+  $stmt = mysqli_prepare($koneksi, $sql);
+
+  $params2 = $params;
+  $types2  = $types . 'ii';
+  $params2[] = $perPage;
+  $params2[] = $offset;
+
+  bindParamsDynamic($stmt, $types2, $params2);
+}
+
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
+
+// Info range
+if ($totalRows === 0) {
+  $shown = 0;
+  $pageDisplayCurrent = 0;
+  $pageDisplayTotal   = 0;
+} else {
+  if ($perPage === 0) {
+    $shown = $totalRows;
+    $pageDisplayCurrent = 1;
+    $pageDisplayTotal   = 1;
+  } else {
+    $from = $offset + 1;
+    $to   = min($offset + $perPage, $totalRows);
+    $shown = $to - $from + 1;
+    $pageDisplayCurrent = $page;
+    $pageDisplayTotal   = $totalPages;
   }
-  $stmt->bind_param('ii', $perPage, $offset);
-}
-$stmt->execute();
-$result = $stmt->get_result();
-
-$rows = [];
-while ($r = $result->fetch_assoc()) {
-  $rows[] = $r;
 }
 
-// ===== Mode AJAX =====
-if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
-  header('Content-Type: application/json; charset=utf-8');
-  echo json_encode([
-    'ok' => true,
-    'csrf' => $csrf,
-    'data' => $rows,
-    'page' => $page,
-    'per' => $perPage,
-    'total' => $total,
-    'totalPages' => $totalPages,
-    'q' => $q
-  ]);
-  exit;
+// Data kelas untuk dropdown + filter
+$kelasAll = [];
+$kelasQuery = mysqli_query($koneksi, "SELECT id_kelas, nama_kelas, tingkat_kelas FROM kelas ORDER BY tingkat_kelas ASC, nama_kelas ASC");
+while ($k = mysqli_fetch_assoc($kelasQuery)) {
+  $kelasAll[] = [
+    'id_kelas' => (int)$k['id_kelas'],
+    'nama_kelas' => (string)$k['nama_kelas'],
+    'tingkat_kelas' => (string)$k['tingkat_kelas'],
+  ];
 }
-
-include '../../includes/header.php';
-include '../../includes/navbar.php';
 ?>
 
-<main class="content">
-  <div class="cards row" style="margin-top: -50px;">
-    <div class="col-12">
-      <div class="card shadow-sm" style="border-radius: 15px;">
+<body>
+  <?php include '../../includes/navbar.php'; ?>
 
-        <!-- NOTIF -->
-        <div id="notifContainer">
-          <?php if (isset($_GET['msg']) && $_GET['msg'] === 'saved'): ?>
-            <div id="notifSaved" class="alert alert-success mx-3 mt-3">
-              Data siswa berhasil ditambahkan.
+  <style>
+    :root {
+      --brand: #0a4db3;
+      --brand-600: #083f93;
+      --ink: #0f172a;
+      --text: #111827;
+      --muted: #475569;
+      --ring: #cbd5e1;
+      --card: #ffffff;
+      --thead: #0a4db3;
+      --thead-text: #ffffff;
+      --card-radius: 14px;
+      --success: #16a34a;
+      --warn: #f59e0b;
+      --danger: #dc2626;
+    }
+
+    .content {
+      padding: clamp(12px, 2vw, 20px);
+      padding-bottom: 260px;
+      color: var(--text);
+    }
+
+    .card {
+      border-radius: var(--card-radius);
+      border: 1px solid #e8eef6;
+      background: var(--card);
+    }
+
+    .page-title {
+      color: var(--ink);
+    }
+
+    .search-wrap {
+      max-width: 300px;
+      width: 100%;
+    }
+
+    .searchbox {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      border: 1px solid var(--ring);
+      border-radius: 10px;
+      background: #fff;
+      padding: 6px 10px;
+    }
+
+    .searchbox .icon {
+      color: var(--muted);
+    }
+
+    .searchbox input {
+      border: none;
+      outline: none;
+      width: 100%;
+      font-size: 14px;
+      color: var(--ink);
+    }
+
+    .searchbox input::placeholder {
+      color: #9aa3af;
+    }
+
+    .searchbox:focus-within {
+      box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
+    }
+
+    .filter-select {
+      border: 1px solid var(--ring);
+      border-radius: 10px;
+      padding: 6px 12px;
+      font-size: 14px;
+      color: var(--ink);
+      background: #fff;
+      height: 38px;
+      text-align: center;
+      text-align-last: center;
+    }
+
+    .filter-select:focus {
+      box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
+      border-color: var(--brand);
+    }
+
+    .table thead th {
+      white-space: nowrap;
+      background: var(--thead);
+      color: var(--thead-text);
+    }
+
+    .table td,
+    .table th {
+      vertical-align: middle;
+      color: var(--text);
+    }
+
+    .highlight-row {
+      background-color: #d4edda !important;
+    }
+
+    #siswaTbody {
+      transition: opacity .25s ease, transform .25s ease;
+    }
+
+    #siswaTbody.tbody-loading {
+      opacity: .4;
+      transform: scale(.995);
+    }
+
+    #siswaTbody.tbody-loaded {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    #siswaTableWrap {
+      position: relative;
+    }
+
+    .table-loading-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, .7);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease;
+      z-index: 2;
+    }
+
+    .table-loading-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .btn-brand {
+      background: #0a4db3 !important;
+      border-color: #0a4db3 !important;
+      color: #fff !important;
+      font-weight: 700;
+    }
+
+    .btn-brand:hover {
+      background: #083f93 !important;
+      border-color: #083f93 !important;
+    }
+
+    .btn-warning {
+      background: #f0ad4e !important;
+      border-color: #eea236 !important;
+      color: #fff !important;
+    }
+
+    .btn-warning:hover {
+      background: #d98d26 !important;
+      border-color: #c77e20 !important;
+      color: #fff !important;
+    }
+
+    .btn-danger {
+      background: #d9534f !important;
+      border-color: #d43f3a !important;
+      color: #fff !important;
+    }
+
+    .btn-danger:hover {
+      background: #c0392b !important;
+      border-color: #a93226 !important;
+      color: #fff !important;
+    }
+
+    .btn-outline-secondary {
+      border-color: #6c757d !important;
+      color: #6c757d !important;
+      background: transparent !important;
+    }
+
+    .btn-outline-secondary:hover {
+      background: #e9ecef !important;
+      color: #333 !important;
+    }
+
+    #perPage {
+      border: 1px solid var(--ring);
+      border-radius: 10px;
+      padding: 6px 30px;
+      font-size: 14px;
+      color: var(--ink);
+      background-color: #fff;
+    }
+
+    #perPage:focus {
+      box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
+      border-color: var(--brand);
+    }
+
+    .page-info-text strong {
+      font-size: .95rem;
+    }
+
+    .dk-alert {
+      padding: 12px 14px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      max-height: 220px;
+      overflow: hidden;
+      position: relative;
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: opacity .35s ease, transform .35s ease,
+        max-height .35s ease, margin .35s ease, padding .35s ease;
+    }
+
+    .dk-alert.dk-show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .dk-alert.dk-hide {
+      opacity: 0;
+      transform: translateY(-6px);
+      max-height: 0;
+      margin: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+
+    .dk-alert-success {
+      background: #e8f8ee;
+      border: 1px solid #c8efd9;
+      color: #166534;
+    }
+
+    .dk-alert-danger {
+      background: #fdecec;
+      border: 1px solid #f5c2c2;
+      color: #991b1b;
+    }
+
+    .dk-alert-warning {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      color: #9a3412;
+    }
+
+    .dk-alert .close-btn {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      opacity: .6;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .dk-alert .close-btn:hover {
+      opacity: 1;
+    }
+
+    #alertAreaTop {
+      position: relative;
+    }
+
+    .modal-alert-area {
+      margin-bottom: 12px;
+    }
+
+    .pager-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      gap: 10px;
+    }
+
+    .pager-group {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 10px 12px;
+      border: 1px solid rgba(0, 0, 0, .12);
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .pager-group .pagination {
+      margin: 0;
+      justify-content: center;
+    }
+
+    .pager-sep {
+      width: 1px;
+      height: 34px;
+      background: rgba(0, 0, 0, .15);
+    }
+
+    .per-select {
+      width: 120px;
+      min-width: 120px;
+    }
+
+    .page-info-center {
+      text-align: center;
+      width: 100%;
+    }
+
+    @media (max-width:520px) {
+      table.table thead {
+        display: none;
+      }
+
+      table.table tbody tr {
+        display: block;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, .04);
+      }
+
+      table.table tbody td {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px !important;
+        border: 0 !important;
+        border-bottom: 1px dashed #edf2f7 !important;
+        color: var(--ink);
+      }
+
+      table.table tbody td:last-child {
+        border-bottom: 0 !important;
+        display: block;
+      }
+
+      table.table tbody td::before {
+        content: attr(data-label);
+        font-weight: 800;
+        color: var(--ink);
+      }
+
+      .table .btn {
+        width: 100%;
+        margin-top: 6px;
+      }
+
+      .search-perpage-row {
+        flex-direction: column;
+        align-items: stretch !important;
+      }
+
+      .pager-sep {
+        display: none;
+      }
+
+      .pager-group {
+        width: 100%;
+      }
+
+      .filter-select {
+        text-align: left;
+        text-align-last: left;
+      }
+
+      /* biar nyaman di mobile */
+    }
+  </style>
+
+  <main class="content">
+    <div class="row g-3">
+      <div class="col-12">
+
+        <div id="alertAreaTop">
+          <?php if (isset($_GET['msg']) && $_GET['msg'] !== ''): ?>
+            <div class="dk-alert dk-alert-success" data-auto-hide="4000">
+              <span class="close-btn">&times;</span>
+              ✅ <?= htmlspecialchars($_GET['msg'], ENT_QUOTES, 'UTF-8'); ?>
             </div>
-            <script>
-              setTimeout(() => {
-                const n = document.getElementById('notifSaved');
-                if (n) n.style.display = 'none';
-              }, 5000);
-            </script>
+          <?php endif; ?>
+
+          <?php if (isset($_GET['err']) && $_GET['err'] !== ''): ?>
+            <div class="dk-alert dk-alert-danger" data-auto-hide="4000">
+              <span class="close-btn">&times;</span>
+              ❌ <?= htmlspecialchars($_GET['err'], ENT_QUOTES, 'UTF-8'); ?>
+            </div>
           <?php endif; ?>
         </div>
 
-        <!-- TOP BAR -->
-        <div class="mt-0 d-flex flex-column flex-md-row align-items-md-center justify-content-between p-3 top-bar">
-          <div class="d-flex flex-column align-items-md-start align-items-center text-md-start text-center mb-2 mb-md-0">
-            <h5 class="mb-2 fw-semibold fs-4">Data Siswa</h5>
+        <div class="card shadow-sm">
+          <div class="top-bar p-3 p-md-4">
+            <div class="d-flex flex-column gap-3 w-100">
+              <div>
+                <h5 class="page-title mb-0 fw-bold fs-4">Data Siswa</h5>
+              </div>
 
-            <!-- SEARCH + FILTER (sebaris) -->
-            <form id="searchForm" class="search-row d-flex flex-wrap align-items-center gap-2 mb-2 mt-1">
-              <input type="text"
-                id="searchInput"
-                class="form-control form-control-sm"
-                placeholder="Masukan kata kunci"
-                style="width:200px;"
-                value="<?= htmlspecialchars($q) ?>">
+              <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-2">
+                <div class="d-flex search-perpage-row align-items-md-center gap-2 flex-grow-1">
+                  <div class="search-wrap flex-grow-1">
+                    <div class="searchbox" role="search" aria-label="Pencarian siswa">
+                      <i class="bi bi-search icon"></i>
+                      <input type="text" id="searchInput" placeholder="Ketik untuk mencari" autofocus>
+                    </div>
+                  </div>
 
-              <select id="filterTingkat" class="form-select form-select-sm dk-select select-tingkat">
-                <option value="">Tingkat: Semua</option>
-                <option value="X">X</option>
-                <option value="XI">XI</option>
-                <option value="XII">XII</option>
-              </select>
+                  <!-- ✅ Filter Tingkat -->
+                  <select id="filterTingkat" class="filter-select" title="Filter Tingkat">
+                    <option value="">Semua Tingkat</option>
+                    <option value="X">X</option>
+                    <option value="XI">XI</option>
+                    <option value="XII">XII</option>
+                  </select>
 
-              <select id="filterKelas" class="form-select form-select-sm dk-select select-kelas">
-                <option value="">Kelas: Semua</option>
-                <?php
-                $kelasQuery = mysqli_query($koneksi, "SELECT * FROM kelas ORDER BY nama_kelas ASC");
-                while ($k = mysqli_fetch_assoc($kelasQuery)) {
-                  echo '<option value="' . htmlspecialchars($k['id_kelas']) . '">' . htmlspecialchars($k['nama_kelas']) . '</option>';
-                }
-                ?>
-              </select>
-            </form>
+                  <!-- ✅ Filter Kelas -->
+                  <select id="filterKelas" class="filter-select" title="Filter Kelas">
+                    <option value="0">Semua Kelas</option>
+                    <?php foreach ($kelasAll as $k): ?>
+                      <option value="<?= (int)$k['id_kelas'] ?>" data-tingkat="<?= htmlspecialchars($k['tingkat_kelas'], ENT_QUOTES, 'UTF-8') ?>">
+                        <?= htmlspecialchars($k['nama_kelas'], ENT_QUOTES, 'UTF-8') ?>
+                      </option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+
+                <div class="d-flex justify-content-md-end flex-wrap gap-2">
+                  <button type="button"
+                    class="btn btn-brand btn-sm d-inline-flex align-items-center gap-2 px-3"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalTambahSiswa">
+                    <i class="bi bi-person-plus"></i> Tambah Siswa
+                  </button>
+
+                  <button type="button"
+                    class="btn btn-success btn-sm d-inline-flex align-items-center gap-2 px-3"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalImportSiswa">
+                    <i class="fa-solid fa-file-arrow-down fa-lg"></i> Import
+                  </button>
+
+                  <button id="exportBtn"
+                    class="btn btn-success btn-sm d-inline-flex align-items-center gap-2 px-3"
+                    type="button">
+                    <i class="fa-solid fa-file-arrow-up fa-lg"></i> Export
+                  </button>
+                </div>
+              </div>
+
+            </div>
           </div>
 
-          <div class="d-flex gap-2 flex-wrap justify-content-md-end justify-content-center mt-3 mt-md-0 action-buttons">
-            <button type="button" class="btn btn-primary btn-sm d-flex align-items-center gap-1 px-3 fw-semibold"
-              id="openTambahModal">
-              <i class="fa-solid fa-plus"></i> Tambah
-            </button>
+          <div class="card-body pt-0">
+            <div class="table-responsive" id="siswaTableWrap">
+              <div class="table-loading-overlay" id="tableLoadingOverlay">
+                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                <span style="font-size:13px;">Sedang memuat data…</span>
+              </div>
 
-            <button type="button"
-              class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2"
-              data-bs-toggle="modal" data-bs-target="#modalImportSiswa">
-              <i class="fa-solid fa-file-arrow-down"></i> Import
-            </button>
-
-            <button id="exportBtn" class="btn btn-success btn-md px-3 py-2 d-flex align-items-center gap-2">
-              <i class="fa-solid fa-file-arrow-up"></i> Export
-            </button>
-          </div>
-        </div>
-
-        <div class="card-body">
-          <form id="formDeleteMultiple" action="hapus_siswa_multiple.php" method="POST">
-            <div class="table-responsive">
-              <table class="table table-bordered table-striped align-middle">
-                <thead style="background-color:#1d52a2" class="text-center text-white">
+              <table class="table table-striped table-bordered align-middle mb-0">
+                <thead class="text-center">
                   <tr>
-                    <th><input type="checkbox" id="selectAll"></th>
-                    <th>Absen</th>
-                    <th>Nama</th>
-                    <th>NISN</th>
-                    <th>Kelas</th>
-                    <th>Aksi</th>
+                    <th style="width:50px;" class="text-center">
+                      <input type="checkbox" id="checkAll" title="Pilih Semua">
+                    </th>
+                    <th style="width:160px;">NISN</th>
+                    <th>Nama Siswa</th>
+                    <th style="width:220px;">Kelas</th>
+                    <th style="width:120px;">Absen</th>
+                    <th style="width:220px;">Aksi</th>
                   </tr>
                 </thead>
-                <tbody id="tbodyData">
-                  <?php foreach ($rows as $data): ?>
-                    <tr
-                      data-kelas="<?= htmlspecialchars($data['id_kelas']) ?>"
-                      data-tingkat="<?= htmlspecialchars($data['tingkat'] ?? '') ?>"
-                      data-id="<?= (int)$data['id_siswa'] ?>"
-                      data-nama="<?= htmlspecialchars($data['nama_siswa']) ?>"
-                      data-nisn="<?= htmlspecialchars($data['no_induk_siswa']) ?>"
-                      data-absen="<?= htmlspecialchars($data['no_absen_siswa']) ?>"
-                      data-id_kelas="<?= htmlspecialchars($data['id_kelas']) ?>">
-                      <td class="text-center">
-                        <input type="checkbox" name="id_siswa[]" class="row-check" value="<?= (int)$data['id_siswa'] ?>">
-                      </td>
-                      <td class="text-center"><?= htmlspecialchars($data['no_absen_siswa']) ?></td>
-                      <td><?= htmlspecialchars($data['nama_siswa']) ?></td>
-                      <td class="text-center"><?= htmlspecialchars($data['no_induk_siswa']) ?></td>
-                      <td class="text-center"><?= htmlspecialchars($data['nama_kelas'] ?? '-') ?></td>
-                      <td class="text-center">
-                        <button type="button" class="btn btn-warning btn-sm btn-edit-siswa">
-                          <i class="bi bi-pencil-square"></i> Edit
-                        </button>
-                        <a href="hapus_siswa.php?id=<?= (int)$data['id_siswa'] ?>"
-                          onclick="return confirm('Yakin ingin menghapus data?');"
-                          class="btn btn-danger btn-sm">
-                          <i class="bi bi-trash"></i> Del
-                        </a>
-                      </td>
+
+                <tbody id="siswaTbody" class="text-center tbody-loaded">
+                  <?php if ($totalRows === 0): ?>
+                    <tr>
+                      <td colspan="6">Belum ada data.</td>
                     </tr>
-                  <?php endforeach; ?>
+                    <?php else:
+                    $rowClass = ($search !== '') ? 'highlight-row' : '';
+                    while ($row = mysqli_fetch_assoc($result)):
+                    ?>
+                      <tr class="<?= $rowClass; ?>">
+                        <td class="text-center" data-label="Pilih">
+                          <input type="checkbox" class="row-check" value="<?= (int)$row['id_siswa'] ?>">
+                        </td>
+
+                        <td data-label="NISN" class="text-center"><?= htmlspecialchars($row['no_induk_siswa']) ?></td>
+                        <td data-label="Nama"><?= htmlspecialchars($row['nama_siswa']) ?></td>
+                        <td data-label="Kelas" class="text-center"><?= htmlspecialchars($row['nama_kelas'] ?? '-') ?></td>
+                        <td data-label="Absen" class="text-center"><?= htmlspecialchars($row['no_absen_siswa']) ?></td>
+
+                        <td data-label="Aksi">
+                          <div class="d-flex gap-2 justify-content-center flex-wrap">
+                            <button type="button"
+                              class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-edit-siswa"
+                              data-id="<?= (int)$row['id_siswa'] ?>"
+                              data-nama="<?= htmlspecialchars($row['nama_siswa'], ENT_QUOTES, 'UTF-8') ?>"
+                              data-nisn="<?= htmlspecialchars($row['no_induk_siswa'], ENT_QUOTES, 'UTF-8') ?>"
+                              data-absen="<?= htmlspecialchars($row['no_absen_siswa'], ENT_QUOTES, 'UTF-8') ?>"
+                              data-id_kelas="<?= (int)($row['id_kelas'] ?? 0) ?>">
+                              <i class="bi bi-pencil-square"></i> Edit
+                            </button>
+
+                            <button type="button"
+                              class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-delete-single"
+                              data-id="<?= (int)$row['id_siswa'] ?>"
+                              data-label="<?= htmlspecialchars($row['nama_siswa'], ENT_QUOTES, 'UTF-8') ?>">
+                              <i class="bi bi-trash"></i> Hapus
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                  <?php endwhile;
+                  endif; ?>
                 </tbody>
               </table>
             </div>
 
-            <button type="submit" id="deleteSelected" class="btn btn-danger btn-sm mt-2" disabled>
-              <i class="bi bi-trash"></i> Hapus Terpilih
-            </button>
-          </form>
-
-          <!-- ✅ Pagination group (Referensi 2) -->
-          <nav aria-label="Page navigation" class="mt-3">
-            <div class="pager-area">
-              <div class="pager-group">
-                <!-- kiri: pagination -->
-                <ul class="pagination mb-0" id="pagination"></ul>
-
-                <!-- separator -->
-                <div class="pager-sep" aria-hidden="true"></div>
-
-                <!-- kanan: per halaman (tanpa teks "Data/hal") -->
-                <select id="perSelect" class="form-select form-select-sm per-select">
-                  <?php foreach ([10, 20, 50, 100] as $opt): ?>
-                    <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>>
-                      <?= $opt ?>/hal
-                    </option>
-                  <?php endforeach; ?>
-                </select>
-              </div>
-
-              <!-- info bawah: center -->
-              <p class="text-muted mb-0 page-info-center" id="pageInfo"></p>
-            </div>
-          </nav>
-        </div>
-      </div>
-    </div>
-  </div>
-</main>
-
-<!-- ========================= -->
-<!-- MODAL: Tambah Siswa -->
-<!-- ========================= -->
-<div class="modal fade" id="modalTambahSiswa" tabindex="-1" aria-labelledby="modalTambahSiswaLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="modalTambahSiswaLabel">Tambah Data Siswa</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-
-      <form id="formTambahSiswa" autocomplete="off">
-        <div class="modal-body">
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Nama Siswa</label>
-            <input type="text" name="nama_siswa" class="form-control" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-semibold">NISN</label>
-            <input type="text" name="no_induk_siswa" class="form-control" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Absen</label>
-            <input type="text" name="no_absen_siswa" class="form-control" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Kelas</label>
-            <select name="id_kelas" class="form-select" required>
-              <option value="" selected disabled>-- Pilih Kelas --</option>
-              <?php
-              $kelasQuery2 = mysqli_query($koneksi, "SELECT * FROM kelas ORDER BY nama_kelas ASC");
-              while ($kk = mysqli_fetch_assoc($kelasQuery2)) {
-                echo '<option value="' . htmlspecialchars($kk['id_kelas']) . '">' . htmlspecialchars($kk['nama_kelas']) . '</option>';
-              }
-              ?>
-            </select>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-          <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> Simpan</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- ========================= -->
-<!-- MODAL: Edit Siswa -->
-<!-- ========================= -->
-<div class="modal fade" id="modalEditSiswa" tabindex="-1" aria-labelledby="modalEditSiswaLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="modalEditSiswaLabel">Edit Data Siswa</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-
-      <form id="formEditSiswa" method="POST" action="edit_siswa.php" autocomplete="off">
-        <div class="modal-body">
-          <input type="hidden" name="id_siswa" id="edit_id_siswa">
-
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Nama Siswa</label>
-            <input type="text" name="nama_siswa" id="edit_nama_siswa" class="form-control" required>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label fw-semibold">NISN</label>
-            <input type="text" name="no_induk_siswa" id="edit_no_induk_siswa" class="form-control" required>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Absen</label>
-            <input type="text" name="no_absen_siswa" id="edit_no_absen_siswa" class="form-control" required>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label fw-semibold">Kelas</label>
-            <select name="id_kelas" id="edit_id_kelas" class="form-select" required>
-              <option value="" disabled>-- Pilih Kelas --</option>
-              <?php
-              $kelasQuery3 = mysqli_query($koneksi, "SELECT * FROM kelas ORDER BY nama_kelas ASC");
-              while ($kx = mysqli_fetch_assoc($kelasQuery3)) {
-                echo '<option value="' . htmlspecialchars($kx['id_kelas']) . '">' . htmlspecialchars($kx['nama_kelas']) . '</option>';
-              }
-              ?>
-            </select>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-          <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> Update</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- ========================= -->
-<!-- MODAL: Import Siswa -->
-<!-- ========================= -->
-<div class="modal fade" id="modalImportSiswa" tabindex="-1" aria-labelledby="modalImportSiswaLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content">
-      <div class="modal-header border-0 pb-0">
-        <div>
-          <h5 class="modal-title fw-semibold" id="modalImportSiswaLabel">Import Data Siswa</h5>
-          <p class="mb-0 text-muted" style="font-size: 13px;">
-            Gunakan template resmi agar susunan kolom sesuai dengan sistem.
-          </p>
-        </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
-      </div>
-
-      <form id="formImportSiswa"
-        action="import_siswa.php"
-        method="POST"
-        enctype="multipart/form-data"
-        autocomplete="off">
-        <div class="modal-body pt-3">
-
-          <div class="mb-3 p-3 rounded-3" style="background:#f9fafb;border:1px solid #e5e7eb;">
-            <div class="d-flex align-items-start gap-2">
-              <div class="mt-1">
-                <i class="fa-solid fa-circle-info" style="color:#0a4db3;"></i>
-              </div>
-              <div style="font-size:13px;">
-                <strong>Langkah import data siswa:</strong>
-                <ol class="mb-1 ps-3" style="padding-left:18px;">
-                  <li>Download template Excel terlebih dahulu.</li>
-                  <li>Isi data siswa sesuai kolom yang tersedia.</li>
-                  <li>Upload kembali file Excel tersebut di form ini.</li>
-                </ol>
-                <span class="text-muted">
-                  Contoh struktur kolom template:
-                  <strong>A: nomor</strong>,
-                  <strong>B: nama siswa</strong>,
-                  <strong>C: NISN</strong>,
-                  <strong>D: absen</strong>,
-                  <strong>E: kelas</strong>.
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
-            <span class="text-muted" style="font-size:13px;">
-              Klik tombol di samping untuk mengunduh template Excel.
-            </span>
-            <a href="../../assets/templates/template_data_siswa.xlsx"
-              class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2"
-              download>
-              <i class="fa-solid fa-file-excel"></i>
-              <span>Download Template</span>
-            </a>
-          </div>
-
-          <hr class="my-2">
-
-          <div class="mb-2">
-            <label for="excelFile" class="form-label fw-semibold mb-1">Upload File Excel</label>
-            <div class="position-relative d-flex align-items-center">
-              <input type="file"
-                class="form-control"
-                id="excelFile"
-                name="excelFile"
-                accept=".xlsx,.xls"
-                style="padding-right:35px;"
-                required
-                onchange="toggleClearButtonSiswaImport()">
-
-              <button type="button"
-                id="clearFileBtnSiswaImport"
-                onclick="clearFileSiswaImport()"
-                title="Hapus file"
-                style="position:absolute;right:10px;background:none;border:none;color:#6c757d;font-size:20px;line-height:1;display:none;cursor:pointer;">
-                &times;
+            <div class="mt-3 d-flex justify-content-start">
+              <button type="button" id="bulkDeleteBtn"
+                class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1"
+                disabled>
+                <i class="bi bi-trash3"></i> <span>Hapus Terpilih</span>
               </button>
             </div>
-            <small class="text-muted d-block mt-1" style="font-size:12px;">
-              Format yang didukung: <strong>.xlsx</strong> atau <strong>.xls</strong>.
-              Pastikan tidak mengubah urutan kolom di template.
-            </small>
+
+            <nav aria-label="Page navigation" class="mt-3">
+              <div class="pager-area">
+                <div class="pager-group">
+                  <ul class="pagination mb-0" id="paginationWrap"></ul>
+                  <div class="pager-sep" aria-hidden="true"></div>
+
+                  <select id="perPage" class="form-select form-select-sm per-select">
+                    <?php foreach ($allowedPer as $opt): ?>
+                      <?php if ($opt === 0): ?>
+                        <option value="0" <?= $perPage === 0 ? 'selected' : '' ?>>Semua</option>
+                      <?php else: ?>
+                        <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>><?= $opt ?>/hal</option>
+                      <?php endif; ?>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+
+                <p id="pageInfo" class="page-info-text text-muted mb-0 page-info-center">
+                  Menampilkan <strong><?= $shown ?></strong> dari <strong><?= $totalRows ?></strong> data •
+                  Halaman <strong><?= $pageDisplayCurrent ?></strong> / <strong><?= $pageDisplayTotal ?></strong>
+                </p>
+              </div>
+            </nav>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL TAMBAH SISWA -->
+  <div class="modal fade" id="modalTambahSiswa" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Tambah Data Siswa</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+        </div>
+
+        <form id="formTambahSiswa" action="proses_tambah_data_siswa.php" method="POST" autocomplete="off">
+          <div class="modal-body">
+            <div id="modalAlertTambah" class="modal-alert-area"></div>
+
+            <!-- ✅ urutan: NISN, Nama, Kelas, Absen (atas-bawah) -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold" for="add_nisn">NISN</label>
+              <input type="text" id="add_nisn" name="no_induk_siswa" class="form-control" maxlength="50" required placeholder="NISN">
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold" for="add_nama_siswa">Nama Siswa</label>
+              <input type="text" id="add_nama_siswa" name="nama_siswa" class="form-control" maxlength="120" required placeholder="Nama Siswa">
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold" for="add_id_kelas">Kelas</label>
+              <select id="add_id_kelas" name="id_kelas" class="form-select" required>
+                <option value="" disabled selected>Pilih Kelas</option>
+                <?php foreach ($kelasAll as $k): ?>
+                  <option value="<?= (int)$k['id_kelas'] ?>">
+                    <?= htmlspecialchars($k['nama_kelas'], ENT_QUOTES, 'UTF-8') ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+
+            <div class="mb-0">
+              <label class="form-label fw-semibold" for="add_absen">Absen</label>
+              <input type="text" id="add_absen" name="no_absen_siswa" class="form-control" maxlength="20" required placeholder="Nomor Absen">
+            </div>
           </div>
 
-        </div>
-
-        <div class="modal-footer d-flex justify-content-between">
-          <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-dismiss="modal">
-            <i class="fa fa-times"></i> Batal
-          </button>
-          <button type="submit" id="btnSubmitImportSiswa" class="btn btn-warning d-inline-flex align-items-center gap-2">
-            <i class="fas fa-upload"></i> Upload &amp; Proses
-          </button>
-        </div>
-      </form>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-dismiss="modal">
+              <i class="bi bi-x-lg"></i> Batal
+            </button>
+            <button type="submit" id="btnSubmitTambahSiswa" class="btn btn-brand d-inline-flex align-items-center gap-2">
+              <i class="bi bi-check2-circle"></i> Simpan
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
-</div>
 
-<?php include '../../includes/footer.php'; ?>
+  <!-- MODAL EDIT SISWA -->
+  <div class="modal fade" id="modalEditSiswa" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Data Siswa</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+        </div>
 
-<script>
-  // ====== HELPER IMPORT SISWA ======
-  function toggleClearButtonSiswaImport() {
-    const fileInput = document.getElementById('excelFile');
-    const clearBtn = document.getElementById('clearFileBtnSiswaImport');
-    if (!fileInput || !clearBtn) return;
-    clearBtn.style.display = fileInput.files.length > 0 ? 'block' : 'none';
-  }
+        <form id="formEditSiswa" action="proses_edit_data_siswa.php" method="POST" autocomplete="off">
+          <input type="hidden" name="id_siswa" id="edit_id_siswa">
 
-  function clearFileSiswaImport() {
-    const fileInput = document.getElementById('excelFile');
-    const clearBtn = document.getElementById('clearFileBtnSiswaImport');
-    if (!fileInput || !clearBtn) return;
-    fileInput.value = '';
-    clearBtn.style.display = 'none';
-  }
-</script>
+          <div class="modal-body">
+            <div id="modalAlertEdit" class="modal-alert-area"></div>
 
-<script>
-  (function() {
-    const tbody = document.getElementById('tbodyData');
-    const pagUl = document.getElementById('pagination');
-    const pageInfo = document.getElementById('pageInfo');
-    const input = document.getElementById('searchInput');
-    const perSel = document.getElementById('perSelect');
-    const deleteBtn = document.getElementById('deleteSelected');
-    const selectAll = document.getElementById('selectAll');
-    const formDelete = document.getElementById('formDeleteMultiple');
-    let currentPage = <?= (int)$page ?>;
-    let typingTimer;
+            <!-- ✅ urutan: NISN, Nama, Kelas, Absen (atas-bawah) -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold" for="edit_nisn">NISN</label>
+              <input type="text" id="edit_nisn" name="no_induk_siswa" class="form-control" maxlength="50" required>
+            </div>
 
-    function escapeHtml(str) {
-      const div = document.createElement('div');
-      div.innerText = str ?? '';
-      return div.innerHTML;
-    }
+            <div class="mb-3">
+              <label class="form-label fw-semibold" for="edit_nama_siswa">Nama Siswa</label>
+              <input type="text" id="edit_nama_siswa" name="nama_siswa" class="form-control" maxlength="120" required>
+            </div>
 
-    function highlightText(text, keyword) {
-      if (!keyword) return escapeHtml(text);
-      const pattern = new RegExp(`(${keyword})`, 'gi');
-      return escapeHtml(text).replace(pattern, '<span class="highlight">$1</span>');
-    }
+            <div class="mb-3">
+              <label class="form-label fw-semibold" for="edit_id_kelas">Kelas</label>
+              <select id="edit_id_kelas" name="id_kelas" class="form-select" required>
+                <option value="" disabled>Pilih Kelas</option>
+                <?php foreach ($kelasAll as $k): ?>
+                  <option value="<?= (int)$k['id_kelas'] ?>">
+                    <?= htmlspecialchars($k['nama_kelas'], ENT_QUOTES, 'UTF-8') ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
 
-    function renderRows(data, startNumber, keyword = '') {
-      if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Data Tidak di Temukan</td></tr>';
-        deleteBtn.disabled = true;
-        return;
-      }
+            <div class="mb-0">
+              <label class="form-label fw-semibold" for="edit_absen">Absen</label>
+              <input type="text" id="edit_absen" name="no_absen_siswa" class="form-control" maxlength="20" required>
+            </div>
 
-      let html = '';
-      for (const r of data) {
-        const nama = highlightText(r.nama_siswa || '', keyword);
-        const nisn = highlightText(r.no_induk_siswa || '', keyword);
+          </div>
 
-        html += `
-        <tr
-          data-kelas="${r.id_kelas || ''}"
-          data-tingkat="${escapeHtml(r.tingkat || '')}"
-          data-id="${r.id_siswa}"
-          data-nama="${escapeHtml(r.nama_siswa || '')}"
-          data-nisn="${escapeHtml(r.no_induk_siswa || '')}"
-          data-absen="${escapeHtml(r.no_absen_siswa || '')}"
-          data-id_kelas="${escapeHtml(r.id_kelas || '')}"
-        >
-          <td class="text-center"><input type="checkbox" class="row-check" name="id_siswa[]" value="${r.id_siswa}"></td>
-          <td class="text-center">${escapeHtml(r.no_absen_siswa || '')}</td>
-          <td>${nama}</td>
-          <td class="text-center">${nisn}</td>
-          <td class="text-center">${escapeHtml(r.nama_kelas || '-')}</td>
-          <td class="text-center">
-            <button type="button" class="btn btn-warning btn-sm btn-edit-siswa">
-              <i class="bi bi-pencil-square"></i> Edit
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-dismiss="modal">
+              <i class="bi bi-x-lg"></i> Batal
             </button>
-            <a href="hapus_siswa.php?id=${r.id_siswa}" onclick="return confirm('Yakin ingin menghapus data?');" class="btn btn-danger btn-sm">
-              <i class="bi bi-trash"></i> Del
-            </a>
-          </td>
-        </tr>`;
-      }
-      tbody.innerHTML = html;
-      initCheckboxEvents();
+            <button type="submit" class="btn btn-brand d-inline-flex align-items-center gap-2">
+              <i class="bi bi-save"></i> Simpan Perubahan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL IMPORT SISWA (tetap) -->
+  <div class="modal fade" id="modalImportSiswa" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header border-0 pb-0">
+          <div>
+            <h5 class="modal-title fw-semibold">Import Data Siswa</h5>
+            <p class="mb-0 text-muted" style="font-size: 13px;">Gunakan template resmi agar susunan kolom sesuai dengan sistem.</p>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+        </div>
+
+        <form id="formImportSiswa" action="proses_import_data_siswa.php" method="POST" enctype="multipart/form-data" autocomplete="off">
+          <div class="modal-body pt-3">
+            <div id="modalAlertImport" class="modal-alert-area"></div>
+
+            <div class="mb-3 p-3 rounded-3" style="background:#f9fafb;border:1px solid #e5e7eb;">
+              <div class="d-flex align-items-start gap-2">
+                <div class="mt-1"><i class="fa-solid fa-circle-info" style="color:#0a4db3;"></i></div>
+                <div style="font-size:13px;">
+                  <strong>Langkah import data siswa:</strong>
+                  <ol class="mb-1 ps-3" style="padding-left:18px;">
+                    <li>Download template Excel terlebih dahulu.</li>
+                    <li>Isi data siswa sesuai kolom yang tersedia.</li>
+                    <li>Upload kembali file Excel tersebut di form ini.</li>
+                  </ol>
+                  <span class="text-muted">
+                    Struktur kolom template:
+                    <strong>A: Nomor</strong>, <strong>B: Nama Siswa</strong>, <strong>C: NISN</strong>, <strong>D: Absen</strong>, <strong>E: Kelas</strong>.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+              <span class="text-muted" style="font-size:13px;">Klik tombol di samping untuk mengunduh template Excel.</span>
+              <a href="../../assets/templates/template_data_siswa.xlsx" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2" download>
+                <i class="fa-solid fa-file-excel"></i><span>Download Template</span>
+              </a>
+            </div>
+
+            <hr class="my-2">
+
+            <div class="mb-2">
+              <label for="excelFile" class="form-label fw-semibold mb-1">Upload File Excel</label>
+              <div class="position-relative d-flex align-items-center">
+                <input type="file" class="form-control" id="excelFile" name="excelFile" accept=".xlsx,.xls"
+                  style="padding-right:35px;" required onchange="toggleClearButtonSiswaImport()">
+                <button type="button" id="clearFileBtnSiswaImport" onclick="clearFileSiswaImport()" title="Hapus file"
+                  style="position:absolute;right:10px;background:none;border:none;color:#6c757d;font-size:20px;line-height:1;display:none;cursor:pointer;">&times;</button>
+              </div>
+              <small class="text-muted d-block mt-1" style="font-size:12px;">
+                Format yang didukung: <strong>.xlsx</strong> atau <strong>.xls</strong>. Pastikan tidak mengubah urutan kolom di template.
+              </small>
+            </div>
+          </div>
+
+          <div class="modal-footer d-flex justify-content-between">
+            <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-dismiss="modal">
+              <i class="fa fa-times"></i> Batal
+            </button>
+            <button type="submit" id="btnSubmitImportSiswa" class="btn btn-warning d-inline-flex align-items-center gap-2">
+              <i class="fas fa-upload"></i> Upload &amp; Proses
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL KONFIRMASI HAPUS -->
+  <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-exclamation-triangle text-danger me-2"></i> Konfirmasi Hapus</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+        </div>
+        <div class="modal-body">
+          <p id="confirmDeleteBody" class="mb-0">Yakin ingin menghapus data ini?</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-danger d-inline-flex align-items-center gap-2" id="confirmDeleteBtn">
+            <i class="bi bi-trash"></i> Hapus
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleClearButtonSiswaImport() {
+      const fileInput = document.getElementById('excelFile');
+      const clearBtn = document.getElementById('clearFileBtnSiswaImport');
+      if (!fileInput || !clearBtn) return;
+      clearBtn.style.display = fileInput.files.length > 0 ? 'block' : 'none';
     }
 
-    function renderPagination(page, totalPages, total, showed, per) {
-      const start = Math.max(1, page - 2);
-      const end = Math.min(totalPages, page + 2);
-      let html = '';
+    function clearFileSiswaImport() {
+      const fileInput = document.getElementById('excelFile');
+      const clearBtn = document.getElementById('clearFileBtnSiswaImport');
+      if (!fileInput || !clearBtn) return;
+      fileInput.value = '';
+      clearBtn.style.display = 'none';
+    }
+  </script>
 
-      const makeLi = (disabled, target, text, active = false) => {
-        const cls = ['page-item', disabled ? 'disabled' : '', active ? 'active' : ''].filter(Boolean).join(' ');
-        const aAttr = disabled ? 'tabindex="-1"' : `data-page="${target}"`;
-        return `<li class="${cls}"><a class="page-link" href="#" ${aAttr}>${text}</a></li>`;
-      };
+  <script>
+    (function() {
+      const input = document.getElementById('searchInput');
+      const tbody = document.getElementById('siswaTbody');
+      const tableWrap = document.getElementById('siswaTableWrap');
+      const loadingOverlay = document.getElementById('tableLoadingOverlay');
 
-      html += makeLi(page <= 1, 1, '« First');
-      html += makeLi(page <= 1, Math.max(1, page - 1), '‹ Prev');
-      for (let i = start; i <= end; i++) html += makeLi(false, i, String(i), i === page);
-      html += makeLi(page >= totalPages, Math.min(totalPages, page + 1), 'Next ›');
-      html += makeLi(page >= totalPages, totalPages, 'Last »');
+      const filterTingkat = document.getElementById('filterTingkat');
+      const filterKelas = document.getElementById('filterKelas');
 
-      pagUl.innerHTML = html;
+      const checkAll = document.getElementById('checkAll');
+      const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+      const perPageSelect = document.getElementById('perPage');
 
-      pageInfo.innerHTML = `Menampilkan <strong>${showed}</strong> dari <strong>${total}</strong> data • Halaman <strong>${page}</strong> / <strong>${totalPages}</strong>`;
+      const paginationUl = document.getElementById('paginationWrap');
+      const pageInfo = document.getElementById('pageInfo');
 
-      [...pagUl.querySelectorAll('a[data-page]')].forEach(a => {
-        a.addEventListener('click', e => {
-          e.preventDefault();
-          currentPage = Number(a.getAttribute('data-page'));
-          doSearch();
+      const csrfToken = '<?= htmlspecialchars($csrf, ENT_QUOTES, "UTF-8"); ?>';
+
+      const confirmModalEl = document.getElementById('confirmDeleteModal');
+      const confirmBodyEl = document.getElementById('confirmDeleteBody');
+      const confirmBtn = document.getElementById('confirmDeleteBtn');
+
+      let typingTimer;
+      const debounceMs = 250;
+      let currentController = null;
+
+      let currentQuery = '<?= htmlspecialchars($search, ENT_QUOTES, "UTF-8"); ?>';
+      let currentPage = <?= (int)$page ?>;
+      let currentPerPage = <?= (int)$perPage ?>;
+      let currentTotalRows = <?= (int)$totalRows ?>;
+
+      let currentTingkat = '<?= htmlspecialchars($tingkat, ENT_QUOTES, "UTF-8"); ?>';
+      let currentKelas = <?= (int)$idKelasFilter ?>;
+
+      let pendingDeleteHandler = null;
+
+      const ALERT_DURATION = 4000;
+
+      function animateAlertIn(el) {
+        if (!el) return;
+        requestAnimationFrame(() => el.classList.add('dk-show'));
+      }
+
+      function animateAlertOut(el) {
+        if (!el) return;
+        el.classList.add('dk-hide');
+        setTimeout(() => {
+          if (el && el.parentNode) el.parentNode.removeChild(el);
+        }, 450);
+      }
+
+      function wireAlert(el) {
+        if (!el) return;
+        animateAlertIn(el);
+        const ms = parseInt(el.getAttribute('data-auto-hide') || String(ALERT_DURATION), 10);
+        const timer = setTimeout(() => animateAlertOut(el), ms);
+        const close = el.querySelector('.close-btn');
+        if (close) {
+          close.addEventListener('click', (e) => {
+            e.preventDefault();
+            clearTimeout(timer);
+            animateAlertOut(el);
+          });
+        }
+      }
+
+      function escapeHtml(str) {
+        return String(str ?? '')
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", "&#039;");
+      }
+
+      function showTopAlert(type, message) {
+        const area = document.getElementById('alertAreaTop');
+        if (!area) return;
+
+        const cls = type === 'success' ? 'dk-alert-success' :
+          type === 'warning' ? 'dk-alert-warning' :
+          'dk-alert-danger';
+        const icon = type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '❌';
+
+        const div = document.createElement('div');
+        div.className = `dk-alert ${cls}`;
+        div.setAttribute('data-auto-hide', String(ALERT_DURATION));
+        div.innerHTML = `<span class="close-btn">&times;</span> ${icon} ${escapeHtml(message)}`;
+
+        area.prepend(div);
+        wireAlert(div);
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      }
+
+      function showModalAlert(containerId, type, message) {
+        const box = document.getElementById(containerId);
+        if (!box) return;
+
+        box.innerHTML = '';
+        const cls = type === 'success' ? 'dk-alert-success' :
+          type === 'warning' ? 'dk-alert-warning' :
+          'dk-alert-danger';
+        const icon = type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '❌';
+
+        const div = document.createElement('div');
+        div.className = `dk-alert ${cls}`;
+        div.setAttribute('data-auto-hide', String(ALERT_DURATION));
+        div.innerHTML = `<span class="close-btn">&times;</span> ${icon} ${escapeHtml(message)}`;
+
+        box.appendChild(div);
+        wireAlert(div);
+      }
+
+      document.querySelectorAll('#alertAreaTop .dk-alert').forEach(wireAlert);
+
+      function scrollToTable() {
+        if (!tableWrap) return;
+        tableWrap.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }
+
+      function showDeleteConfirm(message, handler) {
+        if (!confirmModalEl || !confirmBodyEl || !confirmBtn) {
+          if (confirm(message)) handler();
+          return;
+        }
+        confirmBodyEl.textContent = message;
+        pendingDeleteHandler = handler;
+
+        confirmBtn.onclick = function() {
+          if (pendingDeleteHandler) pendingDeleteHandler();
+          if (typeof bootstrap !== 'undefined') {
+            const m = bootstrap.Modal.getOrCreateInstance(confirmModalEl);
+            m.hide();
+          }
+        };
+
+        if (typeof bootstrap !== 'undefined') {
+          bootstrap.Modal.getOrCreateInstance(confirmModalEl).show();
+        } else {
+          if (confirm(message)) handler();
+        }
+      }
+
+      function getRowCheckboxes() {
+        return Array.from(document.querySelectorAll('.row-check'));
+      }
+
+      function updateBulkUI() {
+        const boxes = getRowCheckboxes();
+        const total = boxes.length;
+        const checked = boxes.filter(b => b.checked).length;
+
+        bulkDeleteBtn.disabled = (checked === 0);
+
+        if (total === 0) {
+          checkAll.checked = false;
+          checkAll.indeterminate = false;
+        } else if (checked === 0) {
+          checkAll.checked = false;
+          checkAll.indeterminate = false;
+        } else if (checked === total) {
+          checkAll.checked = true;
+          checkAll.indeterminate = false;
+        } else {
+          checkAll.checked = false;
+          checkAll.indeterminate = true;
+        }
+      }
+
+      function attachCheckboxEvents() {
+        const boxes = getRowCheckboxes();
+        boxes.forEach(box => box.addEventListener('change', updateBulkUI));
+        updateBulkUI();
+      }
+
+      function attachEditModalEvents() {
+        const editButtons = document.querySelectorAll('.btn-edit-siswa');
+        const modalEl = document.getElementById('modalEditSiswa');
+        if (!modalEl) return;
+
+        const inputId = document.getElementById('edit_id_siswa');
+        const inputNama = document.getElementById('edit_nama_siswa');
+        const inputNisn = document.getElementById('edit_nisn');
+        const inputAbsen = document.getElementById('edit_absen');
+        const inputKelas = document.getElementById('edit_id_kelas');
+
+        editButtons.forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const id = btn.getAttribute('data-id') || '';
+            const nama = btn.getAttribute('data-nama') || '';
+            const nisn = btn.getAttribute('data-nisn') || '';
+            const absen = btn.getAttribute('data-absen') || '';
+            const idKelas = btn.getAttribute('data-id_kelas') || '';
+
+            if (inputId) inputId.value = id;
+            if (inputNisn) inputNisn.value = nisn;
+            if (inputNama) inputNama.value = nama;
+            if (inputKelas) inputKelas.value = idKelas;
+            if (inputAbsen) inputAbsen.value = absen;
+
+            const editAlertBox = document.getElementById('modalAlertEdit');
+            if (editAlertBox) editAlertBox.innerHTML = '';
+
+            if (typeof bootstrap !== 'undefined') {
+              bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            }
+          });
+        });
+      }
+
+      function attachSingleDeleteEvents() {
+        const buttons = document.querySelectorAll('.btn-delete-single');
+        buttons.forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const id = btn.getAttribute('data-id');
+            const label = btn.getAttribute('data-label') || 'siswa ini';
+            if (!id) return;
+
+            showDeleteConfirm(`Yakin ingin menghapus siswa "${label}"?`, () => {
+              const form = document.createElement('form');
+              form.method = 'post';
+              form.action = 'proses_hapus_data_siswa.php';
+
+              const csrfInput = document.createElement('input');
+              csrfInput.type = 'hidden';
+              csrfInput.name = 'csrf';
+              csrfInput.value = csrfToken;
+              form.appendChild(csrfInput);
+
+              const idInput = document.createElement('input');
+              idInput.type = 'hidden';
+              idInput.name = 'id';
+              idInput.value = id;
+              form.appendChild(idInput);
+
+              document.body.appendChild(form);
+              form.submit();
+            });
+          });
+        });
+      }
+
+      function buildPagination(totalRows, page, perPage) {
+        currentTotalRows = totalRows;
+        currentPage = page;
+        currentPerPage = perPage;
+
+        const allMode = (parseInt(perPage, 10) === 0);
+        const totalPages = allMode ? 1 : Math.max(1, Math.ceil(totalRows / perPage));
+
+        let shown;
+        if (totalRows === 0) {
+          shown = 0;
+        } else if (allMode) {
+          shown = totalRows;
+          page = 1;
+        } else {
+          if (page > totalPages) page = totalPages;
+          const from = (page - 1) * perPage + 1;
+          const to = Math.min(page * perPage, totalRows);
+          shown = to - from + 1;
+        }
+
+        const pageDisplayCurrent = totalRows === 0 ? 0 : (allMode ? 1 : page);
+        const pageDisplayTotal = totalRows === 0 ? 0 : totalPages;
+
+        pageInfo.innerHTML =
+          `Menampilkan <strong>${shown}</strong> dari <strong>${totalRows}</strong> data • Halaman <strong>${pageDisplayCurrent}</strong> / <strong>${pageDisplayTotal}</strong>`;
+
+        const makeLi = (disabled, target, text, active = false) => {
+          const cls = ['page-item', disabled ? 'disabled' : '', active ? 'active' : ''].filter(Boolean).join(' ');
+          const aAttr = disabled ? 'tabindex="-1"' : `data-page="${target}"`;
+          return `<li class="${cls}"><a class="page-link" href="#" ${aAttr}>${text}</a></li>`;
+        };
+
+        let html = '';
+        const isFirst = allMode ? true : (page <= 1);
+        const isLast = allMode ? true : (page >= totalPages);
+
+        html += makeLi(isFirst, 1, '« First');
+        html += makeLi(isFirst, Math.max(1, (allMode ? 1 : page - 1)), '‹ Prev');
+
+        if (allMode) {
+          html += makeLi(false, 1, '1', true);
+        } else {
+          const start = Math.max(1, page - 2);
+          const end = Math.min(totalPages, page + 2);
+          for (let i = start; i <= end; i++) html += makeLi(false, i, String(i), i === page);
+        }
+
+        html += makeLi(isLast, Math.min(totalPages, (allMode ? 1 : page + 1)), 'Next ›');
+        html += makeLi(isLast, totalPages, 'Last »');
+
+        paginationUl.innerHTML = html;
+
+        paginationUl.querySelectorAll('a[data-page]').forEach(a => {
+          a.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (allMode) return;
+            const target = parseInt(a.getAttribute('data-page') || '1', 10);
+            if (isNaN(target) || target < 1 || target === currentPage) return;
+            doSearch(currentQuery, target, currentPerPage, currentTingkat, currentKelas, true);
+          });
+        });
+
+        if (perPageSelect) perPageSelect.value = String(perPage);
+      }
+
+      checkAll.addEventListener('change', () => {
+        const boxes = getRowCheckboxes();
+        boxes.forEach(b => b.checked = checkAll.checked);
+        updateBulkUI();
+      });
+
+      bulkDeleteBtn.addEventListener('click', () => {
+        const boxes = getRowCheckboxes().filter(b => b.checked);
+        if (boxes.length === 0) return;
+
+        const count = boxes.length;
+        const form = document.createElement('form');
+        form.method = 'post';
+        form.action = 'proses_hapus_data_siswa.php';
+
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+
+        boxes.forEach(box => {
+          const inp = document.createElement('input');
+          inp.type = 'hidden';
+          inp.name = 'ids[]';
+          inp.value = box.value;
+          form.appendChild(inp);
+        });
+
+        showDeleteConfirm(`Yakin ingin menghapus ${count} data siswa terpilih?`, () => {
+          document.body.appendChild(form);
+          form.submit();
         });
       });
-    }
 
-    async function doSearch() {
-      const q = input.value.trim();
-      const per = Number(perSel.value || 10);
-      const page = currentPage;
-      const params = new URLSearchParams({
-        ajax: '1',
-        q,
-        per,
-        page
-      });
-
-      try {
-        const res = await fetch(`?${params.toString()}`);
-        const json = await res.json();
-        if (!json.ok) return;
-
-        const startNumber = (json.page - 1) * json.per + 1;
-        renderRows(json.data, startNumber, q);
-        renderPagination(json.page, json.totalPages, json.total, json.data.length, json.per);
-      } catch (e) {
-        console.error(e);
+      function setLoading(useScroll) {
+        if (useScroll) scrollToTable();
+        if (tbody) {
+          tbody.classList.remove('tbody-loaded');
+          tbody.classList.add('tbody-loading');
+        }
+        if (loadingOverlay) loadingOverlay.classList.add('show');
       }
-    }
 
-    function initCheckboxEvents() {
-      const allCheckboxes = tbody.querySelectorAll('.row-check');
+      function finishLoading() {
+        if (loadingOverlay) loadingOverlay.classList.remove('show');
+        if (!tbody) return;
+        tbody.classList.remove('tbody-loading');
+        void tbody.offsetHeight;
+        tbody.classList.add('tbody-loaded');
+      }
 
-      allCheckboxes.forEach(cb => {
-        cb.addEventListener('change', () => {
-          const anyChecked = tbody.querySelectorAll('.row-check:checked').length > 0;
-          deleteBtn.disabled = !anyChecked;
-          selectAll.checked = allCheckboxes.length > 0 && [...allCheckboxes].every(c => c.checked);
+      function filterKelasOptionsByTingkat(tingkatVal) {
+        if (!filterKelas) return;
+
+        const opts = Array.from(filterKelas.querySelectorAll('option'));
+        opts.forEach(opt => {
+          const v = parseInt(opt.value || '0', 10);
+          if (v === 0) {
+            opt.hidden = false;
+            return;
+          } // "Semua Kelas"
+          const t = opt.getAttribute('data-tingkat') || '';
+          opt.hidden = (tingkatVal !== '' && t !== tingkatVal);
         });
+
+        // jika kelas yang dipilih tidak cocok, reset ke semua
+        const selectedOpt = filterKelas.querySelector('option:checked');
+        if (selectedOpt && selectedOpt.hidden) {
+          filterKelas.value = '0';
+          currentKelas = 0;
+        }
+      }
+
+      function doSearch(query, page, perPage, tingkat, kelas, fromPaginationOrPerpage = false) {
+        setLoading(fromPaginationOrPerpage);
+
+        if (currentController) currentController.abort();
+        currentController = new AbortController();
+
+        currentQuery = query || '';
+        currentTingkat = tingkat || '';
+        currentKelas = parseInt(kelas || 0, 10) || 0;
+
+        const params = new URLSearchParams({
+          q: currentQuery,
+          page: page || 1,
+          per: perPage ?? currentPerPage ?? 10,
+          tingkat: currentTingkat,
+          kelas: String(currentKelas || 0),
+        });
+
+        fetch('ajax_siswa_list.php?' + params.toString(), {
+            method: 'GET',
+            signal: currentController.signal,
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          })
+          .then(r => {
+            if (!r.ok) throw new Error(r.status);
+            return r.text();
+          })
+          .then(html => {
+            tbody.innerHTML = html;
+
+            const metaRow = tbody.querySelector('.meta-row');
+            if (metaRow) {
+              const total = parseInt(metaRow.getAttribute('data-total') || '0', 10);
+              const pg = parseInt(metaRow.getAttribute('data-page') || '1', 10);
+              const pp = parseInt(metaRow.getAttribute('data-per') || String(currentPerPage), 10);
+              metaRow.parentNode.removeChild(metaRow);
+
+              buildPagination(isNaN(total) ? 0 : total, isNaN(pg) ? 1 : pg, isNaN(pp) ? currentPerPage : pp);
+            }
+
+            attachCheckboxEvents();
+            attachEditModalEvents();
+            attachSingleDeleteEvents();
+            finishLoading();
+          })
+          .catch(e => {
+            if (e.name === 'AbortError') return;
+            tbody.innerHTML = `<tr><td colspan="6">Gagal memuat data.</td></tr>`;
+            finishLoading();
+            console.error(e);
+          });
+      }
+
+      input.addEventListener('input', () => {
+        clearTimeout(typingTimer);
+        typingTimer = setTimeout(() => {
+          doSearch(input.value, 1, currentPerPage, currentTingkat, currentKelas, false);
+        }, debounceMs);
       });
 
-      selectAll.addEventListener('change', () => {
-        const checked = selectAll.checked;
-        allCheckboxes.forEach(cb => cb.checked = checked);
-        deleteBtn.disabled = !checked;
-      });
-    }
-
-    formDelete.addEventListener('submit', function(e) {
-      const checked = tbody.querySelectorAll('.row-check:checked').length;
-      if (checked === 0) {
-        e.preventDefault();
-        alert('Tidak ada data yang dipilih.');
-        return false;
+      if (perPageSelect) {
+        perPageSelect.addEventListener('change', () => {
+          const val = parseInt(perPageSelect.value || '10', 10);
+          if (isNaN(val) || val < 0) return;
+          currentPerPage = val;
+          doSearch(currentQuery, 1, currentPerPage, currentTingkat, currentKelas, true);
+        });
       }
-      if (!confirm('Yakin ingin menghapus data terpilih?')) {
-        e.preventDefault();
-        return false;
+
+      if (filterTingkat) {
+        filterTingkat.addEventListener('change', () => {
+          const v = filterTingkat.value || '';
+          currentTingkat = v;
+          filterKelasOptionsByTingkat(currentTingkat);
+          doSearch(currentQuery, 1, currentPerPage, currentTingkat, currentKelas, true);
+        });
       }
-    });
 
-    input.addEventListener('input', () => {
-      clearTimeout(typingTimer);
-      currentPage = 1;
-      typingTimer = setTimeout(doSearch, 250);
-    });
-    perSel.addEventListener('change', () => {
-      currentPage = 1;
-      doSearch();
-    });
-
-    // jalankan pertama kali
-    doSearch();
-
-    // Modal Tambah
-    document.addEventListener('DOMContentLoaded', function() {
-      const btnOpen = document.getElementById('openTambahModal');
-      const modalEl = document.getElementById('modalTambahSiswa');
-      if (btnOpen && modalEl && typeof bootstrap !== 'undefined') {
-        const modalInstance = new bootstrap.Modal(modalEl);
-        btnOpen.addEventListener('click', () => modalInstance.show());
+      if (filterKelas) {
+        filterKelas.addEventListener('change', () => {
+          const v = parseInt(filterKelas.value || '0', 10) || 0;
+          currentKelas = v;
+          doSearch(currentQuery, 1, currentPerPage, currentTingkat, currentKelas, true);
+        });
       }
-    });
 
-    // Modal Edit
-    document.addEventListener('click', function(e) {
-      const btn = e.target.closest('.btn-edit-siswa');
-      if (!btn) return;
-
-      const row = btn.closest('tr');
-      if (!row) return;
-
-      const id = row.dataset.id || '';
-      const nama = row.dataset.nama || '';
-      const nisn = row.dataset.nisn || '';
-      const absen = row.dataset.absen || '';
-      const idKelas = row.dataset.id_kelas || '';
-
-      document.getElementById('edit_id_siswa').value = id;
-      document.getElementById('edit_nama_siswa').value = nama;
-      document.getElementById('edit_no_induk_siswa').value = nisn;
-      document.getElementById('edit_no_absen_siswa').value = absen;
-      document.getElementById('edit_id_kelas').value = idKelas;
-
-      const modalEl = document.getElementById('modalEditSiswa');
-      if (modalEl && typeof bootstrap !== 'undefined') {
-        const modalInstance = new bootstrap.Modal(modalEl);
-        modalInstance.show();
+      function disableBtn(btn, loading) {
+        if (!btn) return;
+        btn.disabled = !!loading;
+        if (loading) {
+          btn.dataset.oldHtml = btn.innerHTML;
+          btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status"></span> Memproses...`;
+        } else if (btn.dataset.oldHtml) {
+          btn.innerHTML = btn.dataset.oldHtml;
+          delete btn.dataset.oldHtml;
+        }
       }
-    });
 
-    // Tambah via AJAX
-    document.addEventListener('submit', async function(e) {
-      if (e.target && e.target.id === 'formTambahSiswa') {
-        e.preventDefault();
-        const form = e.target;
-        const submitBtn = form.querySelector('button[type="submit"]') || form.querySelector('button.btn-success');
-        if (submitBtn) submitBtn.disabled = true;
+      async function postFormAjax(form, btn, modalAlertId, onSuccess) {
+        if (!form) return;
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          return;
+        }
+
+        disableBtn(btn, true);
 
         try {
           const fd = new FormData(form);
-          const resp = await fetch('tambah_siswa.php', {
+          const res = await fetch(form.getAttribute('action'), {
             method: 'POST',
-            body: fd
+            body: fd,
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
           });
-          const text = await resp.text();
-          let json;
 
-          try {
-            json = JSON.parse(text);
-          } catch (err) {
-            console.error('Response not JSON:', text);
-            alert('Terjadi kesalahan server. Cek console network dan PHP error log.');
-            if (submitBtn) submitBtn.disabled = false;
+          const data = await res.json().catch(() => null);
+          if (!data) {
+            showModalAlert(modalAlertId, 'danger', 'Respon server tidak valid.');
+            disableBtn(btn, false);
             return;
           }
 
-          if (json.status === 'success') {
-            const notifWrap = document.getElementById('notifContainer');
-            if (notifWrap) {
-              const el = document.createElement('div');
-              el.className = 'alert alert-success mx-3 mt-3';
-              el.id = 'notifSavedAjax';
-              el.innerText = 'Data siswa berhasil ditambahkan.';
-              notifWrap.appendChild(el);
-              setTimeout(() => {
-                if (el) el.remove();
-              }, 4000);
-            }
-
-            const modalEl = document.getElementById('modalTambahSiswa');
-            const bsModal = bootstrap.Modal.getInstance(modalEl);
-            if (bsModal) bsModal.hide();
-
-            form.reset();
-            currentPage = 1;
-            doSearch();
+          if (data.ok) {
+            onSuccess && onSuccess(data);
           } else {
-            alert('Gagal menyimpan: ' + (json.msg || 'unknown'));
+            showModalAlert(modalAlertId, data.type || 'danger', data.msg || 'Terjadi kesalahan.');
           }
         } catch (err) {
+          showModalAlert(modalAlertId, 'danger', 'Gagal terhubung ke server.');
           console.error(err);
-          alert('Terjadi kesalahan jaringan. Cek console.');
         } finally {
-          if (submitBtn) submitBtn.disabled = false;
+          disableBtn(btn, false);
         }
       }
-    });
 
-    // Validasi Import
-    const formImportSiswa = document.getElementById('formImportSiswa');
-    const btnSubmitImportSiswa = document.getElementById('btnSubmitImportSiswa');
-    if (formImportSiswa && btnSubmitImportSiswa) {
-      btnSubmitImportSiswa.addEventListener('click', (e) => {
-        if (!formImportSiswa.checkValidity()) {
+      // Tambah
+      const formTambah = document.getElementById('formTambahSiswa');
+      const btnTambah = document.getElementById('btnSubmitTambahSiswa');
+      const modalTambahEl = document.getElementById('modalTambahSiswa');
+
+      if (formTambah) {
+        formTambah.addEventListener('submit', (e) => {
           e.preventDefault();
-          formImportSiswa.reportValidity();
-        }
-      });
-    }
-  })();
-</script>
+          postFormAjax(formTambah, btnTambah, 'modalAlertTambah', (data) => {
+            if (typeof bootstrap !== 'undefined' && modalTambahEl) {
+              bootstrap.Modal.getOrCreateInstance(modalTambahEl).hide();
+            }
+            formTambah.reset();
+            doSearch(currentQuery, 1, currentPerPage, currentTingkat, currentKelas, true);
+            showTopAlert(data.type || 'success', data.msg || 'Berhasil.');
+          });
+        });
+      }
 
-<style>
-  .highlight {
-    background-color: #d4edda;
-    padding: 1px 2px;
-    border-radius: 3px;
-  }
+      // Edit
+      const formEdit = document.getElementById('formEditSiswa');
+      const modalEditEl = document.getElementById('modalEditSiswa');
 
-  .row-highlight {
-    background-color: #d4edda !important;
-    transition: background-color 0.3s ease;
-  }
+      if (formEdit) {
+        formEdit.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const submitBtn = formEdit.querySelector('button[type="submit"]');
+          postFormAjax(formEdit, submitBtn, 'modalAlertEdit', (data) => {
+            if (typeof bootstrap !== 'undefined' && modalEditEl) {
+              bootstrap.Modal.getOrCreateInstance(modalEditEl).hide();
+            }
+            doSearch(currentQuery, 1, currentPerPage, currentTingkat, currentKelas, true);
+            showTopAlert(data.type || 'success', data.msg || 'Berhasil.');
+          });
+        });
+      }
 
-  .search-row {
-    gap: 8px;
-  }
+      // Import
+      const formImport = document.getElementById('formImportSiswa');
+      const btnImport = document.getElementById('btnSubmitImportSiswa');
+      const modalImportEl = document.getElementById('modalImportSiswa');
 
-  /* Lebarkan select tingkat biar tidak ketutupan */
-  .select-tingkat {
-    width: 150px;
-    min-width: 150px;
-  }
+      if (formImport) {
+        formImport.addEventListener('submit', (e) => {
+          e.preventDefault();
+          postFormAjax(formImport, btnImport, 'modalAlertImport', (data) => {
+            if (typeof bootstrap !== 'undefined' && modalImportEl) {
+              bootstrap.Modal.getOrCreateInstance(modalImportEl).hide();
+            }
+            formImport.reset();
+            toggleClearButtonSiswaImport();
 
-  .select-kelas {
-    width: 180px;
-    min-width: 180px;
-  }
+            doSearch(currentQuery, 1, currentPerPage, currentTingkat, currentKelas, true);
+            showTopAlert(data.type || 'success', data.msg || 'Import selesai.');
+          });
+        });
+      }
 
-  /* ✅ Area pagination: center semua */
-  .pager-area {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-    gap: 10px;
-  }
+      // Export (placeholder)
+      const exportBtn = document.getElementById('exportBtn');
+      if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+          showTopAlert('warning', 'Fitur export belum dihubungkan ke file export siswa.');
+        });
+      }
 
-  /* ✅ Grup (Referensi 2) */
-  .pager-group {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    flex-wrap: wrap;
+      // init
+      attachCheckboxEvents();
+      attachEditModalEvents();
+      attachSingleDeleteEvents();
+      buildPagination(currentTotalRows, currentPage, currentPerPage);
+      if (tbody) tbody.classList.add('tbody-loaded');
 
-    padding: 10px 12px;
-    border: 1px solid rgba(0, 0, 0, .12);
-    border-radius: 12px;
-    background: #fff;
-  }
+      if (input) input.value = currentQuery;
 
-  .pager-group .pagination {
-    margin: 0;
-    justify-content: center;
-  }
+      // set nilai awal filter dari URL
+      if (filterTingkat) filterTingkat.value = currentTingkat;
+      if (filterKelas) filterKelas.value = String(currentKelas || 0);
+      filterKelasOptionsByTingkat(currentTingkat);
 
-  /* separator */
-  .pager-sep {
-    width: 1px;
-    height: 34px;
-    background: rgba(0, 0, 0, .15);
-  }
+    })();
+  </script>
 
-  .per-select {
-    width: 120px;
-    min-width: 120px;
-  }
-
-  /* info bawah center */
-  .page-info-center {
-    text-align: center;
-    width: 100%;
-  }
-
-  /* Responsive */
-  @media (max-width: 768px) {
-    #pagination {
-      flex-wrap: wrap !important;
-      justify-content: center !important;
-      gap: 4px !important;
-    }
-
-    #pagination .page-link {
-      padding: 4px 8px;
-      font-size: 13px;
-    }
-
-    #pageInfo {
-      font-size: 13px;
-      white-space: normal;
-    }
-
-    nav[aria-label="Page navigation"] {
-      overflow: visible !important;
-      position: relative;
-      z-index: 10;
-    }
-
-    .table-responsive {
-      overflow-x: auto;
-      margin-bottom: 0 !important;
-    }
-
-    .top-bar {
-      flex-direction: column !important;
-      align-items: center !important;
-      text-align: center;
-    }
-
-    .action-buttons {
-      justify-content: center !important;
-      margin-top: 10px;
-    }
-
-    /* agar select rapi di mobile */
-    .dk-select {
-      width: 100% !important;
-    }
-
-    .select-tingkat,
-    .select-kelas {
-      width: 100% !important;
-      min-width: 0 !important;
-    }
-
-    /* biasanya lebih rapi tanpa separator di mobile */
-    .pager-sep {
-      display: none;
-    }
-  }
-</style>
+  <?php include '../../includes/footer.php'; ?>
+</body>

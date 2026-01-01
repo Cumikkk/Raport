@@ -107,7 +107,7 @@ include '../../includes/header.php';
 
       <div class="dk-content-box">
         <div class="container py-4">
-          <h4 class="fw-bold mb-4 jus">Data Semester</h4>
+          <h4 class="fw-bold mb-4 jus text-center">Data Semester</h4>
 
           <!-- Form Simpan -->
           <form action="proses_simpan_data_semester.php" method="POST">

@@ -110,7 +110,7 @@ $data  = mysqli_fetch_assoc($query);
         <div class="container py-4">
 
           <!-- ✅ Judul pojok kiri -->
-          <h4 class="fw-bold mb-4">Pengaturan Cetak Rapor</h4>
+          <h4 class="fw-bold mb-4 text-center">Pengaturan Cetak Rapor</h4>
 
           <form action="proses_simpan_pengaturan_cetak_rapor.php" method="POST" autocomplete="off">
             <div class="mb-3">
