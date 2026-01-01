@@ -6,6 +6,7 @@ mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 error_reporting(E_ALL);
 
 require_once __DIR__ . '/../../koneksi.php';
+mysqli_set_charset($koneksi, 'utf8mb4');
 
 // Session + CSRF (untuk bulk delete & bulk edit)
 if (session_status() === PHP_SESSION_NONE) {
@@ -16,10 +17,17 @@ if (empty($_SESSION['csrf'])) {
 }
 $csrf = $_SESSION['csrf'];
 
-// --------- SEARCH & PAGINATION AWAL (server-side, sebelum AJAX) ---------
-$search = isset($_GET['q']) ? trim($_GET['q']) : '';
-$like   = "%{$search}%";
+// --------- SEARCH & FILTER AWAL ---------
+$search  = isset($_GET['q']) ? trim($_GET['q']) : '';
+$like    = "%{$search}%";
+$tingkat = isset($_GET['tingkat']) ? trim($_GET['tingkat']) : '';
+$idKelasFilter = isset($_GET['kelas']) ? (int)$_GET['kelas'] : 0;
 
+// valid tingkat
+$allowedTingkat = ['', 'X', 'XI', 'XII'];
+if (!in_array($tingkat, $allowedTingkat, true)) $tingkat = '';
+
+// --------- PAGINATION AWAL ---------
 $allowedPer = [10, 20, 50, 100];
 $perPage    = isset($_GET['per']) ? (int)$_GET['per'] : 10;
 if (!in_array($perPage, $allowedPer, true)) {
@@ -29,125 +37,123 @@ if (!in_array($perPage, $allowedPer, true)) {
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($page < 1) $page = 1;
 
+/**
+ * Helper bind_param dinamis
+ */
+function bindParamsDynamic(mysqli_stmt $stmt, string $types, array $params): void
+{
+  if ($types === '' || empty($params)) return;
+  $refs = [];
+  $refs[] = &$types;
+  foreach ($params as $k => $v) {
+    $refs[] = &$params[$k];
+  }
+  call_user_func_array([$stmt, 'bind_param'], $refs);
+}
+
+/**
+ * Build WHERE dinamis
+ */
+$where = [];
+$params = [];
+$types  = '';
+
+if ($search !== '') {
+  $where[] = "(
+    s.nama_siswa LIKE ?
+    OR s.no_induk_siswa LIKE ?
+    OR COALESCE(k.nama_kelas,'') LIKE ?
+    OR COALESCE(k.tingkat_kelas,'') LIKE ?
+  )";
+  $params[] = $like;
+  $params[] = $like;
+  $params[] = $like;
+  $params[] = $like;
+  $types .= 'ssss';
+
+  if (ctype_digit($search)) {
+    $where[] = "(a.id_absensi = ? OR a.sakit = ? OR a.izin = ? OR a.alpha = ?)";
+    $val = (int)$search;
+    $params[] = $val;
+    $params[] = $val;
+    $params[] = $val;
+    $params[] = $val;
+    $types   .= 'iiii';
+  }
+}
+
+if ($tingkat !== '') {
+  $where[] = "k.tingkat_kelas = ?";
+  $params[] = $tingkat;
+  $types .= 's';
+}
+
+if ($idKelasFilter > 0) {
+  $where[] = "s.id_kelas = ?";
+  $params[] = $idKelasFilter;
+  $types .= 'i';
+}
+
+$whereSql = '';
+if (!empty($where)) {
+  $whereSql = ' WHERE ' . implode(' AND ', $where);
+}
+
 /* ==========================
  * HITUNG TOTAL DATA
  * ========================== */
-if ($search !== '') {
-  $countSql = "
-    SELECT COUNT(*) AS total
-    FROM absensi a
-    INNER JOIN siswa s ON s.id_siswa = a.id_siswa
-    LEFT JOIN kelas k ON k.id_kelas = s.id_kelas
-    LEFT JOIN guru  g ON g.id_guru  = k.id_guru
-    WHERE (
-      s.nama_siswa LIKE ?
-      OR s.no_induk_siswa LIKE ?
-      OR COALESCE(g.nama_guru,'') LIKE ?
-  ";
-  $params = [$like, $like, $like];
-  $types  = 'sss';
-
-  if (ctype_digit($search)) {
-    $countSql .= " OR a.id_absensi = ? OR a.sakit = ? OR a.izin = ? OR a.alpha = ? ";
-    $val = (int)$search;
-    $params[] = $val;
-    $params[] = $val;
-    $params[] = $val;
-    $params[] = $val;
-    $types   .= 'iiii';
-  }
-
-  $countSql .= " ) ";
-
-  $stmtCount = $koneksi->prepare($countSql);
-  $stmtCount->bind_param($types, ...$params);
-} else {
-  // Tanpa filter, cukup hitung dari tabel absensi
-  $countSql = "SELECT COUNT(*) AS total FROM absensi";
-  $stmtCount = $koneksi->prepare($countSql);
-}
-
-$stmtCount->execute();
-$resCount  = $stmtCount->get_result();
-$rowCount  = $resCount->fetch_assoc();
+$countSql = "
+  SELECT COUNT(*) AS total
+  FROM absensi a
+  INNER JOIN siswa s ON s.id_siswa = a.id_siswa
+  LEFT JOIN kelas k ON k.id_kelas = s.id_kelas
+  $whereSql
+";
+$stmtCount = mysqli_prepare($koneksi, $countSql);
+bindParamsDynamic($stmtCount, $types, $params);
+mysqli_stmt_execute($stmtCount);
+$resCount  = mysqli_stmt_get_result($stmtCount);
+$rowCount  = mysqli_fetch_assoc($resCount);
 $totalRows = (int)($rowCount['total'] ?? 0);
 
 $totalPages = max(1, (int)ceil($totalRows / $perPage));
-if ($page > $totalPages) {
-  $page = $totalPages;
-}
+if ($page > $totalPages) $page = $totalPages;
 $offset = ($page - 1) * $perPage;
 
 /* ==========================
- * AMBIL DATA ABSENSI UNTUK TAMPILAN AWAL (INNER JOIN)
+ * AMBIL DATA ABSENSI UNTUK TAMPILAN AWAL
  * ========================== */
-if ($search !== '') {
-  $sql = "
-    SELECT
-      a.id_absensi,
-      a.id_siswa,
-      s.nama_siswa,
-      s.no_induk_siswa AS nis,
-      COALESCE(g.nama_guru, '-') AS wali_kelas,
-      a.sakit, a.izin, a.alpha
-    FROM absensi a
-    INNER JOIN siswa s ON s.id_siswa = a.id_siswa
-    LEFT JOIN kelas k ON k.id_kelas = s.id_kelas
-    LEFT JOIN guru  g ON g.id_guru  = k.id_guru
-    WHERE (
-      s.nama_siswa LIKE ?
-      OR s.no_induk_siswa LIKE ?
-      OR COALESCE(g.nama_guru,'') LIKE ?
-  ";
-  $params = [$like, $like, $like];
-  $types  = 'sss';
+$baseSql = "
+  SELECT
+    a.id_absensi,
+    a.id_siswa,
+    s.nama_siswa,
+    s.no_induk_siswa AS nis,
+    s.no_absen_siswa AS absen,
+    COALESCE(k.nama_kelas, '-') AS nama_kelas,
+    COALESCE(k.tingkat_kelas, '') AS tingkat_kelas,
+    a.sakit, a.izin, a.alpha
+  FROM absensi a
+  INNER JOIN siswa s ON s.id_siswa = a.id_siswa
+  LEFT JOIN kelas k ON k.id_kelas = s.id_kelas
+  $whereSql
+  ORDER BY s.nama_siswa ASC
+";
 
-  if (ctype_digit($search)) {
-    $sql .= " OR a.id_absensi = ? OR a.sakit = ? OR a.izin = ? OR a.alpha = ? ";
-    $val = (int)$search;
-    $params[] = $val;
-    $params[] = $val;
-    $params[] = $val;
-    $params[] = $val;
-    $types   .= 'iiii';
-  }
+$sql = $baseSql . " LIMIT ? OFFSET ?";
+$stmt = mysqli_prepare($koneksi, $sql);
 
-  $sql .= " ) 
-            ORDER BY s.nama_siswa ASC
-            LIMIT ? OFFSET ? ";
+$params2 = $params;
+$types2  = $types . 'ii';
+$params2[] = $perPage;
+$params2[] = $offset;
 
-  $params[] = $perPage;
-  $params[] = $offset;
-  $types   .= 'ii';
-
-  $stmt = $koneksi->prepare($sql);
-  $stmt->bind_param($types, ...$params);
-} else {
-  $sql = "
-    SELECT
-      a.id_absensi,
-      a.id_siswa,
-      s.nama_siswa,
-      s.no_induk_siswa AS nis,
-      COALESCE(g.nama_guru, '-') AS wali_kelas,
-      a.sakit, a.izin, a.alpha
-    FROM absensi a
-    INNER JOIN siswa s ON s.id_siswa = a.id_siswa
-    LEFT JOIN kelas k ON k.id_kelas = s.id_kelas
-    LEFT JOIN guru  g ON g.id_guru  = k.id_guru
-    ORDER BY s.nama_siswa ASC
-    LIMIT ? OFFSET ?
-  ";
-  $stmt = $koneksi->prepare($sql);
-  $stmt->bind_param('ii', $perPage, $offset);
-}
-$stmt->execute();
-$result = $stmt->get_result();
+bindParamsDynamic($stmt, $types2, $params2);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
 
 // Info range
 if ($totalRows === 0) {
-  $from = 0;
-  $to   = 0;
   $shown = 0;
   $pageDisplayCurrent = 0;
   $pageDisplayTotal   = 0;
@@ -163,14 +169,24 @@ if ($totalRows === 0) {
 $siswa_list = [];
 $q = $koneksi->query("
   SELECT s.id_siswa, s.nama_siswa, s.no_induk_siswa, s.no_absen_siswa,
-         k.nama_kelas, g.nama_guru
+         k.nama_kelas, k.tingkat_kelas
   FROM siswa s
   LEFT JOIN kelas k ON k.id_kelas = s.id_kelas
-  LEFT JOIN guru  g ON g.id_guru  = k.id_guru
   ORDER BY s.nama_siswa ASC
 ");
 while ($r = $q->fetch_assoc()) {
   $siswa_list[] = $r;
+}
+
+// Data kelas untuk dropdown filter (mirip data_siswa)
+$kelasAll = [];
+$kelasQuery = mysqli_query($koneksi, "SELECT id_kelas, nama_kelas, tingkat_kelas FROM kelas ORDER BY tingkat_kelas ASC, nama_kelas ASC");
+while ($k = mysqli_fetch_assoc($kelasQuery)) {
+  $kelasAll[] = [
+    'id_kelas' => (int)$k['id_kelas'],
+    'nama_kelas' => (string)$k['nama_kelas'],
+    'tingkat_kelas' => (string)$k['tingkat_kelas'],
+  ];
 }
 
 // --------- TENTUKAN ALERT BERDASARKAN ?msg= / ?err= ---------
@@ -274,6 +290,28 @@ include '../../includes/header.php';
       color: #9aa3af;
     }
 
+    .searchbox:focus-within {
+      box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
+    }
+
+    /* ✅ Filter seperti data siswa */
+    .filter-select {
+      border: 1px solid var(--ring);
+      border-radius: 10px;
+      padding: 6px 12px;
+      font-size: 14px;
+      color: var(--ink);
+      background: #fff;
+      height: 38px;
+      text-align: center;
+      text-align-last: center;
+    }
+
+    .filter-select:focus {
+      box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
+      border-color: var(--brand);
+    }
+
     .table thead th {
       white-space: nowrap;
       background: var(--thead);
@@ -291,9 +329,7 @@ include '../../includes/header.php';
     }
 
     #absensiTbody {
-      transition:
-        opacity 0.25s ease,
-        transform 0.25s ease;
+      transition: opacity 0.25s ease, transform 0.25s ease;
     }
 
     #absensiTbody.tbody-loading {
@@ -398,13 +434,7 @@ include '../../includes/header.php';
       border-radius: 12px;
       margin-bottom: 20px;
       font-size: 14px;
-      transition:
-        opacity 0.4s ease,
-        transform 0.4s ease,
-        max-height 0.4s ease,
-        margin 0.4s ease,
-        padding-top 0.4s ease,
-        padding-bottom 0.4s ease;
+      transition: opacity 0.4s ease, transform 0.4s ease, max-height 0.4s ease, margin 0.4s ease, padding-top 0.4s ease, padding-bottom 0.4s ease;
       max-height: 200px;
       overflow: hidden;
       position: relative;
@@ -446,9 +476,7 @@ include '../../includes/header.php';
       opacity: 1;
     }
 
-    /* ================================
-       ✅ PAGINATION GROUP (Referensi 2)
-       ================================ */
+    /* ✅ Pagination group */
     .pager-area {
       display: flex;
       flex-direction: column;
@@ -463,7 +491,6 @@ include '../../includes/header.php';
       justify-content: center;
       gap: 12px;
       flex-wrap: wrap;
-
       padding: 10px 12px;
       border: 1px solid rgba(0, 0, 0, .12);
       border-radius: 12px;
@@ -489,6 +516,13 @@ include '../../includes/header.php';
     .page-info-center {
       text-align: center;
       width: 100%;
+    }
+
+    /* ✅ Header bertingkat (Keterangan -> Sakit/Izin/Alpha) */
+    .thead-sub th {
+      background: var(--thead);
+      color: var(--thead-text);
+      border-top: 0 !important;
     }
 
     @media (max-width: 520px) {
@@ -536,7 +570,6 @@ include '../../includes/header.php';
         align-items: stretch !important;
       }
 
-      /* di mobile: separator disembunyikan biar rapih */
       .pager-sep {
         display: none;
       }
@@ -544,10 +577,12 @@ include '../../includes/header.php';
       .pager-group {
         width: 100%;
       }
-    }
 
-    .searchbox:focus-within {
-      box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
+      /* filter di mobile biar nyaman */
+      .filter-select {
+        text-align: left;
+        text-align-last: left;
+      }
     }
   </style>
 
@@ -573,18 +608,36 @@ include '../../includes/header.php';
               </div>
 
               <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-2">
-                <!-- Search (perPage dipindah ke bawah) -->
                 <div class="d-flex search-perpage-row align-items-md-center gap-2 flex-grow-1">
                   <div class="search-wrap flex-grow-1">
                     <div class="searchbox" role="search" aria-label="Pencarian absensi">
                       <i class="bi bi-search icon"></i>
                       <input type="text"
                         id="searchInput"
-                        placeholder="Ketik untuk mencari (Nama/NIS/Wali/Sakit/Izin/Alpha)"
+                        placeholder="Ketik untuk mencari (Nama/NIS/Kelas/Sakit/Izin/Alpha)"
                         value="<?= htmlspecialchars($search, ENT_QUOTES, 'UTF-8'); ?>"
                         autofocus>
                     </div>
                   </div>
+
+                  <!-- ✅ Filter Tingkat -->
+                  <select id="filterTingkat" class="filter-select" title="Filter Tingkat">
+                    <option value="">Semua Tingkat</option>
+                    <option value="X">X</option>
+                    <option value="XI">XI</option>
+                    <option value="XII">XII</option>
+                  </select>
+
+                  <!-- ✅ Filter Kelas -->
+                  <select id="filterKelas" class="filter-select" title="Filter Kelas">
+                    <option value="0">Semua Kelas</option>
+                    <?php foreach ($kelasAll as $k): ?>
+                      <option value="<?= (int)$k['id_kelas'] ?>"
+                        data-tingkat="<?= htmlspecialchars($k['tingkat_kelas'], ENT_QUOTES, 'UTF-8') ?>">
+                        <?= htmlspecialchars($k['nama_kelas'], ENT_QUOTES, 'UTF-8') ?>
+                      </option>
+                    <?php endforeach; ?>
+                  </select>
                 </div>
 
                 <!-- Tombol Tambah / Import / Export -->
@@ -628,40 +681,51 @@ include '../../includes/header.php';
                 <span style="font-size:13px;">Sedang memuat data…</span>
               </div>
 
-              <!-- FORM BULK EDIT -->
-              <form id="bulkEditForm" action="proses_bulk_edit_absensi.php" method="post">
+              <!-- FORM EDIT (rename action) -->
+              <form id="bulkEditForm" action="proses_edit_data_absensi.php" method="post">
                 <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
 
                 <table class="table table-striped table-bordered align-middle mb-0">
                   <thead class="text-center">
                     <tr>
-                      <th style="width:50px;" class="text-center">
+                      <th rowspan="2" style="width:50px;" class="text-center">
                         <input type="checkbox" id="checkAll" title="Pilih Semua">
                       </th>
-                      <th style="width:70px;">Absen</th>
-                      <th>Nama Siswa</th>
-                      <th>NIS</th>
-                      <th>Wali Kelas</th>
-                      <th>Sakit</th>
-                      <th>Izin</th>
-                      <th>Alpha</th>
-                      <th style="width:140px;">Aksi</th>
+                      <th rowspan="2" style="width:160px;">NIS</th>
+                      <th rowspan="2">Nama Siswa</th>
+                      <th rowspan="2" style="width:220px;">Kelas</th>
+                      <th rowspan="2" style="width:120px;">Absen</th>
+                      <th colspan="3" style="min-width:240px;">Keterangan</th>
+                      <th rowspan="2" style="width:140px;">Aksi</th>
+                    </tr>
+                    <tr class="thead-sub">
+                      <th style="width:90px;">Sakit</th>
+                      <th style="width:90px;">Izin</th>
+                      <th style="width:90px;">Alpha</th>
                     </tr>
                   </thead>
+
                   <tbody id="absensiTbody" class="text-center tbody-loaded">
                     <?php if ($totalRows === 0): ?>
                       <tr>
                         <td colspan="9">Belum ada data.</td>
                       </tr>
                       <?php else:
-                      $no = $offset + 1;
-                      $rowClass = ($search !== '') ? 'highlight-row' : '';
+                      $rowClass = ($search !== '' || $tingkat !== '' || $idKelasFilter > 0) ? 'highlight-row' : '';
                       while ($row = $result->fetch_assoc()):
                         $id        = (int)$row['id_absensi'];
-                        $id_siswa  = (int)($row['id_siswa'] ?? 0);
                         $nama      = htmlspecialchars($row['nama_siswa'] ?? '-', ENT_QUOTES, 'UTF-8');
                         $nis       = htmlspecialchars($row['nis'] ?? '-', ENT_QUOTES, 'UTF-8');
-                        $wali      = htmlspecialchars($row['wali_kelas'] ?? '-', ENT_QUOTES, 'UTF-8');
+                        $absen     = htmlspecialchars($row['absen'] ?? '-', ENT_QUOTES, 'UTF-8');
+
+                        $kelasNama = (string)($row['nama_kelas'] ?? '-');
+                        $kelasTkt  = (string)($row['tingkat_kelas'] ?? '');
+                        $kelasTampil = trim($kelasNama);
+                        if ($kelasTkt !== '' && stripos($kelasTampil, $kelasTkt) === false) {
+                          $kelasTampil = $kelasTkt . ' - ' . $kelasTampil;
+                        }
+                        $kelasTampil = htmlspecialchars($kelasTampil !== '' ? $kelasTampil : '-', ENT_QUOTES, 'UTF-8');
+
                         $sakit     = (int)($row['sakit'] ?? 0);
                         $izin      = (int)($row['izin'] ?? 0);
                         $alpha     = (int)($row['alpha'] ?? 0);
@@ -671,20 +735,23 @@ include '../../includes/header.php';
                             <input type="checkbox" class="row-check" value="<?= $id; ?>">
                             <input type="hidden" name="id_absensi[]" value="<?= $id; ?>">
                           </td>
-                          <td data-label="Absen"><?= $no++; ?></td>
-                          <td data-label="Nama Siswa"><?= $nama; ?></td>
-                          <td data-label="NIS"><?= $nis; ?></td>
-                          <td data-label="Wali Kelas"><?= $wali; ?></td>
 
-                          <td data-label="Sakit">
+                          <td data-label="NIS" class="text-center"><?= $nis; ?></td>
+                          <td data-label="Nama Siswa"><?= $nama; ?></td>
+                          <td data-label="Kelas" class="text-center"><?= $kelasTampil; ?></td>
+                          <td data-label="Absen" class="text-center"><?= $absen; ?></td>
+
+                          <td data-label="Sakit" class="text-center">
                             <span class="cell-view"><?= $sakit; ?></span>
                             <input type="number" class="form-control form-control-sm cell-input d-none" name="sakit[]" min="0" step="1" value="<?= $sakit; ?>">
                           </td>
-                          <td data-label="Izin">
+
+                          <td data-label="Izin" class="text-center">
                             <span class="cell-view"><?= $izin; ?></span>
                             <input type="number" class="form-control form-control-sm cell-input d-none" name="izin[]" min="0" step="1" value="<?= $izin; ?>">
                           </td>
-                          <td data-label="Alpha">
+
+                          <td data-label="Alpha" class="text-center">
                             <span class="cell-view"><?= $alpha; ?></span>
                             <input type="number" class="form-control form-control-sm cell-input d-none" name="alpha[]" min="0" step="1" value="<?= $alpha; ?>">
                           </td>
@@ -721,17 +788,13 @@ include '../../includes/header.php';
               </button>
             </div>
 
-            <!-- ✅ Pagination + perPage digabung (Referensi 2) -->
+            <!-- Pagination + perPage digabung -->
             <nav aria-label="Page navigation" class="mt-3">
               <div class="pager-area">
                 <div class="pager-group">
-                  <!-- kiri: pagination -->
                   <ul class="pagination mb-0" id="paginationWrap"></ul>
-
-                  <!-- separator -->
                   <div class="pager-sep" aria-hidden="true"></div>
 
-                  <!-- kanan: per halaman -->
                   <select id="perPage" class="form-select form-select-sm per-select">
                     <?php foreach ($allowedPer as $opt): ?>
                       <option value="<?= $opt ?>" <?= $perPage === $opt ? 'selected' : '' ?>>
@@ -741,7 +804,6 @@ include '../../includes/header.php';
                   </select>
                 </div>
 
-                <!-- info bawah: center -->
                 <p id="pageInfo" class="page-info-text text-muted mb-0 page-info-center">
                   Menampilkan <strong><?= $shown ?></strong> dari <strong><?= $totalRows ?></strong> data •
                   Halaman <strong><?= $pageDisplayCurrent ?></strong> / <strong><?= $pageDisplayTotal ?></strong>
@@ -772,7 +834,11 @@ include '../../includes/header.php';
                 <?php foreach ($siswa_list as $s):
                   $opt = $s['nama_siswa'];
                   $opt .= $s['no_induk_siswa'] ? " (NIS: {$s['no_induk_siswa']})" : "";
-                  if (!empty($s['nama_kelas'])) $opt .= " - {$s['nama_kelas']}";
+                  if (!empty($s['tingkat_kelas']) && !empty($s['nama_kelas'])) {
+                    $opt .= " - {$s['tingkat_kelas']} - {$s['nama_kelas']}";
+                  } elseif (!empty($s['nama_kelas'])) {
+                    $opt .= " - {$s['nama_kelas']}";
+                  }
                   if (!empty($s['no_absen_siswa'])) $opt .= " [Absen: {$s['no_absen_siswa']}]";
                 ?>
                   <option value="<?= (int)$s['id_siswa']; ?>"><?= htmlspecialchars($opt, ENT_QUOTES, 'UTF-8'); ?></option>
@@ -808,7 +874,7 @@ include '../../includes/header.php';
     </div>
   </div>
 
-  <!-- MODAL IMPORT ABSENSI -->
+  <!-- MODAL IMPORT ABSENSI (tetap) -->
   <div class="modal fade" id="modalImportAbsensi" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content">
@@ -954,11 +1020,13 @@ include '../../includes/header.php';
       const tableWrap = document.getElementById('absensiTableWrap');
       const loadingOverlay = document.getElementById('tableLoadingOverlay');
 
+      const filterTingkat = document.getElementById('filterTingkat');
+      const filterKelas = document.getElementById('filterKelas');
+
       const checkAll = document.getElementById('checkAll');
       const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
       const perPageSelect = document.getElementById('perPage');
 
-      // ✅ pagination sekarang UL langsung
       const paginationUl = document.getElementById('paginationWrap');
       const pageInfo = document.getElementById('pageInfo');
 
@@ -979,6 +1047,9 @@ include '../../includes/header.php';
       let currentPage = <?= (int)$page ?>;
       let currentPerPage = <?= (int)$perPage ?>;
       let currentTotalRows = <?= (int)$totalRows ?>;
+
+      let currentTingkat = '<?= htmlspecialchars($tingkat, ENT_QUOTES, "UTF-8"); ?>';
+      let currentKelas = <?= (int)$idKelasFilter ?>;
 
       let pendingDeleteHandler = null;
       let editMode = false;
@@ -1003,14 +1074,12 @@ include '../../includes/header.php';
         confirmBtn.onclick = function() {
           if (pendingDeleteHandler) pendingDeleteHandler();
           if (typeof bootstrap !== 'undefined') {
-            const m = bootstrap.Modal.getOrCreateInstance(confirmModalEl);
-            m.hide();
+            bootstrap.Modal.getOrCreateInstance(confirmModalEl).hide();
           }
         };
 
         if (typeof bootstrap !== 'undefined') {
-          const m = bootstrap.Modal.getOrCreateInstance(confirmModalEl);
-          m.show();
+          bootstrap.Modal.getOrCreateInstance(confirmModalEl).show();
         } else {
           if (confirm(message)) handler();
         }
@@ -1096,7 +1165,27 @@ include '../../includes/header.php';
         });
       }
 
-      // ✅ Build pagination ke <ul id="paginationWrap">
+      function filterKelasOptionsByTingkat(tingkatVal) {
+        if (!filterKelas) return;
+
+        const opts = Array.from(filterKelas.querySelectorAll('option'));
+        opts.forEach(opt => {
+          const v = parseInt(opt.value || '0', 10);
+          if (v === 0) {
+            opt.hidden = false;
+            return;
+          }
+          const t = opt.getAttribute('data-tingkat') || '';
+          opt.hidden = (tingkatVal !== '' && t !== tingkatVal);
+        });
+
+        const selectedOpt = filterKelas.querySelector('option:checked');
+        if (selectedOpt && selectedOpt.hidden) {
+          filterKelas.value = '0';
+          currentKelas = 0;
+        }
+      }
+
       function buildPagination(totalRows, page, perPage) {
         currentTotalRows = totalRows;
         currentPage = page;
@@ -1149,7 +1238,7 @@ include '../../includes/header.php';
             e.preventDefault();
             const target = parseInt(a.getAttribute('data-page') || '1', 10);
             if (isNaN(target) || target < 1 || target === currentPage) return;
-            doSearch(currentQuery, target, currentPerPage, true);
+            doSearch(currentQuery, target, currentPerPage, currentTingkat, currentKelas, true);
           });
         });
 
@@ -1193,7 +1282,6 @@ include '../../includes/header.php';
         });
       });
 
-      // Toggle mode edit
       toggleEditMode.addEventListener('change', () => {
         editMode = toggleEditMode.checked;
         applyEditModeToTable();
@@ -1227,17 +1315,22 @@ include '../../includes/header.php';
         tbody.classList.add('tbody-loaded');
       }
 
-      function doSearch(query, page, perPage, fromPaginationOrPerpage = false) {
+      function doSearch(query, page, perPage, tingkat, kelas, fromPaginationOrPerpage = false) {
         setLoading(fromPaginationOrPerpage);
 
         if (currentController) currentController.abort();
         currentController = new AbortController();
 
         currentQuery = query || '';
+        currentTingkat = tingkat || '';
+        currentKelas = parseInt(kelas || 0, 10) || 0;
+
         const params = new URLSearchParams({
           q: currentQuery,
           page: page || 1,
-          per: perPage || currentPerPage || 10
+          per: perPage || currentPerPage || 10,
+          tingkat: currentTingkat,
+          kelas: String(currentKelas || 0),
         });
 
         fetch('ajax_absensi_list.php?' + params.toString(), {
@@ -1284,7 +1377,7 @@ include '../../includes/header.php';
       input.addEventListener('input', () => {
         clearTimeout(typingTimer);
         typingTimer = setTimeout(() => {
-          doSearch(input.value, 1, currentPerPage, false);
+          doSearch(input.value, 1, currentPerPage, currentTingkat, currentKelas, false);
         }, debounceMs);
       });
 
@@ -1293,30 +1386,24 @@ include '../../includes/header.php';
           const val = parseInt(perPageSelect.value || '10', 10);
           if (isNaN(val) || val <= 0) return;
           currentPerPage = val;
-          doSearch(currentQuery, 1, currentPerPage, true);
+          doSearch(currentQuery, 1, currentPerPage, currentTingkat, currentKelas, true);
         });
       }
 
-      // Validasi modal Tambah & Import
-      const formTambah = document.getElementById('formTambahAbsensi');
-      const btnSubmitTambah = document.getElementById('btnSubmitTambahAbsensi');
-      if (formTambah && btnSubmitTambah) {
-        btnSubmitTambah.addEventListener('click', (e) => {
-          if (!formTambah.checkValidity()) {
-            e.preventDefault();
-            formTambah.reportValidity();
-          }
+      if (filterTingkat) {
+        filterTingkat.addEventListener('change', () => {
+          const v = filterTingkat.value || '';
+          currentTingkat = v;
+          filterKelasOptionsByTingkat(currentTingkat);
+          doSearch(currentQuery, 1, currentPerPage, currentTingkat, currentKelas, true);
         });
       }
 
-      const formImport = document.getElementById('formImportAbsensi');
-      const btnSubmitImport = document.getElementById('btnSubmitImportAbsensi');
-      if (formImport && btnSubmitImport) {
-        btnSubmitImport.addEventListener('click', (e) => {
-          if (!formImport.checkValidity()) {
-            e.preventDefault();
-            formImport.reportValidity();
-          }
+      if (filterKelas) {
+        filterKelas.addEventListener('change', () => {
+          const v = parseInt(filterKelas.value || '0', 10) || 0;
+          currentKelas = v;
+          doSearch(currentQuery, 1, currentPerPage, currentTingkat, currentKelas, true);
         });
       }
 
@@ -1324,8 +1411,15 @@ include '../../includes/header.php';
       attachCheckboxEvents();
       attachSingleDeleteEvents();
       buildPagination(currentTotalRows, currentPage, currentPerPage);
-      applyEditModeToTable();
 
+      if (input) input.value = currentQuery;
+
+      // set nilai awal filter dari URL
+      if (filterTingkat) filterTingkat.value = currentTingkat;
+      if (filterKelas) filterKelas.value = String(currentKelas || 0);
+      filterKelasOptionsByTingkat(currentTingkat);
+
+      applyEditModeToTable();
       if (tbody) tbody.classList.add('tbody-loaded');
     })();
   </script>

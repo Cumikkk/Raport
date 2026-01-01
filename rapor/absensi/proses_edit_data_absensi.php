@@ -1,7 +1,8 @@
 <?php
-// pages/absensi/proses_bulk_edit_absensi.php
+// pages/absensi/proses_edit_data_absensi.php
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 error_reporting(E_ALL);
+
 require_once __DIR__ . '/../../koneksi.php';
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -62,6 +63,7 @@ for ($i = 0; $i < $countIds; $i++) {
     $stmt->bind_param('iiii', $sakit, $izin, $alpha, $id);
     $stmt->execute();
 
+    // affected_rows bisa 0 kalau nilainya sama (tetap dihitung sukses)
     if ($stmt->affected_rows >= 0) {
         $updated++;
     } else {
@@ -77,7 +79,7 @@ if ($updated === 0 && $skipped === 0) {
 
 $msgParts = [];
 $msgParts[] = "Perubahan absensi berhasil disimpan.";
-$msgParts[] = "Diperbarui: {$updated} baris.";
+$msgParts[] = "Diproses: {$updated} baris.";
 if ($skipped > 0) {
     $msgParts[] = "Dilewati: {$skipped} baris (data tidak valid).";
 }
