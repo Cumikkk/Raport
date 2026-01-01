@@ -178,7 +178,7 @@ while ($r = $q->fetch_assoc()) {
   $siswa_list[] = $r;
 }
 
-// Data kelas untuk dropdown filter (mirip data_siswa)
+// Data kelas untuk dropdown filter
 $kelasAll = [];
 $kelasQuery = mysqli_query($koneksi, "SELECT id_kelas, nama_kelas, tingkat_kelas FROM kelas ORDER BY tingkat_kelas ASC, nama_kelas ASC");
 while ($k = mysqli_fetch_assoc($kelasQuery)) {
@@ -294,7 +294,6 @@ include '../../includes/header.php';
       box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
     }
 
-    /* ✅ Filter seperti data siswa */
     .filter-select {
       border: 1px solid var(--ring);
       border-radius: 10px;
@@ -452,6 +451,12 @@ include '../../includes/header.php';
       color: #991b1b;
     }
 
+    .alert-warning {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      color: #9a3412;
+    }
+
     .alert-hide {
       opacity: 0;
       transform: translateY(-4px);
@@ -476,7 +481,11 @@ include '../../includes/header.php';
       opacity: 1;
     }
 
-    /* ✅ Pagination group */
+    /* area alert untuk modal tambah (mirip data_guru) */
+    .modal-alert-area {
+      margin-bottom: 12px;
+    }
+
     .pager-area {
       display: flex;
       flex-direction: column;
@@ -518,7 +527,6 @@ include '../../includes/header.php';
       width: 100%;
     }
 
-    /* ✅ Header bertingkat (Keterangan -> Sakit/Izin/Alpha) */
     .thead-sub th {
       background: var(--thead);
       color: var(--thead-text);
@@ -578,7 +586,6 @@ include '../../includes/header.php';
         width: 100%;
       }
 
-      /* filter di mobile biar nyaman */
       .filter-select {
         text-align: left;
         text-align-last: left;
@@ -591,12 +598,14 @@ include '../../includes/header.php';
       <div class="col-12">
 
         <!-- ALERT DI LUAR CARD -->
-        <?php if ($alertMsg !== '' && $alertClass !== ''): ?>
-          <div class="alert <?= htmlspecialchars($alertClass, ENT_QUOTES, 'UTF-8'); ?>">
-            <span class="close-btn">&times;</span>
-            <?= htmlspecialchars($alertMsg, ENT_QUOTES, 'UTF-8'); ?>
-          </div>
-        <?php endif; ?>
+        <div id="alertAreaTop">
+          <?php if ($alertMsg !== '' && $alertClass !== ''): ?>
+            <div class="alert <?= htmlspecialchars($alertClass, ENT_QUOTES, 'UTF-8'); ?>">
+              <span class="close-btn">&times;</span>
+              <?= htmlspecialchars($alertMsg, ENT_QUOTES, 'UTF-8'); ?>
+            </div>
+          <?php endif; ?>
+        </div>
 
         <div class="card shadow-sm">
 
@@ -620,7 +629,6 @@ include '../../includes/header.php';
                     </div>
                   </div>
 
-                  <!-- ✅ Filter Tingkat -->
                   <select id="filterTingkat" class="filter-select" title="Filter Tingkat">
                     <option value="">Semua Tingkat</option>
                     <option value="X">X</option>
@@ -628,7 +636,6 @@ include '../../includes/header.php';
                     <option value="XII">XII</option>
                   </select>
 
-                  <!-- ✅ Filter Kelas -->
                   <select id="filterKelas" class="filter-select" title="Filter Kelas">
                     <option value="0">Semua Kelas</option>
                     <?php foreach ($kelasAll as $k): ?>
@@ -640,7 +647,6 @@ include '../../includes/header.php';
                   </select>
                 </div>
 
-                <!-- Tombol Tambah / Import / Export -->
                 <div class="d-flex justify-content-md-end flex-wrap gap-2 align-items-center">
                   <button type="button"
                     class="btn btn-brand btn-sm d-inline-flex align-items-center gap-2 px-3"
@@ -675,13 +681,11 @@ include '../../includes/header.php';
 
           <div class="card-body pt-0">
             <div class="table-responsive" id="absensiTableWrap">
-              <!-- OVERLAY LOADING -->
               <div class="table-loading-overlay" id="tableLoadingOverlay">
                 <div class="spinner-border spinner-border-sm me-2" role="status"></div>
                 <span style="font-size:13px;">Sedang memuat data…</span>
               </div>
 
-              <!-- FORM EDIT (rename action) -->
               <form id="bulkEditForm" action="proses_edit_data_absensi.php" method="post">
                 <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
 
@@ -772,7 +776,6 @@ include '../../includes/header.php';
               </form>
             </div>
 
-            <!-- HAPUS TERPILIH + SIMPAN PERUBAHAN -->
             <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
               <button type="button" id="bulkDeleteBtn"
                 class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1">
@@ -788,7 +791,6 @@ include '../../includes/header.php';
               </button>
             </div>
 
-            <!-- Pagination + perPage digabung -->
             <nav aria-label="Page navigation" class="mt-3">
               <div class="pager-area">
                 <div class="pager-group">
@@ -812,9 +814,9 @@ include '../../includes/header.php';
             </nav>
 
           </div>
-        </div><!-- /.card -->
-      </div><!-- /.col-12 -->
-    </div><!-- /.row -->
+        </div>
+      </div>
+    </div>
   </main>
 
   <!-- MODAL TAMBAH ABSENSI -->
@@ -825,8 +827,14 @@ include '../../includes/header.php';
           <h5 class="modal-title">Tambah Data Absensi</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
         </div>
+
         <form id="formTambahAbsensi" action="proses_tambah_data_absensi.php" method="POST" autocomplete="off">
+          <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
+
           <div class="modal-body">
+            <!-- ✅ alert di dalam modal (seperti data_guru) -->
+            <div id="modalAlertTambahAbsensi" class="modal-alert-area"></div>
+
             <div class="mb-3">
               <label class="form-label fw-semibold" for="add_id_siswa">Nama Siswa</label>
               <select id="add_id_siswa" name="id_siswa" class="form-select" required>
@@ -861,6 +869,7 @@ include '../../includes/header.php';
               </div>
             </div>
           </div>
+
           <div class="modal-footer">
             <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-dismiss="modal">
               <i class="bi bi-x-lg"></i> Batal
@@ -874,7 +883,7 @@ include '../../includes/header.php';
     </div>
   </div>
 
-  <!-- MODAL IMPORT ABSENSI (tetap) -->
+  <!-- MODAL IMPORT ABSENSI -->
   <div class="modal fade" id="modalImportAbsensi" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content">
@@ -908,14 +917,15 @@ include '../../includes/header.php';
                   </ol>
                   <span class="text-muted">
                     Struktur kolom template:
-                    <strong>A: nomer</strong>,
-                    <strong>B: nama siswa</strong>,
-                    <strong>C: NIS</strong>,
-                    <strong>D: wali kelas</strong>,
-                    <strong>E: sakit</strong>,
-                    <strong>F: izin</strong>,
-                    <strong>G: alpha</strong>.
-                    Data siswa akan disambungkan berdasarkan NIS.
+                    <strong>A: No</strong>,
+                    <strong>B: NIS</strong>,
+                    <strong>C: Nama Siswa</strong>,
+                    <strong>D: Kelas</strong>,
+                    <strong>E: Absen</strong>,
+                    <strong>F: Sakit</strong>,
+                    <strong>G: Izin</strong>,
+                    <strong>H: Alpha</strong>.
+                    Data akan disambungkan berdasarkan <strong>NIS</strong>, dan <strong>duplikat akan ditolak</strong>.
                   </span>
                 </div>
               </div>
@@ -1053,6 +1063,114 @@ include '../../includes/header.php';
 
       let pendingDeleteHandler = null;
       let editMode = false;
+
+      // ========= ALERT helpers (top & modal) =========
+      function escapeHtml(str) {
+        return String(str ?? '')
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", "&#039;");
+      }
+
+      function wireAlert(el, autoMs = 4000) {
+        if (!el) return;
+        const timer = setTimeout(() => el.classList.add('alert-hide'), autoMs);
+        const close = el.querySelector('.close-btn');
+        if (close) {
+          close.addEventListener('click', (e) => {
+            e.preventDefault();
+            el.classList.add('alert-hide');
+            clearTimeout(timer);
+          });
+        }
+      }
+
+      function showTopAlert(type, message) {
+        const area = document.getElementById('alertAreaTop');
+        if (!area) return;
+
+        const cls = type === 'success' ? 'alert-success' : (type === 'warning' ? 'alert-warning' : 'alert-danger');
+
+        const div = document.createElement('div');
+        div.className = `alert ${cls}`;
+        div.innerHTML = `<span class="close-btn">&times;</span> ${escapeHtml(message)}`;
+
+        area.prepend(div);
+        wireAlert(div, 4000);
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      }
+
+      function showModalAlert(containerId, type, message) {
+        const box = document.getElementById(containerId);
+        if (!box) return;
+
+        const cls = type === 'success' ? 'alert-success' : (type === 'warning' ? 'alert-warning' : 'alert-danger');
+        box.innerHTML = `
+          <div class="alert ${cls}">
+            <span class="close-btn">&times;</span>
+            ${escapeHtml(message)}
+          </div>
+        `;
+        const alertEl = box.querySelector('.alert');
+        wireAlert(alertEl, 5000);
+      }
+
+      function disableBtn(btn, loading) {
+        if (!btn) return;
+        btn.disabled = !!loading;
+        if (loading) {
+          btn.dataset.oldHtml = btn.innerHTML;
+          btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status"></span> Memproses...`;
+        } else if (btn.dataset.oldHtml) {
+          btn.innerHTML = btn.dataset.oldHtml;
+          delete btn.dataset.oldHtml;
+        }
+      }
+
+      async function postFormAjax(form, btn, modalAlertId, onSuccess) {
+        if (!form) return;
+
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          return;
+        }
+
+        disableBtn(btn, true);
+
+        try {
+          const fd = new FormData(form);
+          const res = await fetch(form.getAttribute('action'), {
+            method: 'POST',
+            body: fd,
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          });
+
+          const data = await res.json().catch(() => null);
+          if (!data) {
+            showModalAlert(modalAlertId, 'danger', 'Respon server tidak valid.');
+            disableBtn(btn, false);
+            return;
+          }
+
+          if (data.ok) {
+            onSuccess && onSuccess(data);
+          } else {
+            showModalAlert(modalAlertId, data.type || 'danger', data.msg || 'Terjadi kesalahan.');
+          }
+        } catch (err) {
+          showModalAlert(modalAlertId, 'danger', 'Gagal terhubung ke server.');
+          console.error(err);
+        } finally {
+          disableBtn(btn, false);
+        }
+      }
 
       function scrollToTable() {
         if (!tableWrap) return;
@@ -1407,6 +1525,27 @@ include '../../includes/header.php';
         });
       }
 
+      // ========= AJAX submit untuk modal tambah =========
+      const formTambah = document.getElementById('formTambahAbsensi');
+      const btnTambah = document.getElementById('btnSubmitTambahAbsensi');
+      const modalTambahEl = document.getElementById('modalTambahAbsensi');
+
+      if (formTambah) {
+        formTambah.addEventListener('submit', (e) => {
+          e.preventDefault();
+          postFormAjax(formTambah, btnTambah, 'modalAlertTambahAbsensi', (data) => {
+            // sukses -> tutup modal, reset, reload tabel, alert di atas
+            if (typeof bootstrap !== 'undefined' && modalTambahEl) {
+              bootstrap.Modal.getOrCreateInstance(modalTambahEl).hide();
+            }
+            formTambah.reset();
+            document.getElementById('modalAlertTambahAbsensi').innerHTML = '';
+            doSearch(currentQuery, 1, currentPerPage, currentTingkat, currentKelas, true);
+            showTopAlert(data.type || 'success', data.msg || 'Berhasil.');
+          });
+        });
+      }
+
       // init
       attachCheckboxEvents();
       attachSingleDeleteEvents();
@@ -1414,7 +1553,6 @@ include '../../includes/header.php';
 
       if (input) input.value = currentQuery;
 
-      // set nilai awal filter dari URL
       if (filterTingkat) filterTingkat.value = currentTingkat;
       if (filterKelas) filterKelas.value = String(currentKelas || 0);
       filterKelasOptionsByTingkat(currentTingkat);

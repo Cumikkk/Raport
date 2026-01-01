@@ -2,11 +2,46 @@
 // pages/absensi/proses_tambah_data_absensi.php
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 error_reporting(E_ALL);
+
 require_once __DIR__ . '/../../koneksi.php';
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-  header('Location: data_absensi.php?err=' . urlencode('Metode tidak diizinkan.'));
+if (session_status() === PHP_SESSION_NONE) {
+  session_start();
+}
+
+// Deteksi request AJAX (biar bisa alert di modal seperti data_guru)
+$isAjax = (
+  !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+  strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest'
+);
+
+function json_out(bool $ok, string $msg, string $type = 'success')
+{
+  header('Content-Type: application/json; charset=utf-8');
+  echo json_encode([
+    'ok'   => $ok,
+    'msg'  => $msg,
+    'type' => $type,
+  ]);
   exit;
+}
+
+function back_with(string $key, string $val)
+{
+  header('Location: data_absensi.php?' . $key . '=' . urlencode($val));
+  exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+  if ($isAjax) json_out(false, 'Metode tidak diizinkan.', 'danger');
+  back_with('err', 'Metode tidak diizinkan.');
+}
+
+// CSRF (wajib karena sekarang submit via AJAX)
+$csrf = $_POST['csrf'] ?? '';
+if (empty($_SESSION['csrf']) || !hash_equals($_SESSION['csrf'], $csrf)) {
+  if ($isAjax) json_out(false, 'Token tidak valid. Silakan coba lagi.', 'danger');
+  back_with('err', 'Token tidak valid. Silakan coba lagi.');
 }
 
 // Ambil input & validasi
@@ -16,55 +51,70 @@ $izin     = isset($_POST['izin']) ? (int)$_POST['izin'] : 0;
 $alpha    = isset($_POST['alpha']) ? (int)$_POST['alpha'] : 0;
 
 if ($id_siswa <= 0) {
-  header('Location: data_absensi.php?err=' . urlencode('Silakan pilih Nama Siswa.'));
-  exit;
+  if ($isAjax) json_out(false, 'Silakan pilih Nama Siswa.', 'warning');
+  back_with('err', 'Silakan pilih Nama Siswa.');
 }
+
 if ($sakit < 0 || $izin < 0 || $alpha < 0) {
-  header('Location: data_absensi.php?err=' . urlencode('Input Sakit/Izin/Alpha tidak boleh bernilai negatif.'));
-  exit;
+  if ($isAjax) json_out(false, 'Input Sakit/Izin/Alpha tidak boleh bernilai negatif.', 'warning');
+  back_with('err', 'Input Sakit/Izin/Alpha tidak boleh bernilai negatif.');
 }
 
-// Cek apakah siswa ada
-$stmt = $koneksi->prepare("SELECT 1 FROM siswa WHERE id_siswa = ? LIMIT 1");
-$stmt->bind_param('i', $id_siswa);
-$stmt->execute();
-$exists = $stmt->get_result()->fetch_row();
-$stmt->close();
+// Ambil data siswa (sekalian ambil NIS buat pesan)
+$stmtS = $koneksi->prepare("SELECT nama_siswa, no_induk_siswa FROM siswa WHERE id_siswa = ? LIMIT 1");
+$stmtS->bind_param('i', $id_siswa);
+$stmtS->execute();
+$siswaRow = $stmtS->get_result()->fetch_assoc();
+$stmtS->close();
 
-if (!$exists) {
-  header('Location: data_absensi.php?err=' . urlencode('Data siswa tidak ditemukan.'));
-  exit;
+if (!$siswaRow) {
+  if ($isAjax) json_out(false, 'Data siswa tidak ditemukan.', 'danger');
+  back_with('err', 'Data siswa tidak ditemukan.');
 }
 
-// Ambil id_semester (pakai yang pertama/aktif)
-$id_semester = null;
+$namaSiswa = (string)($siswaRow['nama_siswa'] ?? '');
+$nisSiswa  = (string)($siswaRow['no_induk_siswa'] ?? '');
+
+// Ambil id_semester (pakai yang pertama/aktif sesuai versi kamu)
 $res = $koneksi->query("SELECT id_semester FROM semester ORDER BY id_semester ASC LIMIT 1");
-if ($res && $res->num_rows) {
-  $id_semester = (int)$res->fetch_assoc()['id_semester'];
+if (!$res || !$res->num_rows) {
+  if ($isAjax) json_out(false, 'Data semester belum ada. Silakan isi data semester terlebih dahulu.', 'danger');
+  back_with('err', 'Data semester belum ada. Silakan isi data semester terlebih dahulu.');
+}
+$id_semester = (int)$res->fetch_assoc()['id_semester'];
+
+// ==========================
+// CEK DUPLIKAT (berdasar semester + siswa/NIS)
+// ==========================
+$stmtDup = $koneksi->prepare("
+  SELECT 1
+  FROM absensi
+  WHERE id_semester = ? AND id_siswa = ?
+  LIMIT 1
+");
+$stmtDup->bind_param('ii', $id_semester, $id_siswa);
+$stmtDup->execute();
+$dup = $stmtDup->get_result()->fetch_row();
+$stmtDup->close();
+
+if ($dup) {
+  $label = $nisSiswa !== '' ? "NIS {$nisSiswa}" : "siswa ini";
+  $msg = "Data absensi untuk {$label} sudah ada. Data duplikat ditolak.";
+  if ($isAjax) json_out(false, $msg, 'warning');
+  back_with('err', $msg);
 }
 
 // Insert ke absensi
-if ($id_semester !== null) {
-  $stmt = $koneksi->prepare("
-    INSERT INTO absensi (id_semester, id_siswa, sakit, izin, alpha)
-    VALUES (?, ?, ?, ?, ?)
-  ");
-  $stmt->bind_param('iiiii', $id_semester, $id_siswa, $sakit, $izin, $alpha);
-  $stmt->execute();
-  $stmt->close();
-} else {
-  // Tidak ada semester → isi 0 sementara (kalau tidak pakai FK ketat)
-  $koneksi->query("SET FOREIGN_KEY_CHECKS=0");
-  $dummy = 0;
-  $stmt = $koneksi->prepare("
-    INSERT INTO absensi (id_semester, id_siswa, sakit, izin, alpha)
-    VALUES (?, ?, ?, ?, ?)
-  ");
-  $stmt->bind_param('iiiii', $dummy, $id_siswa, $sakit, $izin, $alpha);
-  $stmt->execute();
-  $stmt->close();
-  $koneksi->query("SET FOREIGN_KEY_CHECKS=1");
-}
+$stmtIns = $koneksi->prepare("
+  INSERT INTO absensi (id_semester, id_siswa, sakit, izin, alpha)
+  VALUES (?, ?, ?, ?, ?)
+");
+$stmtIns->bind_param('iiiii', $id_semester, $id_siswa, $sakit, $izin, $alpha);
+$stmtIns->execute();
+$stmtIns->close();
+
+$okMsg = 'Data absensi berhasil ditambahkan.';
+if ($isAjax) json_out(true, $okMsg, 'success');
 
 header('Location: data_absensi.php?msg=add_success');
 exit;

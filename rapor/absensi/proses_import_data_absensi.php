@@ -18,43 +18,75 @@ if (!isset($_FILES['excel_file']) || !is_uploaded_file($_FILES['excel_file']['tm
   exit;
 }
 
-// Ambil id_semester (pakai yang pertama/aktif)
-$id_semester = null;
+// Ambil id_semester (pakai yang pertama/aktif sesuai versi kamu)
 $res = $koneksi->query("SELECT id_semester FROM semester ORDER BY id_semester ASC LIMIT 1");
-if ($res && $res->num_rows) {
-  $id_semester = (int)$res->fetch_assoc()['id_semester'];
-} else {
-  $id_semester = 0; // fallback (kalau ada FK, pastikan ada row id_semester=0 atau ubah logika ini)
+if (!$res || !$res->num_rows) {
+  header('Location: data_absensi.php?err=' . urlencode('Data semester belum ada. Silakan isi data semester terlebih dahulu.'));
+  exit;
 }
+$id_semester = (int)$res->fetch_assoc()['id_semester'];
 
-$success        = 0;
-$skipped        = 0;
-$emptyRows      = 0;
-$skippedNoNIS   = 0;
-$skippedNoSiswa = 0;
+$success          = 0;
+$skipped          = 0;
+$emptyRows        = 0;
+$skippedNoNIS     = 0;
+$skippedNoSiswa   = 0;
+$skippedDuplicate = 0;
 
 try {
   $spreadsheet = IOFactory::load($_FILES['excel_file']['tmp_name']);
   $sheet       = $spreadsheet->getActiveSheet();
   $highestRow  = $sheet->getHighestRow();
 
+  // Prepare statements (lebih cepat)
+  $stmtFindSiswa = $koneksi->prepare("
+    SELECT s.id_siswa
+    FROM siswa s
+    WHERE s.no_induk_siswa = ?
+    LIMIT 1
+  ");
+
+  $stmtCheckDup = $koneksi->prepare("
+    SELECT 1
+    FROM absensi
+    WHERE id_semester = ? AND id_siswa = ?
+    LIMIT 1
+  ");
+
+  $stmtIns = $koneksi->prepare("
+    INSERT INTO absensi (id_semester, id_siswa, sakit, izin, alpha)
+    VALUES (?, ?, ?, ?, ?)
+  ");
+
   // Loop mulai dari baris 2 (baris 1 = header)
   for ($row = 2; $row <= $highestRow; $row++) {
-    $no      = trim((string)$sheet->getCell('A' . $row)->getValue());
-    $namaXls = trim((string)$sheet->getCell('B' . $row)->getValue());
-    $nisXls  = trim((string)$sheet->getCell('C' . $row)->getValue());
-    $waliXls = trim((string)$sheet->getCell('D' . $row)->getValue());
-    $sakitX  = $sheet->getCell('E' . $row)->getValue();
-    $izinX   = $sheet->getCell('F' . $row)->getValue();
-    $alphaX  = $sheet->getCell('G' . $row)->getValue();
+    // Template baru:
+    // A No
+    // B NIS
+    // C Nama Siswa
+    // D Kelas
+    // E Absen
+    // F Sakit
+    // G Izin
+    // H Alpha
+
+    $noXls   = trim((string)$sheet->getCell('A' . $row)->getValue());
+    $nisXls  = trim((string)$sheet->getCell('B' . $row)->getValue());
+    $namaXls = trim((string)$sheet->getCell('C' . $row)->getValue());
+    $kelasX  = trim((string)$sheet->getCell('D' . $row)->getValue());
+    $absenX  = trim((string)$sheet->getCell('E' . $row)->getValue());
+
+    $sakitX  = $sheet->getCell('F' . $row)->getValue();
+    $izinX   = $sheet->getCell('G' . $row)->getValue();
+    $alphaX  = $sheet->getCell('H' . $row)->getValue();
 
     // Cek benar-benar kosong
-    if ($namaXls === '' && $nisXls === '' && $waliXls === '' && $sakitX === null && $izinX === null && $alphaX === null) {
+    if ($nisXls === '' && $namaXls === '' && $kelasX === '' && $absenX === '' && $sakitX === null && $izinX === null && $alphaX === null) {
       $emptyRows++;
       continue;
     }
 
-    // NIS wajib diisi sebagai kunci mapping ke siswa
+    // NIS wajib
     if ($nisXls === '') {
       $skippedNoNIS++;
       $skipped++;
@@ -71,20 +103,12 @@ try {
       continue;
     }
 
-    // Cari siswa berdasar NIS
-    $stmtFind = $koneksi->prepare("
-      SELECT s.id_siswa
-      FROM siswa s
-      WHERE s.no_induk_siswa = ?
-      LIMIT 1
-    ");
-    $stmtFind->bind_param('s', $nisXls);
-    $stmtFind->execute();
-    $rowS = $stmtFind->get_result()->fetch_assoc();
-    $stmtFind->close();
+    // Cari siswa by NIS
+    $stmtFindSiswa->bind_param('s', $nisXls);
+    $stmtFindSiswa->execute();
+    $rowS = $stmtFindSiswa->get_result()->fetch_assoc();
 
     if (!$rowS) {
-      // siswa tidak ditemukan berdasarkan NIS
       $skippedNoSiswa++;
       $skipped++;
       continue;
@@ -92,25 +116,40 @@ try {
 
     $id_siswa = (int)$rowS['id_siswa'];
 
-    // Insert ke absensi (pakai INNER JOIN saat read)
-    $stmtIns = $koneksi->prepare("
-      INSERT INTO absensi (id_semester, id_siswa, sakit, izin, alpha)
-      VALUES (?, ?, ?, ?, ?)
-    ");
-    $stmtIns->bind_param('iiiii', $id_semester, $id_siswa, $sakit, $izin, $alpha);
+    // ==========================
+    // CEK DUPLIKAT (semester + siswa/NIS)
+    // ==========================
+    $stmtCheckDup->bind_param('ii', $id_semester, $id_siswa);
+    $stmtCheckDup->execute();
+    $dupRow = $stmtCheckDup->get_result()->fetch_row();
 
+    if ($dupRow) {
+      $skippedDuplicate++;
+      $skipped++;
+      continue; // TOLAK, tidak insert
+    }
+
+    // Insert
+    $stmtIns->bind_param('iiiii', $id_semester, $id_siswa, $sakit, $izin, $alpha);
     if ($stmtIns->execute()) {
       $success++;
     } else {
       $skipped++;
     }
-    $stmtIns->close();
   }
 
-  // Susun pesan
+  $stmtFindSiswa->close();
+  $stmtCheckDup->close();
+  $stmtIns->close();
+
+  // Pesan
   $msgParts = [];
   $msgParts[] = "Import selesai.";
   $msgParts[] = "Berhasil: {$success} baris.";
+
+  if ($skippedDuplicate > 0) {
+    $msgParts[] = "Duplikat ditolak: {$skippedDuplicate} baris.";
+  }
   if ($skipped > 0) {
     $msgParts[] = "Dilewati (tidak valid/ tidak cocok): {$skipped} baris.";
   }
@@ -124,8 +163,7 @@ try {
     $msgParts[] = "NIS tidak ditemukan di data siswa: {$skippedNoSiswa} baris.";
   }
 
-  $msg = implode(' ', $msgParts);
-  header('Location: data_absensi.php?msg=' . urlencode($msg));
+  header('Location: data_absensi.php?msg=' . urlencode(implode(' ', $msgParts)));
   exit;
 } catch (Throwable $e) {
   header('Location: data_absensi.php?err=' . urlencode('Gagal memproses file Excel: ' . $e->getMessage()));
