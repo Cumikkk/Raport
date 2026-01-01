@@ -111,7 +111,7 @@ mysqli_stmt_execute($stmt);
 $res = mysqli_stmt_get_result($stmt);
 
 if ($totalRows === 0) {
-  echo '<tr><td colspan="6">Belum ada data.</td></tr>';
+  echo '<tr><td colspan="6">Tidak ada data yang cocok.</td></tr>';
   echo '<tr class="meta-row" data-total="0" data-page="1" data-per="' . (int)$perPage . '"></tr>';
   exit;
 }
