@@ -214,7 +214,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     <!-- BAGIAN KANAN -->
     <div class="login-right d-flex align-items-center justify-content-center">
-      <img src="assets/img/image/a.png" alt="Illustration">
+      <img src="assets/img/content/a.png" alt="Illustration">
     </div>
   </div>
 

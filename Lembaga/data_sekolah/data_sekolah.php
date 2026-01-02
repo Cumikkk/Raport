@@ -493,7 +493,7 @@ $data = $res->fetch_assoc() ?: [];
             <div class="grid">
               <div class="card">
                 <h2 class="section-title">Data Sekolah</h2>
-                <form action="save_data_sekolah.php" method="POST" enctype="multipart/form-data" class="stack" id="formSekolah">
+                <form action="proses_simpan_data_sekolah.php" method="POST" enctype="multipart/form-data" class="stack" id="formSekolah">
                   <?php if (!empty($data['id_sekolah'])): ?>
                     <input type="hidden" name="id_sekolah" value="<?= (int)$data['id_sekolah'] ?>">
                   <?php endif; ?>

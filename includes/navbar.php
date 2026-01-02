@@ -52,40 +52,40 @@ if ($roleKey === 'guru') {
 
     <?php if ($roleKey === 'admin'): ?>
       <!-- MENU LEMBAGA -->
-      <details <?= str_contains($current_url, '/Lembaga/') ? 'open' : '' ?>>
+      <details <?= str_contains($current_url, '/lembaga/') ? 'open' : '' ?>>
         <summary><span><i class="fas fa-building"></i> Lembaga</span><i class="fas fa-angle-right arrow"></i></summary>
         <ul>
-          <li><a href="/RAPORT/Lembaga/data_sekolah/data_sekolah.php" class="<?= str_contains($current_url, 'data_sekolah') ? 'active' : '' ?>">Data Sekolah</a></li>
-          <li><a href="/RAPORT/Lembaga/data_siswa/data_siswa.php" class="<?= str_contains($current_url, 'data_siswa') ? 'active' : '' ?>">Data Siswa</a></li>
-          <li><a href="/RAPORT/Lembaga/data_guru/data_guru.php" class="<?= str_contains($current_url, 'data_guru') ? 'active' : '' ?>">Data Guru</a></li>
-          <li><a href="/RAPORT/Lembaga/data_kelas/data_kelas.php" class="<?= str_contains($current_url, 'data_kelas') ? 'active' : '' ?>">Data Kelas</a></li>
-          <li><a href="/RAPORT/Lembaga/data_semester/data_semester.php" class="<?= str_contains($current_url, 'data_semester') ? 'active' : '' ?>">Semester</a></li>
-          <li><a href="/RAPORT/Lembaga/data_mapel/data_mapel.php" class="<?= str_contains($current_url, 'data_mapel') ? 'active' : '' ?>">Mata Pelajaran</a></li>
-          <li><a href="/RAPORT/Lembaga/data_kurlum/data_kurlum.php" class="<?= str_contains($current_url, 'data_kurlum') ? 'active' : '' ?>">Kurikulum</a></li>
-          <li><a href="/RAPORT/Lembaga/data_ekstra/data_ekstra.php" class="<?= str_contains($current_url, 'data_ekstra') ? 'active' : '' ?>">Ekstrakurikuler</a></li>
+          <li><a href="/RAPORT/lembaga/data_sekolah/data_sekolah.php" class="<?= str_contains($current_url, 'data_sekolah') ? 'active' : '' ?>">Data Sekolah</a></li>
+          <li><a href="/RAPORT/lembaga/data_siswa/data_siswa.php" class="<?= str_contains($current_url, 'data_siswa') ? 'active' : '' ?>">Data Siswa</a></li>
+          <li><a href="/RAPORT/lembaga/data_guru/data_guru.php" class="<?= str_contains($current_url, 'data_guru') ? 'active' : '' ?>">Data Guru</a></li>
+          <li><a href="/RAPORT/lembaga/data_kelas/data_kelas.php" class="<?= str_contains($current_url, 'data_kelas') ? 'active' : '' ?>">Data Kelas</a></li>
+          <li><a href="/RAPORT/lembaga/data_semester/data_semester.php" class="<?= str_contains($current_url, 'data_semester') ? 'active' : '' ?>">Semester</a></li>
+          <li><a href="/RAPORT/lembaga/data_mapel/data_mapel.php" class="<?= str_contains($current_url, 'data_mapel') ? 'active' : '' ?>">Mata Pelajaran</a></li>
+          <li><a href="/RAPORT/lembaga/data_kurlum/data_kurlum.php" class="<?= str_contains($current_url, 'data_kurlum') ? 'active' : '' ?>">Kurikulum</a></li>
+          <li><a href="/RAPORT/lembaga/data_ekstra/data_ekstra.php" class="<?= str_contains($current_url, 'data_ekstra') ? 'active' : '' ?>">Ekstrakurikuler</a></li>
         </ul>
       </details>
 
       <!-- MENU RAPOR -->
-      <details <?= str_contains($current_url, '/Rapor/') ? 'open' : '' ?>>
+      <details <?= str_contains($current_url, '/rapor/') ? 'open' : '' ?>>
         <summary><span><i class="fas fa-book"></i> Rapor</span><i class="fas fa-angle-right arrow"></i></summary>
         <ul>
-          <li><a href="/RAPORT/Rapor/pengaturan_cetak_rapor/pengaturan_cetak_rapor.php" class="<?= str_contains($current_url, 'pengaturan_cetak_rapor') ? 'active' : '' ?>">Peraturan Cetak</a></li>
-          <li><a href="/RAPORT/Rapor/nilai_mapel/mapel.php" class="<?= str_contains($current_url, 'nilai_mapel') ? 'active' : '' ?>">Nilai Mapel</a></li>
-          <li><a href="/RAPORT/Rapor/absensi/data_absensi.php" class="<?= str_contains($current_url, 'data_absensi') ? 'active' : '' ?>">Absensi</a></li>
-          <li><a href="/RAPORT/Rapor/nilai_ekstra/nilai_ekstra.php" class="<?= str_contains($current_url, 'nilai_ekstra') ? 'active' : '' ?>">Nilai Ekstrakurikuler</a></li>
-          <li><a href="/RAPORT/Rapor/cetak_rapor/data_rapor.php" class="<?= str_contains($current_url, 'data_rapor') ? 'active' : '' ?>">Cetak Rapor</a></li>
+          <li><a href="/RAPORT/rapor/pengaturan_cetak_rapor/pengaturan_cetak_rapor.php" class="<?= str_contains($current_url, 'pengaturan_cetak_rapor') ? 'active' : '' ?>">Peraturan Cetak</a></li>
+          <li><a href="/RAPORT/rapor/nilai_mapel/mapel.php" class="<?= str_contains($current_url, 'nilai_mapel') ? 'active' : '' ?>">Nilai Mapel</a></li>
+          <li><a href="/RAPORT/rapor/absensi/data_absensi.php" class="<?= str_contains($current_url, 'data_absensi') ? 'active' : '' ?>">Absensi</a></li>
+          <li><a href="/RAPORT/rapor/nilai_ekstra/nilai_ekstra.php" class="<?= str_contains($current_url, 'nilai_ekstra') ? 'active' : '' ?>">Nilai Ekstrakurikuler</a></li>
+          <li><a href="/RAPORT/rapor/cetak_rapor/data_rapor.php" class="<?= str_contains($current_url, 'data_rapor') ? 'active' : '' ?>">Cetak Rapor</a></li>
         </ul>
       </details>
 
       <!-- USER (ONE CLICK + ALWAYS BOLD) -->
-      <a href="/RAPORT/tambah%20user/data_user.php"
+      <a href="/RAPORT/user/data_user.php"
         class="user-link <?= (str_contains($current_url, 'tambah_user') || str_contains($current_url, 'data_user')) ? 'active' : '' ?>">
         <i class="fas fa-user"></i><span>User</span>
       </a>
 
     <?php elseif ($roleKey === 'guru'): ?>
-      <a href="/RAPORT/Lembaga/data_siswa/guru/data_siswa.php"
+      <a href="/RAPORT/lembaga/data_siswa/guru/data_siswa.php"
         class="<?= str_contains($current_url, 'data_siswa') ? 'active' : '' ?>">
         <i class="fas fa-users"></i><span>Data Siswa</span>
       </a>
