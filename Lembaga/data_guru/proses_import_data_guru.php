@@ -1,153 +1,238 @@
 <?php
 // pages/guru/proses_import_data_guru.php
 require_once '../../koneksi.php';
-require_once '../../vendor/autoload.php';
-
-use PhpOffice\PhpSpreadsheet\IOFactory;
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
-$koneksi->set_charset('utf8mb4');
+mysqli_set_charset($koneksi, 'utf8mb4');
 
-function is_ajax_request(): bool
-{
-  return (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
-}
-
-function json_out(array $payload, int $code = 200): void
-{
-  http_response_code($code);
-  header('Content-Type: application/json; charset=utf-8');
-  echo json_encode($payload);
-  exit;
-}
+header('Content-Type: application/json; charset=utf-8');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-  $msg = 'Metode tidak diizinkan.';
-  if (is_ajax_request()) json_out(['ok' => false, 'type' => 'danger', 'msg' => $msg], 405);
-  header('Location: data_guru.php?err=' . urlencode($msg));
+  echo json_encode(['ok' => false, 'type' => 'danger', 'msg' => 'Metode tidak diizinkan.']);
   exit;
 }
 
-if (!isset($_FILES['excel_file']) || !is_uploaded_file($_FILES['excel_file']['tmp_name'])) {
-  $msg = 'Silakan pilih file Excel terlebih dahulu.';
-  if (is_ajax_request()) json_out(['ok' => false, 'type' => 'danger', 'msg' => $msg], 422);
-  header('Location: data_guru.php?err=' . urlencode($msg));
+// support name input: excel_file (punyamu) atau excelFile (contoh siswa)
+$file = null;
+if (isset($_FILES['excel_file'])) $file = $_FILES['excel_file'];
+if (!$file && isset($_FILES['excelFile'])) $file = $_FILES['excelFile'];
+
+if (!$file || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+  echo json_encode(['ok' => false, 'type' => 'warning', 'msg' => 'File Excel belum dipilih atau terjadi kesalahan upload.']);
   exit;
 }
 
-$ALLOWED_JABATAN = ['Kepala Sekolah', 'Guru'];
+$allowedExt = ['xls', 'xlsx'];
+$filename   = $file['name'] ?? '';
+$tmpPath    = $file['tmp_name'] ?? '';
+$ext        = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 
-$success   = 0;
-$skipped   = 0;
-$emptyRows = 0;
+if (!in_array($ext, $allowedExt, true)) {
+  echo json_encode(['ok' => false, 'type' => 'warning', 'msg' => 'Format file tidak didukung. Upload .xls / .xlsx.']);
+  exit;
+}
 
-$skippedReasons = [
-  'duplikat' => 0,
-  'jabatan'  => 0,
-  'kepsek'   => 0,
-  'invalid'  => 0,
+if (!is_uploaded_file($tmpPath)) {
+  echo json_encode(['ok' => false, 'type' => 'danger', 'msg' => 'Upload file tidak valid.']);
+  exit;
+}
+
+// Cari autoload PhpSpreadsheet
+$autoloadCandidates = [
+  __DIR__ . '/../../vendor/autoload.php',
+  __DIR__ . '/../../../vendor/autoload.php',
+  __DIR__ . '/../../../../vendor/autoload.php',
+  __DIR__ . '/vendor/autoload.php',
 ];
 
+$autoloadFound = null;
+foreach ($autoloadCandidates as $p) {
+  if (file_exists($p)) {
+    $autoloadFound = $p;
+    break;
+  }
+}
+
+if (!$autoloadFound) {
+  echo json_encode([
+    'ok' => false,
+    'type' => 'danger',
+    'msg' => 'PhpSpreadsheet belum terpasang. Jalankan: composer require phpoffice/phpspreadsheet (pastikan folder vendor/ ada).'
+  ]);
+  exit;
+}
+
+require_once $autoloadFound;
+
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+
+function norm($v): string
+{
+  $v = trim((string)$v);
+  $v = preg_replace('/\s+/', ' ', $v);
+  return $v;
+}
+
+function lower_key(string $v): string
+{
+  return mb_strtolower($v, 'UTF-8');
+}
+
 try {
-  // cek apakah sudah ada kepala sekolah (sekali saja)
-  $stmtKS = $koneksi->prepare("SELECT COUNT(*) AS cnt FROM guru WHERE jabatan_guru = 'Kepala Sekolah'");
-  $stmtKS->execute();
-  $kepsekExists = ((int)$stmtKS->get_result()->fetch_assoc()['cnt'] > 0);
-  $stmtKS->close();
+  $spreadsheet = IOFactory::load($tmpPath);
+  $sheet = $spreadsheet->getActiveSheet();
 
-  $spreadsheet = IOFactory::load($_FILES['excel_file']['tmp_name']);
-  $sheet       = $spreadsheet->getActiveSheet();
-  $highestRow  = $sheet->getHighestRow();
+  $highestRow = (int)$sheet->getHighestDataRow();
+  $highestCol = (string)$sheet->getHighestDataColumn();
+  $highestColIndex = (int)Coordinate::columnIndexFromString($highestCol);
 
-  // prepared untuk cek duplikat (case-insensitive)
-  $stmtDup = $koneksi->prepare("SELECT COUNT(*) AS cnt FROM guru WHERE LOWER(nama_guru) = LOWER(?)");
-  // prepared untuk insert
-  $stmtIns = $koneksi->prepare("INSERT INTO guru (nama_guru, jabatan_guru) VALUES (?, ?)");
+  // Template guru: A No, B Nama Guru, C Jabatan
+  if ($highestRow < 2 || $highestColIndex < 3) {
+    echo json_encode([
+      'ok' => false,
+      'type' => 'warning',
+      'msg' => 'File Excel tidak sesuai. Pastikan kolom sampai C (No, Nama Guru, Jabatan).'
+    ]);
+    exit;
+  }
 
-  for ($row = 2; $row <= $highestRow; $row++) {
-    $nama    = trim((string)$sheet->getCell('B' . $row)->getValue());
-    $jabatan = trim((string)$sheet->getCell('C' . $row)->getValue());
+  // cek apakah sudah ada kepala sekolah di DB
+  $kepsekExists = false;
+  $qKS = mysqli_query($koneksi, "SELECT COUNT(*) AS cnt FROM guru WHERE jabatan_guru='Kepala Sekolah'");
+  if ($qKS) {
+    $rowKS = mysqli_fetch_assoc($qKS);
+    $kepsekExists = ((int)($rowKS['cnt'] ?? 0) > 0);
+  }
+
+  mysqli_begin_transaction($koneksi);
+
+  $inserted = 0;
+  $skipped_empty = 0;
+  $skipped_invalid = 0;
+  $duplicates_db = 0;
+  $duplicates_file = 0;
+  $errors = [];
+
+  $allowedJabatan = ['Kepala Sekolah', 'Guru'];
+
+  // prepared: cek duplikat di DB berdasarkan (nama|jabatan) case-insensitive
+  $stmtFind = mysqli_prepare(
+    $koneksi,
+    "SELECT id_guru FROM guru WHERE LOWER(nama_guru)=LOWER(?) AND jabatan_guru=? LIMIT 1"
+  );
+
+  // prepared: insert
+  $stmtIns  = mysqli_prepare(
+    $koneksi,
+    "INSERT INTO guru (nama_guru, jabatan_guru) VALUES (?, ?)"
+  );
+
+  // deteksi duplikat di dalam file (nama|jabatan)
+  $seen = [];
+
+  for ($r = 2; $r <= $highestRow; $r++) {
+    // A: No (abaikan)
+    // B: Nama Guru
+    // C: Jabatan
+    $namaRaw    = $sheet->getCell("B{$r}")->getFormattedValue();
+    $jabatanRaw = $sheet->getCell("C{$r}")->getFormattedValue();
+
+    $nama    = norm($namaRaw);
+    $jabatan = norm($jabatanRaw);
 
     if ($nama === '' && $jabatan === '') {
-      $emptyRows++;
+      $skipped_empty++;
       continue;
     }
 
-    if ($nama === '') {
-      $skipped++;
-      $skippedReasons['invalid']++;
+    if ($nama === '' || $jabatan === '') {
+      $skipped_invalid++;
+      $errors[] = "Baris {$r}: data belum lengkap (Nama/Jabatan wajib).";
       continue;
     }
 
-    $jabatanNormalized = ucwords(strtolower($jabatan));
-    if (!in_array($jabatanNormalized, $ALLOWED_JABATAN, true)) {
-      $skipped++;
-      $skippedReasons['jabatan']++;
+    // Normalisasi jabatan agar konsisten
+    $jabKey = lower_key($jabatan);
+    if ($jabKey === 'kepala sekolah' || $jabKey === 'kepalasekolah') $jabatan = 'Kepala Sekolah';
+    else if ($jabKey === 'guru') $jabatan = 'Guru';
+
+    if (!in_array($jabatan, $allowedJabatan, true)) {
+      $skipped_invalid++;
+      $errors[] = "Baris {$r}: Jabatan \"{$jabatanRaw}\" tidak valid (hanya Kepala Sekolah / Guru).";
       continue;
     }
 
-    // cek duplikat nama
-    $stmtDup->bind_param('s', $nama);
-    $stmtDup->execute();
-    $cntDup = (int)$stmtDup->get_result()->fetch_assoc()['cnt'];
-    if ($cntDup > 0) {
-      $skipped++;
-      $skippedReasons['duplikat']++;
+    // duplikat di file (pakai nama|jabatan)
+    $key = lower_key($nama . '|' . $jabatan);
+    if (isset($seen[$key])) {
+      $duplicates_file++;
+      $errors[] = "Baris {$r}: Duplikat di file ({$nama} - {$jabatan}).";
+      continue;
+    }
+    $seen[$key] = true;
+
+    // aturan kepsek hanya 1 (di DB atau sudah masuk pada baris sebelumnya)
+    if ($jabatan === 'Kepala Sekolah' && $kepsekExists) {
+      $skipped_invalid++;
+      $errors[] = "Baris {$r}: Kepala Sekolah sudah ada. Baris di-skip.";
       continue;
     }
 
-    // kepala sekolah cuma 1 (import: kalau sudah ada → skip)
-    if ($jabatanNormalized === 'Kepala Sekolah' && $kepsekExists) {
-      $skipped++;
-      $skippedReasons['kepsek']++;
+    // duplikat di DB (nama|jabatan)
+    mysqli_stmt_bind_param($stmtFind, 'ss', $nama, $jabatan);
+    mysqli_stmt_execute($stmtFind);
+    $resFind = mysqli_stmt_get_result($stmtFind);
+    $found = mysqli_fetch_assoc($resFind);
+
+    if (!empty($found)) {
+      $duplicates_db++;
+      $errors[] = "Baris {$r}: {$nama} ({$jabatan}) sudah ada di database. Baris di-skip.";
       continue;
     }
 
     // insert
-    $stmtIns->bind_param('ss', $nama, $jabatanNormalized);
-    if ($stmtIns->execute()) {
-      $success++;
-      if ($jabatanNormalized === 'Kepala Sekolah') {
-        $kepsekExists = true; // setelah sukses insert kepsek, baris kepsek berikutnya skip
-      }
-    } else {
-      $skipped++;
-      $skippedReasons['invalid']++;
+    mysqli_stmt_bind_param($stmtIns, 'ss', $nama, $jabatan);
+    mysqli_stmt_execute($stmtIns);
+    $inserted++;
+
+    if ($jabatan === 'Kepala Sekolah') {
+      $kepsekExists = true;
     }
   }
 
-  $stmtDup->close();
-  $stmtIns->close();
+  mysqli_stmt_close($stmtFind);
+  mysqli_stmt_close($stmtIns);
 
-  // Susun pesan akhir
-  $parts = [];
-  $parts[] = "Import selesai.";
-  $parts[] = "Berhasil: $success baris.";
+  mysqli_commit($koneksi);
 
-  if ($skipped > 0) {
-    $detail = [];
-    if ($skippedReasons['duplikat'] > 0) $detail[] = "duplikat nama: {$skippedReasons['duplikat']}";
-    if ($skippedReasons['kepsek'] > 0)   $detail[] = "kepala sekolah lebih dari 1: {$skippedReasons['kepsek']}";
-    if ($skippedReasons['jabatan'] > 0)  $detail[] = "jabatan tidak valid: {$skippedReasons['jabatan']}";
-    if ($skippedReasons['invalid'] > 0)  $detail[] = "data tidak valid: {$skippedReasons['invalid']}";
-    $parts[] = "Dilewati: $skipped baris (" . implode(', ', $detail) . ").";
-  }
+  $msg = "Import selesai. Data masuk: {$inserted}, Data duplikat dalam sistem: {$duplicates_db}, Data duplikat dalam file excel: {$duplicates_file}, Baris kosong dilewati: {$skipped_empty}, Data tidak valid: {$skipped_invalid}.";
+  if (!empty($errors)) $msg .= " Ada " . count($errors) . " catatan.";
 
-  if ($emptyRows > 0) {
-    $parts[] = "Baris kosong: $emptyRows baris (diabaikan).";
-  }
-
-  $msg = implode(' ', $parts);
-
-  // kalau ada yang di-skip, tipe warning biar kerasa “ada yang dilewati”
-  $type = ($skipped > 0) ? 'warning' : 'success';
-
-  if (is_ajax_request()) json_out(['ok' => true, 'type' => $type, 'msg' => $msg]);
-  header('Location: data_guru.php?msg=' . urlencode($msg));
+  echo json_encode([
+    'ok' => true,
+    'type' => ($inserted > 0 ? 'success' : 'warning'),
+    'msg' => $msg,
+    'detail' => [
+      'inserted' => $inserted,
+      'duplicates_db' => $duplicates_db,
+      'duplicates_file' => $duplicates_file,
+      'skipped_empty' => $skipped_empty,
+      'skipped_invalid' => $skipped_invalid,
+      'errors' => $errors
+    ]
+  ]);
   exit;
 } catch (Throwable $e) {
-  $msg = 'Gagal memproses file Excel: ' . $e->getMessage();
-  if (is_ajax_request()) json_out(['ok' => false, 'type' => 'danger', 'msg' => $msg], 500);
-  header('Location: data_guru.php?err=' . urlencode($msg));
+  try {
+    mysqli_rollback($koneksi);
+  } catch (Throwable $e2) {
+  }
+
+  echo json_encode([
+    'ok' => false,
+    'type' => 'danger',
+    'msg' => 'Gagal import. Pastikan file sesuai template dan PhpSpreadsheet terpasang.'
+  ]);
   exit;
 }

@@ -1424,7 +1424,7 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
           form.appendChild(inp);
         });
 
-        showDeleteConfirm(`Yakin ingin menghapus ${count} siswa terpilih?`, () => {
+        showDeleteConfirm(`Yakin ingin menghapus ${count} data siswa terpilih?`, () => {
           document.body.appendChild(form);
           form.submit();
         });

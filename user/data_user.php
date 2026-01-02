@@ -1205,7 +1205,7 @@ if ($totalRows === 0) {
         form.appendChild(inp);
       });
 
-      showDeleteConfirm(`Yakin ingin menghapus ${count} user terpilih?`, () => {
+      showDeleteConfirm(`Yakin ingin menghapus ${count} data user terpilih?`, () => {
         document.body.appendChild(form);
         form.submit();
       });

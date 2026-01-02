@@ -18,10 +18,17 @@ function json_out(array $payload, int $code = 200): void
   exit;
 }
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-  if (is_ajax_request()) json_out(['ok' => false, 'type' => 'danger', 'msg' => 'Metode tidak diizinkan.'], 405);
-  header('Location: data_guru.php?err=' . urlencode('Metode tidak diizinkan.'));
+function redirect_with(string $status, string $msg): void
+{
+  $qs = http_build_query(['status' => $status, 'msg' => $msg]);
+  header('Location: data_guru.php?' . $qs);
   exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+  $msg = 'Metode tidak diizinkan.';
+  if (is_ajax_request()) json_out(['ok' => false, 'type' => 'danger', 'msg' => $msg], 405);
+  redirect_with('error', $msg);
 }
 
 $ALLOWED_JABATAN = ['Kepala Sekolah', 'Guru'];
@@ -39,30 +46,11 @@ if (!in_array($jabatan_guru, $ALLOWED_JABATAN, true)) {
 
 if (!empty($errors)) {
   $msg = implode(' | ', $errors);
-  if (is_ajax_request()) json_out(['ok' => false, 'type' => 'danger', 'msg' => $msg], 422);
-  header('Location: data_guru.php?err=' . urlencode($msg));
-  exit;
+  if (is_ajax_request()) json_out(['ok' => false, 'type' => 'warning', 'msg' => $msg], 422);
+  redirect_with('error', $msg);
 }
 
-// ===========================
-// ✅ CEK DUPLIKAT NAMA (case-insensitive)
-// ===========================
-$stmtDup = $koneksi->prepare("SELECT COUNT(*) AS cnt FROM guru WHERE LOWER(nama_guru) = LOWER(?)");
-$stmtDup->bind_param('s', $nama_guru);
-$stmtDup->execute();
-$cntDup = (int)$stmtDup->get_result()->fetch_assoc()['cnt'];
-$stmtDup->close();
-
-if ($cntDup > 0) {
-  $msg = 'Nama guru sudah ada. Silakan gunakan nama lain.';
-  if (is_ajax_request()) json_out(['ok' => false, 'type' => 'danger', 'msg' => $msg], 409);
-  header('Location: data_guru.php?err=' . urlencode($msg));
-  exit;
-}
-
-// ===========================
 // ✅ KEPALA SEKOLAH CUMA 1
-// ===========================
 if ($jabatan_guru === 'Kepala Sekolah') {
   $stmtKS = $koneksi->prepare("SELECT COUNT(*) AS cnt FROM guru WHERE jabatan_guru = 'Kepala Sekolah'");
   $stmtKS->execute();
@@ -71,13 +59,12 @@ if ($jabatan_guru === 'Kepala Sekolah') {
 
   if ($cntKS > 0) {
     $msg = 'Kepala Sekolah hanya boleh 1. Sudah ada data Kepala Sekolah.';
-    if (is_ajax_request()) json_out(['ok' => false, 'type' => 'danger', 'msg' => $msg], 409);
-    header('Location: data_guru.php?err=' . urlencode($msg));
-    exit;
+    if (is_ajax_request()) json_out(['ok' => false, 'type' => 'warning', 'msg' => $msg], 409);
+    redirect_with('error', $msg);
   }
 }
 
-// Insert
+// Insert (nama boleh sama)
 $sql = "INSERT INTO guru (nama_guru, jabatan_guru) VALUES (?, ?)";
 $stmt = $koneksi->prepare($sql);
 $stmt->bind_param('ss', $nama_guru, $jabatan_guru);
@@ -85,11 +72,9 @@ $stmt->bind_param('ss', $nama_guru, $jabatan_guru);
 if ($stmt->execute()) {
   $msg = 'Data guru berhasil ditambahkan.';
   if (is_ajax_request()) json_out(['ok' => true, 'type' => 'success', 'msg' => $msg]);
-  header('Location: data_guru.php?msg=' . urlencode($msg));
-  exit;
+  redirect_with('success', $msg);
 }
 
 $msg = 'Gagal menambahkan data guru.';
 if (is_ajax_request()) json_out(['ok' => false, 'type' => 'danger', 'msg' => $msg], 500);
-header('Location: data_guru.php?err=' . urlencode($msg));
-exit;
+redirect_with('error', $msg);

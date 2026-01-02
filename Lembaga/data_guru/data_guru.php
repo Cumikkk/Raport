@@ -4,8 +4,6 @@ require_once '../../koneksi.php';
 include '../../includes/header.php';
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
-
-// ✅ aman untuk mysqli procedural
 mysqli_set_charset($koneksi, 'utf8mb4');
 
 // Session + CSRF untuk bulk delete
@@ -16,6 +14,18 @@ if (empty($_SESSION['csrf'])) {
   $_SESSION['csrf'] = bin2hex(random_bytes(32));
 }
 $csrf = $_SESSION['csrf'];
+
+// ==========================
+// ALERT PACK (SESSION PAYLOAD) - bisa 2 pesan (success & error)
+// Dipakai untuk pesan panjang (hapus single/bulk)
+// ==========================
+$sessionAlertMulti = null;
+if (isset($_SESSION['dk_alert_guru']) && is_array($_SESSION['dk_alert_guru'])) {
+  $sessionAlertMulti = [
+    'success' => (string)($_SESSION['dk_alert_guru']['success'] ?? ''),
+    'error'   => (string)($_SESSION['dk_alert_guru']['error'] ?? ''),
+  ];
+}
 
 // Search & pagination awal (server-side sebelum AJAX)
 $search = isset($_GET['q']) ? trim($_GET['q']) : '';
@@ -59,7 +69,6 @@ if ($perPage === 0) {
 
 // Ambil data guru untuk tampilan awal
 if ($perPage === 0) {
-  // ✅ semua: tanpa LIMIT/OFFSET
   if ($search !== '') {
     $sql = "
       SELECT id_guru, nama_guru, jabatan_guru
@@ -78,7 +87,6 @@ if ($perPage === 0) {
     $stmt = mysqli_prepare($koneksi, $sql);
   }
 } else {
-  // ✅ normal: pakai LIMIT/OFFSET
   if ($search !== '') {
     $sql = "
       SELECT id_guru, nama_guru, jabatan_guru
@@ -139,15 +147,11 @@ if ($totalRows === 0) {
       --thead: #0a4db3;
       --thead-text: #ffffff;
       --card-radius: 14px;
-      --success: #16a34a;
-      --warn: #f59e0b;
-      --danger: #dc2626;
     }
 
     .content {
       padding: clamp(12px, 2vw, 20px);
       padding-bottom: 260px;
-      /* ✅ ruang bawah agar dropdown perPage tidak kebuka ke atas */
       color: var(--text);
     }
 
@@ -318,10 +322,11 @@ if ($totalRows === 0) {
       font-size: .95rem;
     }
 
+    /* ALERT PACK */
     .dk-alert {
       padding: 12px 14px;
       border-radius: 12px;
-      margin-bottom: 20px;
+      margin-bottom: 12px;
       font-size: 14px;
       max-height: 220px;
       overflow: hidden;
@@ -334,7 +339,7 @@ if ($totalRows === 0) {
 
     .dk-alert.dk-show {
       opacity: 1;
-      transform: translateY(0);
+      transform: translateY(0)
     }
 
     .dk-alert.dk-hide {
@@ -373,18 +378,40 @@ if ($totalRows === 0) {
       opacity: .6;
       font-size: 18px;
       line-height: 1;
+      user-select: none;
     }
 
     .dk-alert .close-btn:hover {
       opacity: 1;
     }
 
-    #alertAreaTop {
-      position: relative;
+    @keyframes dkPulseIn {
+      0% {
+        transform: translateY(-10px);
+        opacity: 0
+      }
+
+      70% {
+        transform: translateY(2px);
+        opacity: 1
+      }
+
+      100% {
+        transform: translateY(0);
+        opacity: 1
+      }
+    }
+
+    .dk-alert.dk-pulse {
+      animation: dkPulseIn .28s ease;
     }
 
     .modal-alert-area {
       margin-bottom: 12px;
+    }
+
+    #alertAreaTop {
+      position: relative;
     }
 
     .pager-area {
@@ -487,21 +514,17 @@ if ($totalRows === 0) {
     <div class="row g-3">
       <div class="col-12">
 
-        <div id="alertAreaTop">
-          <?php if (isset($_GET['msg']) && $_GET['msg'] !== ''): ?>
-            <div class="dk-alert dk-alert-success" data-auto-hide="4000">
-              <span class="close-btn">&times;</span>
-              ✅ <?= htmlspecialchars($_GET['msg'], ENT_QUOTES, 'UTF-8'); ?>
-            </div>
-          <?php endif; ?>
+        <!-- TOP ALERT AREA -->
+        <div id="alertAreaTop"></div>
 
-          <?php if (isset($_GET['err']) && $_GET['err'] !== ''): ?>
-            <div class="dk-alert dk-alert-danger" data-auto-hide="4000">
-              <span class="close-btn">&times;</span>
-              ❌ <?= htmlspecialchars($_GET['err'], ENT_QUOTES, 'UTF-8'); ?>
-            </div>
-          <?php endif; ?>
-        </div>
+        <!-- Session alert payload (hanya dibaca kalau ?alert=1) -->
+        <?php if ($sessionAlertMulti && isset($_GET['alert']) && $_GET['alert'] === '1'): ?>
+          <div id="dkSessionAlertMulti"
+            data-success="<?= htmlspecialchars($sessionAlertMulti['success'], ENT_QUOTES, 'UTF-8'); ?>"
+            data-error="<?= htmlspecialchars($sessionAlertMulti['error'], ENT_QUOTES, 'UTF-8'); ?>"
+            style="display:none;"></div>
+          <?php unset($_SESSION['dk_alert_guru']); ?>
+        <?php endif; ?>
 
         <div class="card shadow-sm">
           <div class="top-bar p-3 p-md-4">
@@ -644,8 +667,7 @@ if ($totalRows === 0) {
     </div>
   </main>
 
-  <!-- ========= MODAL-MODAL (TIDAK BERUBAH dari versi sebelumnya) ========= -->
-  <!-- MODAL TAMBAH -->
+  <!-- MODALS (tetap seperti punyamu) -->
   <div class="modal fade" id="modalTambahGuru" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
@@ -686,7 +708,6 @@ if ($totalRows === 0) {
     </div>
   </div>
 
-  <!-- MODAL EDIT -->
   <div class="modal fade" id="modalEditGuru" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
@@ -727,7 +748,6 @@ if ($totalRows === 0) {
     </div>
   </div>
 
-  <!-- MODAL IMPORT -->
   <div class="modal fade" id="modalImportGuru" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content">
@@ -798,7 +818,6 @@ if ($totalRows === 0) {
     </div>
   </div>
 
-  <!-- MODAL KONFIRMASI HAPUS -->
   <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
@@ -836,6 +855,227 @@ if ($totalRows === 0) {
     }
   </script>
 
+  <!-- ALERT PACK JS -->
+  <script>
+    (function() {
+      const ALERT_DURATION = 4000;
+
+      function escapeHtml(str) {
+        return String(str ?? '')
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", "&#039;");
+      }
+
+      function animateIn(el) {
+        if (!el) return;
+        requestAnimationFrame(() => el.classList.add('dk-show'));
+      }
+
+      function animateOut(el) {
+        if (!el) return;
+        el.classList.add('dk-hide');
+        setTimeout(() => {
+          if (el && el.parentNode) el.parentNode.removeChild(el);
+        }, 450);
+      }
+
+      function wireAlert(el) {
+        if (!el) return;
+        animateIn(el);
+
+        const ms = parseInt(el.getAttribute('data-auto-hide') || String(ALERT_DURATION), 10);
+        const timer = setTimeout(() => animateOut(el), ms);
+        el.dataset.timerId = String(timer);
+
+        const close = el.querySelector('.close-btn');
+        if (close && !close.dataset.bound) {
+          close.dataset.bound = '1';
+          close.addEventListener('click', (e) => {
+            e.preventDefault();
+            const t = el.dataset.timerId ? parseInt(el.dataset.timerId, 10) : 0;
+            if (t) clearTimeout(t);
+            animateOut(el);
+          });
+        }
+      }
+
+      function pulse(el) {
+        if (!el) return;
+        el.classList.remove('dk-pulse');
+        void el.offsetWidth;
+        el.classList.add('dk-pulse');
+      }
+
+      // persist 2 pesan: success di (status,msg) dan error di (err)
+      window.dkPersistAlertsToUrl = function(successMsg, errorMsg) {
+        try {
+          const url = new URL(window.location.href);
+          const sp = url.searchParams;
+
+          if (successMsg) {
+            sp.set('status', 'success');
+            sp.set('msg', String(successMsg));
+          } else {
+            // kalau tidak ada success, msg boleh kosong
+            sp.delete('status');
+            sp.delete('msg');
+          }
+
+          if (errorMsg) {
+            sp.set('err', String(errorMsg));
+          } else {
+            sp.delete('err');
+          }
+
+          // buang token alert session biar tidak dobel
+          sp.delete('alert');
+
+          url.search = sp.toString();
+          window.history.replaceState({}, '', url.toString());
+        } catch (e) {}
+      };
+
+      window.dkPersistAlertToUrl = function(status, message) {
+        try {
+          const url = new URL(window.location.href);
+          const sp = url.searchParams;
+          sp.set('status', String(status || 'success'));
+          sp.set('msg', String(message || ''));
+          // jangan bawa alert token
+          sp.delete('alert');
+          url.search = sp.toString();
+          window.history.replaceState({}, '', url.toString());
+        } catch (e) {}
+      };
+
+      window.dkShowTopAlert = function(type, message) {
+        const area = document.getElementById('alertAreaTop');
+        if (!area) return;
+
+        const ok = (String(type || '').toLowerCase() === 'success');
+        const cls = ok ? 'dk-alert-success' : 'dk-alert-danger';
+        const icon = ok ?
+          '<i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>' :
+          '<i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>';
+
+        const div = document.createElement('div');
+        div.className = `dk-alert ${cls}`;
+        div.setAttribute('data-auto-hide', String(ALERT_DURATION));
+        div.innerHTML = `<span class="close-btn">&times;</span>${icon}${escapeHtml(message)}`;
+
+        area.prepend(div);
+        wireAlert(div);
+
+        try {
+          window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+          });
+        } catch (e) {
+          window.scrollTo(0, 0);
+        }
+      };
+
+      window.dkShowModalWarning = function(containerId, message) {
+        const box = document.getElementById(containerId);
+        if (!box) return;
+
+        const icon = '<i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>';
+        const existing = box.querySelector('.dk-alert');
+
+        if (existing) {
+          const oldTimer = existing.dataset.timerId ? parseInt(existing.dataset.timerId, 10) : 0;
+          if (oldTimer) clearTimeout(oldTimer);
+
+          const msgSpan = existing.querySelector('.dk-msg');
+          if (msgSpan) {
+            msgSpan.textContent = String(message ?? '');
+          } else {
+            existing.innerHTML = `<span class="close-btn">&times;</span>${icon}<span class="dk-msg"></span>`;
+            existing.querySelector('.dk-msg').textContent = String(message ?? '');
+          }
+
+          existing.classList.remove('dk-hide');
+          existing.classList.add('dk-show');
+          pulse(existing);
+
+          const timer = setTimeout(() => animateOut(existing), ALERT_DURATION);
+          existing.dataset.timerId = String(timer);
+
+          const close = existing.querySelector('.close-btn');
+          if (close && !close.dataset.bound) {
+            close.dataset.bound = '1';
+            close.addEventListener('click', (e) => {
+              e.preventDefault();
+              const t = existing.dataset.timerId ? parseInt(existing.dataset.timerId, 10) : 0;
+              if (t) clearTimeout(t);
+              animateOut(existing);
+            });
+          }
+          return;
+        }
+
+        const div = document.createElement('div');
+        div.className = 'dk-alert dk-alert-warning';
+        div.setAttribute('data-auto-hide', String(ALERT_DURATION));
+        div.innerHTML = `<span class="close-btn">&times;</span>${icon}<span class="dk-msg">${escapeHtml(message)}</span>`;
+        box.appendChild(div);
+        wireAlert(div);
+        pulse(div);
+      };
+
+      // ✅ AUTO URL (JANGAN jalan kalau ada token alert=1, biar tidak dobel)
+      (function autoFromUrl() {
+        try {
+          const url = new URL(window.location.href);
+          const sp = url.searchParams;
+
+          // kalau ada alert=1, nanti dibaca dari session payload
+          if (sp.get('alert') === '1') return;
+
+          const st = (sp.get('status') || '').toLowerCase();
+          const msg = sp.get('msg') || '';
+          const err = sp.get('err') || '';
+
+          if (st && msg) {
+            if (st === 'success') window.dkShowTopAlert('success', msg);
+            else window.dkShowTopAlert('danger', msg);
+          }
+          if (err) {
+            window.dkShowTopAlert('danger', err);
+          }
+        } catch (e) {}
+      })();
+
+      // ✅ AUTO SESSION TOKEN (?alert=1) -> tampilkan, lalu simpan ke URL tanpa dobel
+      (function autoFromSessionToken() {
+        try {
+          const url = new URL(window.location.href);
+          const sp = url.searchParams;
+
+          if (sp.get('alert') !== '1') return;
+
+          const el = document.getElementById('dkSessionAlertMulti');
+          if (!el) return;
+
+          const successMsg = (el.getAttribute('data-success') || '').trim();
+          const errorMsg = (el.getAttribute('data-error') || '').trim();
+
+          // tampilkan (bisa 2)
+          if (successMsg) window.dkShowTopAlert('success', successMsg);
+          if (errorMsg) window.dkShowTopAlert('danger', errorMsg);
+
+          // persist ke URL: success -> (status,msg), error -> (err)
+          window.dkPersistAlertsToUrl(successMsg, errorMsg);
+        } catch (e) {}
+      })();
+
+    })();
+  </script>
+
   <script>
     (function() {
       const input = document.getElementById('searchInput');
@@ -857,7 +1097,6 @@ if ($totalRows === 0) {
       const confirmBtn = document.getElementById('confirmDeleteBtn');
 
       let typingTimer;
-      const debounceMs = 250;
       let currentController = null;
 
       let currentQuery = '<?= htmlspecialchars($search, ENT_QUOTES, "UTF-8"); ?>';
@@ -866,88 +1105,6 @@ if ($totalRows === 0) {
       let currentTotalRows = <?= (int)$totalRows ?>;
 
       let pendingDeleteHandler = null;
-
-      const ALERT_DURATION = 4000;
-
-      function animateAlertIn(el) {
-        if (!el) return;
-        requestAnimationFrame(() => el.classList.add('dk-show'));
-      }
-
-      function animateAlertOut(el) {
-        if (!el) return;
-        el.classList.add('dk-hide');
-        setTimeout(() => {
-          if (el && el.parentNode) el.parentNode.removeChild(el);
-        }, 450);
-      }
-
-      function wireAlert(el) {
-        if (!el) return;
-        animateAlertIn(el);
-        const ms = parseInt(el.getAttribute('data-auto-hide') || String(ALERT_DURATION), 10);
-        const timer = setTimeout(() => animateAlertOut(el), ms);
-        const close = el.querySelector('.close-btn');
-        if (close) {
-          close.addEventListener('click', (e) => {
-            e.preventDefault();
-            clearTimeout(timer);
-            animateAlertOut(el);
-          });
-        }
-      }
-
-      function escapeHtml(str) {
-        return String(str ?? '')
-          .replaceAll('&', '&amp;')
-          .replaceAll('<', '&lt;')
-          .replaceAll('>', '&gt;')
-          .replaceAll('"', '&quot;')
-          .replaceAll("'", "&#039;");
-      }
-
-      function showTopAlert(type, message) {
-        const area = document.getElementById('alertAreaTop');
-        if (!area) return;
-
-        const cls = type === 'success' ? 'dk-alert-success' :
-          type === 'warning' ? 'dk-alert-warning' :
-          'dk-alert-danger';
-        const icon = type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '❌';
-
-        const div = document.createElement('div');
-        div.className = `dk-alert ${cls}`;
-        div.setAttribute('data-auto-hide', String(ALERT_DURATION));
-        div.innerHTML = `<span class="close-btn">&times;</span> ${icon} ${escapeHtml(message)}`;
-
-        area.prepend(div);
-        wireAlert(div);
-        window.scrollTo({
-          top: 0,
-          behavior: 'smooth'
-        });
-      }
-
-      function showModalAlert(containerId, type, message) {
-        const box = document.getElementById(containerId);
-        if (!box) return;
-
-        box.innerHTML = '';
-        const cls = type === 'success' ? 'dk-alert-success' :
-          type === 'warning' ? 'dk-alert-warning' :
-          'dk-alert-danger';
-        const icon = type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '❌';
-
-        const div = document.createElement('div');
-        div.className = `dk-alert ${cls}`;
-        div.setAttribute('data-auto-hide', String(ALERT_DURATION));
-        div.innerHTML = `<span class="close-btn">&times;</span> ${icon} ${escapeHtml(message)}`;
-
-        box.appendChild(div);
-        wireAlert(div);
-      }
-
-      document.querySelectorAll('#alertAreaTop .dk-alert').forEach(wireAlert);
 
       function scrollToTable() {
         if (!tableWrap) return;
@@ -1084,9 +1241,8 @@ if ($totalRows === 0) {
         const totalPages = allMode ? 1 : Math.max(1, Math.ceil(totalRows / perPage));
 
         let shown;
-        if (totalRows === 0) {
-          shown = 0;
-        } else if (allMode) {
+        if (totalRows === 0) shown = 0;
+        else if (allMode) {
           shown = totalRows;
           page = 1;
         } else {
@@ -1115,9 +1271,8 @@ if ($totalRows === 0) {
         html += makeLi(isFirst, 1, '« First');
         html += makeLi(isFirst, Math.max(1, (allMode ? 1 : page - 1)), '‹ Prev');
 
-        if (allMode) {
-          html += makeLi(false, 1, '1', true);
-        } else {
+        if (allMode) html += makeLi(false, 1, '1', true);
+        else {
           const start = Math.max(1, page - 2);
           const end = Math.min(totalPages, page + 2);
           for (let i = start; i <= end; i++) html += makeLi(false, i, String(i), i === page);
@@ -1247,7 +1402,7 @@ if ($totalRows === 0) {
         clearTimeout(typingTimer);
         typingTimer = setTimeout(() => {
           doSearch(input.value, 1, currentPerPage, false);
-        }, debounceMs);
+        }, 250);
       });
 
       if (perPageSelect) {
@@ -1292,18 +1447,17 @@ if ($totalRows === 0) {
 
           const data = await res.json().catch(() => null);
           if (!data) {
-            showModalAlert(modalAlertId, 'danger', 'Respon server tidak valid.');
-            disableBtn(btn, false);
+            window.dkShowModalWarning(modalAlertId, 'Respon server tidak valid.');
             return;
           }
 
           if (data.ok) {
             onSuccess && onSuccess(data);
           } else {
-            showModalAlert(modalAlertId, data.type || 'danger', data.msg || 'Terjadi kesalahan.');
+            window.dkShowModalWarning(modalAlertId, data.msg || 'Terjadi kesalahan.');
           }
         } catch (err) {
-          showModalAlert(modalAlertId, 'danger', 'Gagal terhubung ke server.');
+          window.dkShowModalWarning(modalAlertId, 'Gagal terhubung ke server.');
           console.error(err);
         } finally {
           disableBtn(btn, false);
@@ -1323,7 +1477,9 @@ if ($totalRows === 0) {
             }
             formTambah.reset();
             doSearch(currentQuery, 1, currentPerPage, true);
-            showTopAlert(data.type || 'success', data.msg || 'Berhasil.');
+
+            window.dkShowTopAlert('success', data.msg || 'Data guru berhasil ditambahkan.');
+            window.dkPersistAlertToUrl('success', data.msg || 'Data guru berhasil ditambahkan.');
           });
         });
       }
@@ -1340,7 +1496,9 @@ if ($totalRows === 0) {
               bootstrap.Modal.getOrCreateInstance(modalEditEl).hide();
             }
             doSearch(currentQuery, 1, currentPerPage, true);
-            showTopAlert(data.type || 'success', data.msg || 'Berhasil.');
+
+            window.dkShowTopAlert('success', data.msg || 'Data guru berhasil diperbarui.');
+            window.dkPersistAlertToUrl('success', data.msg || 'Data guru berhasil diperbarui.');
           });
         });
       }
@@ -1360,7 +1518,12 @@ if ($totalRows === 0) {
             toggleClearButtonGuruImport();
 
             doSearch(currentQuery, 1, currentPerPage, true);
-            showTopAlert(data.type || 'success', data.msg || 'Import selesai.');
+
+            const topType = (String(data.type || '').toLowerCase() === 'success') ? 'success' : 'danger';
+            const persistStatus = (topType === 'success') ? 'success' : 'error';
+
+            window.dkShowTopAlert(topType, data.msg || 'Import selesai.');
+            window.dkPersistAlertToUrl(persistStatus, data.msg || 'Import selesai.');
           });
         });
       }
