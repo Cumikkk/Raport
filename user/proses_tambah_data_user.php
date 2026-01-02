@@ -57,7 +57,7 @@ mysqli_stmt_bind_param($stmt, 's', $username);
 mysqli_stmt_execute($stmt);
 $res = mysqli_stmt_get_result($stmt);
 if (mysqli_num_rows($res) > 0) {
-    $msg = 'Username sudah digunakan.';
+    $msg = 'Username sudah dipakai.';
     if ($isAjax) json_response(false, $msg);
     redirect_to_modal('add', $msg);
 }

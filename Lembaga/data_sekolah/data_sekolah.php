@@ -172,80 +172,6 @@ $data = $res->fetch_assoc() ?: [];
       gap: var(--gap);
     }
 
-    .alert {
-      padding: 12px 14px;
-      border-radius: 12px;
-      margin-bottom: var(--gap);
-      font-size: 14px;
-      transition:
-        opacity 0.4s ease,
-        transform 0.4s ease,
-        max-height 0.4s ease,
-        margin 0.4s ease,
-        padding-top 0.4s ease,
-        padding-bottom 0.4s ease;
-      max-height: 200px;
-      overflow: hidden;
-      position: relative;
-      will-change: opacity, transform, max-height;
-    }
-
-    /* ✅ Animasi MUNCUL */
-    .alert-enter {
-      opacity: 0;
-      transform: translateY(-10px);
-      max-height: 0;
-      margin-bottom: 0;
-      padding-top: 0;
-      padding-bottom: 0;
-    }
-
-    .alert-enter.alert-enter-active {
-      opacity: 1;
-      transform: translateY(0);
-      max-height: 200px;
-      margin-bottom: var(--gap);
-      padding-top: 12px;
-      padding-bottom: 12px;
-    }
-
-    .alert-success {
-      background: #e8f8ee;
-      border: 1px solid #c8efd9;
-      color: #166534;
-    }
-
-    .alert-danger {
-      background: #fdecec;
-      border: 1px solid #f5c2c2;
-      color: #991b1b;
-    }
-
-    /* ✅ FIX: selector dibuat 2 class + important biar ngalahin enter-active */
-    .alert.alert-hide {
-      opacity: 0 !important;
-      transform: translateY(-4px) !important;
-      max-height: 0 !important;
-      margin: 0 !important;
-      padding-top: 0 !important;
-      padding-bottom: 0 !important;
-    }
-
-    .alert .close-btn {
-      position: absolute;
-      top: 14px;
-      right: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      opacity: 0.6;
-      font-size: 18px;
-      line-height: 1;
-    }
-
-    .alert .close-btn:hover {
-      opacity: 1;
-    }
-
     .logo-wrap {
       display: flex;
       flex-direction: column;
@@ -462,6 +388,92 @@ $data = $res->fetch_assoc() ?: [];
       outline: none !important;
       box-shadow: none !important;
     }
+
+    /* =========================
+      [ALERT PACK TEMPLATE] - DK ALERT
+    ========================= */
+    .dk-alert {
+      padding: 12px 14px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      font-size: 14px;
+      max-height: 220px;
+      overflow: hidden;
+      position: relative;
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: opacity .35s ease, transform .35s ease,
+        max-height .35s ease, margin .35s ease, padding .35s ease;
+    }
+
+    .dk-alert.dk-show {
+      opacity: 1;
+      transform: translateY(0)
+    }
+
+    .dk-alert.dk-hide {
+      opacity: 0;
+      transform: translateY(-6px);
+      max-height: 0;
+      margin: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+
+    .dk-alert-success {
+      background: #e8f8ee;
+      border: 1px solid #c8efd9;
+      color: #166534;
+    }
+
+    .dk-alert-danger {
+      background: #fdecec;
+      border: 1px solid #f5c2c2;
+      color: #991b1b;
+    }
+
+    .dk-alert-warning {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      color: #9a3412;
+    }
+
+    .dk-alert .close-btn {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      opacity: .6;
+      font-size: 18px;
+      line-height: 1;
+      user-select: none;
+    }
+
+    .dk-alert .close-btn:hover {
+      opacity: 1;
+    }
+
+    @keyframes dkPulseIn {
+      0% {
+        transform: translateY(-10px);
+        opacity: 0
+      }
+
+      70% {
+        transform: translateY(2px);
+        opacity: 1
+      }
+
+      100% {
+        transform: translateY(0);
+        opacity: 1
+      }
+    }
+
+    .dk-alert.dk-pulse {
+      animation: dkPulseIn .28s ease;
+    }
   </style>
 
   <div class="dk-page">
@@ -472,23 +484,36 @@ $data = $res->fetch_assoc() ?: [];
 
             <div class="page-title"></div>
 
-            <?php if (isset($_GET['status'])): ?>
-              <?php if ($_GET['status'] === 'success'): ?>
-                <div class="alert alert-success alert-enter" data-auto-scroll="1">
-                  <span class="close-btn">&times;</span>
-                  ✅ Data sekolah berhasil disimpan.
-                </div>
-              <?php else: ?>
-                <div class="alert alert-danger alert-enter" data-auto-scroll="1">
-                  <span class="close-btn">&times;</span>
-                  ❌ Gagal menyimpan data sekolah
-                  <?= isset($_GET['msg']) ? ': ' . htmlspecialchars($_GET['msg']) : '' ?>.
-                </div>
+            <!-- =========================
+              (B) HTML AREA ALERT TOP
+            ========================= -->
+            <div id="alertAreaTop" style="position:relative;">
+              <?php if (isset($_GET['status'])): ?>
+                <?php
+                $st = (string)$_GET['status'];
+                $msg = $_GET['msg'] ?? '';
+                ?>
+                <?php if ($st === 'success'): ?>
+                  <div class="dk-alert dk-alert-success" data-auto-hide="4000">
+                    <span class="close-btn">&times;</span>
+                    <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
+                    <?= htmlspecialchars($msg ?: 'Data sekolah berhasil disimpan.', ENT_QUOTES, 'UTF-8'); ?>
+                  </div>
+                <?php elseif ($st === 'deleted'): ?>
+                  <div class="dk-alert dk-alert-success" data-auto-hide="4000">
+                    <span class="close-btn">&times;</span>
+                    <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
+                    Berhasil menghapus data: <strong><?= htmlspecialchars($_GET['item'] ?? '-', ENT_QUOTES, 'UTF-8'); ?></strong>
+                  </div>
+                <?php else: ?>
+                  <div class="dk-alert dk-alert-danger" data-auto-hide="4000">
+                    <span class="close-btn">&times;</span>
+                    <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
+                    <?= htmlspecialchars($msg ?: 'Gagal menyimpan data sekolah.', ENT_QUOTES, 'UTF-8'); ?>
+                  </div>
+                <?php endif; ?>
               <?php endif; ?>
-            <?php endif; ?>
-
-            <!-- ✅ ALERT UI UNTUK VALIDASI JS -->
-            <div id="jsAlertContainer"></div>
+            </div>
 
             <div class="grid">
               <div class="card">
@@ -633,64 +658,92 @@ $data = $res->fetch_assoc() ?: [];
     </div>
   </div>
 
+  <!-- ========== (D) JS HELPER ALERT (DK) ========== -->
   <script>
-    function animateInAlert(el, doScroll = true) {
-      if (!el) return;
+    (function() {
+      const ALERT_DURATION = 4000;
 
-      if (doScroll) {
-        window.scrollTo({
-          top: 0,
-          behavior: 'smooth'
-        });
+      function escapeHtml(str) {
+        return String(str ?? '')
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", "&#039;");
       }
 
-      if (!el.classList.contains('alert-enter')) el.classList.add('alert-enter');
-
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          el.classList.add('alert-enter-active');
-        });
-      });
-    }
-
-    // ✅ FIX: saat hide, buang class enter-active biar ga “ngunci” max-height/padding
-    function hideAlert(el) {
-      if (!el) return;
-      el.classList.remove('alert-enter-active');
-      el.classList.add('alert-hide');
-    }
-
-    function showUiAlert(type, message) {
-      const container = document.getElementById('jsAlertContainer');
-      if (!container) return;
-
-      const el = document.createElement('div');
-      el.className = `alert alert-${type} alert-enter`;
-      el.innerHTML = `<span class="close-btn">&times;</span>${message}`;
-
-      container.prepend(el);
-
-      animateInAlert(el, true);
-
-      const timer = setTimeout(() => {
-        hideAlert(el);
-      }, 4000);
-
-      const close = el.querySelector('.close-btn');
-      if (close) {
-        close.addEventListener('click', (e) => {
-          e.preventDefault();
-          hideAlert(el);
-          clearTimeout(timer);
-        });
+      function animateAlertIn(el) {
+        if (!el) return;
+        requestAnimationFrame(() => el.classList.add('dk-show'));
       }
-    }
+
+      function animateAlertOut(el) {
+        if (!el) return;
+        el.classList.add('dk-hide');
+        setTimeout(() => {
+          if (el && el.parentNode) el.parentNode.removeChild(el);
+        }, 450);
+      }
+
+      function wireAlert(el) {
+        if (!el) return;
+        animateAlertIn(el);
+
+        const ms = parseInt(el.getAttribute('data-auto-hide') || String(ALERT_DURATION), 10);
+        const timer = setTimeout(() => animateAlertOut(el), ms);
+        el.dataset.timerId = String(timer);
+
+        const close = el.querySelector('.close-btn');
+        if (close && !close.dataset.bound) {
+          close.dataset.bound = '1';
+          close.addEventListener('click', (e) => {
+            e.preventDefault();
+            const t = el.dataset.timerId ? parseInt(el.dataset.timerId, 10) : 0;
+            if (t) clearTimeout(t);
+            animateAlertOut(el);
+          });
+        }
+      }
+
+      // ✅ Top alert (success/danger)
+      window.dkShowTopAlert = function(type, message) {
+        const area = document.getElementById('alertAreaTop');
+        if (!area) return;
+
+        const cls = (type === 'success') ? 'dk-alert-success' : 'dk-alert-danger';
+        const icon = (type === 'success') ?
+          '<i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>' :
+          '<i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>';
+
+        const div = document.createElement('div');
+        div.className = `dk-alert ${cls}`;
+        div.setAttribute('data-auto-hide', String(ALERT_DURATION));
+        div.innerHTML = `<span class="close-btn">&times;</span>${icon}${escapeHtml(message)}`;
+
+        area.prepend(div);
+        wireAlert(div);
+
+        try {
+          window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+          });
+        } catch (e) {
+          window.scrollTo(0, 0);
+        }
+      };
+
+      // ✅ auto wire alert yang sudah ada dari PHP
+      document.querySelectorAll('#alertAreaTop .dk-alert').forEach(wireAlert);
+    })();
   </script>
 
   <script>
     // --- VALIDASI WAJIB ISI SEMUA INPUT + ERROR MERAH & SCROLL KE PERTAMA YANG KOSONG ---
     document.addEventListener("DOMContentLoaded", () => {
       const form = document.getElementById("formSekolah");
+      if (!form) return;
+
       const inputs = form.querySelectorAll(".form-control:not([type='file'])");
       const checkbox = document.getElementById("confirm");
       const btnSubmit = form.querySelector("button[type='submit']");
@@ -774,6 +827,10 @@ $data = $res->fetch_assoc() ?: [];
               behavior: "smooth",
               block: "center"
             });
+
+            if (typeof window.dkShowTopAlert === 'function') {
+              window.dkShowTopAlert('danger', '❌ Mohon lengkapi semua field yang wajib diisi.');
+            }
           }
         }
       });
@@ -848,14 +905,18 @@ $data = $res->fetch_assoc() ?: [];
 
         const okTypes = ['image/jpeg', 'image/png', 'image/webp'];
         if (!okTypes.includes(f.type)) {
-          showUiAlert('danger', '❌ Format gambar harus JPG / PNG / WebP.');
+          if (typeof window.dkShowTopAlert === 'function') {
+            window.dkShowTopAlert('danger', '❌ Format gambar harus JPG / PNG / WebP.');
+          }
           resetFileInput();
           return;
         }
 
         const max = 10 * 1024 * 1024;
         if (f.size > max) {
-          showUiAlert('danger', '❌ Ukuran logo melebihi 10MB.');
+          if (typeof window.dkShowTopAlert === 'function') {
+            window.dkShowTopAlert('danger', '❌ Ukuran logo melebihi 10MB.');
+          }
           resetFileInput();
           return;
         }
@@ -926,7 +987,9 @@ $data = $res->fetch_assoc() ?: [];
           imgPreview.src = previewUrl;
           imgPreview.onload = () => URL.revokeObjectURL(previewUrl);
 
-          showUiAlert('success', '✅ Logo berhasil diproses. Jangan lupa klik Simpan.');
+          if (typeof window.dkShowTopAlert === 'function') {
+            window.dkShowTopAlert('success', '✅ Logo berhasil diproses. Jangan lupa klik Simpan.');
+          }
 
           destroyCropper();
           cleanupUrl();
@@ -934,34 +997,6 @@ $data = $res->fetch_assoc() ?: [];
 
           lastSelectedFile = null;
         }, mime, 0.92);
-      });
-    });
-  </script>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // PHP alert saat page load
-      const firstAlert = document.querySelector('.alert[data-auto-scroll="1"]') || document.querySelector('.alert');
-      if (firstAlert) {
-        animateInAlert(firstAlert, true);
-      }
-
-      const alerts = document.querySelectorAll('.alert');
-      if (!alerts.length) return;
-
-      alerts.forEach(alert => {
-        const timer = setTimeout(() => {
-          hideAlert(alert);
-        }, 4000);
-
-        const close = alert.querySelector('.close-btn');
-        if (close) {
-          close.addEventListener('click', (e) => {
-            e.preventDefault();
-            hideAlert(alert);
-            clearTimeout(timer);
-          });
-        }
       });
     });
   </script>

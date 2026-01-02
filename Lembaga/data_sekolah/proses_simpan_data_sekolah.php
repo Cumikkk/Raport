@@ -1,15 +1,19 @@
 <?php
+// pages/sekolah/proses_simpan_data_sekolah.php
 require_once '../../koneksi.php';
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $koneksi->set_charset('utf8mb4');
 
-function redirectBack($ok, $msg = '')
+function redirectBack(bool $ok, string $msg = ''): void
 {
-    $q = $ok ? 'success' : 'fail';
-    $loc = 'data_sekolah.php?status=' . $q;
-    if (!$ok && $msg) {
+    // ✅ samakan dengan template dk-alert: success / error
+    $status = $ok ? 'success' : 'error';
+    $loc = 'data_sekolah.php?status=' . $status;
+
+    if ($msg !== '') {
         $loc .= '&msg=' . rawurlencode($msg);
     }
+
     header('Location: ' . $loc);
     exit;
 }
@@ -29,26 +33,30 @@ try {
     $prov       = isset($_POST['provinsi_sekolah']) ? trim($_POST['provinsi_sekolah']) : '';
 
     if ($nama === '') {
-        redirectBack(false, 'Nama sekolah wajib diisi');
+        redirectBack(false, 'Nama sekolah wajib diisi.');
+    }
+    if ($nsm === '' || $npsn === '' || $alamat === '' || $telp === '' || $kec === '' || $kabkota === '' || $prov === '') {
+        redirectBack(false, 'Mohon lengkapi semua field yang wajib diisi.');
     }
 
     // ----- Upload logo (opsional) -----
     $logoFinal = $old;
     if (isset($_FILES['logo_sekolah']) && $_FILES['logo_sekolah']['error'] !== UPLOAD_ERR_NO_FILE) {
         $f = $_FILES['logo_sekolah'];
+
         if ($f['error'] !== UPLOAD_ERR_OK) {
-            redirectBack(false, 'Gagal mengunggah file');
+            redirectBack(false, 'Gagal mengunggah file.');
         }
 
         $max = 10 * 1024 * 1024; // 10MB
         if ($f['size'] > $max) {
-            redirectBack(false, 'Ukuran logo melebihi 10MB');
+            redirectBack(false, 'Ukuran logo melebihi 10MB.');
         }
 
         $allowedExt = ['jpg', 'jpeg', 'png', 'webp'];
         $ext = strtolower(pathinfo($f['name'], PATHINFO_EXTENSION));
         if (!in_array($ext, $allowedExt, true)) {
-            redirectBack(false, 'Format logo harus jpg/jpeg/png/webp');
+            redirectBack(false, 'Format logo harus jpg/jpeg/png/webp.');
         }
 
         // Buat nama file aman & unik
@@ -62,7 +70,7 @@ try {
 
         $dst = $dstDir . '/' . $newName;
         if (!move_uploaded_file($f['tmp_name'], $dst)) {
-            redirectBack(false, 'Gagal memindahkan file upload');
+            redirectBack(false, 'Gagal memindahkan file upload.');
         }
 
         $logoFinal = $newName;
@@ -102,7 +110,7 @@ try {
         $stmt->execute();
     }
 
-    redirectBack(true);
+    redirectBack(true, 'Data sekolah berhasil disimpan.');
 } catch (Throwable $e) {
     redirectBack(false, $e->getMessage());
 }

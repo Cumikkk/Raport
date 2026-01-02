@@ -75,8 +75,6 @@ while ($g = mysqli_fetch_assoc($guruRes)) {
 
 // Hitung info awal
 if ($totalRows === 0) {
-  $from = 0;
-  $to   = 0;
   $shown = 0;
   $pageDisplayCurrent = 0;
   $pageDisplayTotal   = 0;
@@ -108,7 +106,6 @@ if ($totalRows === 0) {
   .content {
     padding: clamp(12px, 2vw, 20px);
     padding-bottom: 260px;
-    /* ✅ ruang bawah agar dropdown perPage kebuka ke bawah */
     color: var(--text);
   }
 
@@ -158,6 +155,10 @@ if ($totalRows === 0) {
     color: #9aa3af;
   }
 
+  .searchbox:focus-within {
+    box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
+  }
+
   .table thead th {
     white-space: nowrap;
     background: var(--thead);
@@ -185,7 +186,6 @@ if ($totalRows === 0) {
     font-family: monospace;
   }
 
-  /* TRANSISI TABEL + OVERLAY LOADING */
   #userTbody {
     transition: opacity 0.25s ease, transform 0.25s ease;
   }
@@ -222,7 +222,6 @@ if ($totalRows === 0) {
     pointer-events: auto;
   }
 
-  /* Tombol & hover */
   .btn-brand {
     background: #0a4db3 !important;
     border-color: #0a4db3 !important;
@@ -244,7 +243,6 @@ if ($totalRows === 0) {
   .btn-warning:hover {
     background: #d98d26 !important;
     border-color: #c77e20 !important;
-    color: #fff !important;
   }
 
   .btn-danger {
@@ -256,7 +254,6 @@ if ($totalRows === 0) {
   .btn-danger:hover {
     background: #c0392b !important;
     border-color: #a93226 !important;
-    color: #fff !important;
   }
 
   .btn-outline-secondary {
@@ -279,7 +276,6 @@ if ($totalRows === 0) {
     color: #333 !important;
   }
 
-  /* Styling dropdown per halaman */
   #perPage {
     border: 1px solid var(--ring);
     border-radius: 10px;
@@ -298,50 +294,28 @@ if ($totalRows === 0) {
     font-size: 0.95rem;
   }
 
-  /* ===========================
-     ✅ ALERT ANIMATION
-     =========================== */
-  .alert {
+  /* ✅ ALERT (MODEL DATA_GURU) */
+  .dk-alert {
     padding: 12px 14px;
     border-radius: 12px;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
     font-size: 14px;
     max-height: 220px;
     overflow: hidden;
     position: relative;
-  }
 
-  .alert-success {
-    background: #e8f8ee;
-    border: 1px solid #c8efd9;
-    color: #166534;
-  }
-
-  .alert-danger {
-    background: #fdecec;
-    border: 1px solid #f5c2c2;
-    color: #991b1b;
-  }
-
-  .alert-anim {
     opacity: 0;
-    transform: translateY(-8px);
-    transition:
-      opacity 0.35s ease,
-      transform 0.35s ease,
-      max-height 0.35s ease,
-      margin 0.35s ease,
-      padding-top 0.35s ease,
-      padding-bottom 0.35s ease;
-    will-change: opacity, transform;
+    transform: translateY(-10px);
+    transition: opacity .35s ease, transform .35s ease,
+      max-height .35s ease, margin .35s ease, padding .35s ease;
   }
 
-  .alert-show {
+  .dk-alert.dk-show {
     opacity: 1;
     transform: translateY(0);
   }
 
-  .alert-hide {
+  .dk-alert.dk-hide {
     opacity: 0;
     transform: translateY(-6px);
     max-height: 0;
@@ -350,23 +324,67 @@ if ($totalRows === 0) {
     padding-bottom: 0;
   }
 
-  .alert .close-btn {
+  .dk-alert-success {
+    background: #e8f8ee;
+    border: 1px solid #c8efd9;
+    color: #166534;
+  }
+
+  .dk-alert-danger {
+    background: #fdecec;
+    border: 1px solid #f5c2c2;
+    color: #991b1b;
+  }
+
+  .dk-alert-warning {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    color: #9a3412;
+  }
+
+  .dk-alert .close-btn {
     position: absolute;
     top: 14px;
     right: 14px;
-    font-weight: 700;
+    font-weight: 800;
     cursor: pointer;
-    opacity: 0.6;
+    opacity: .6;
     font-size: 18px;
     line-height: 1;
     user-select: none;
   }
 
-  .alert .close-btn:hover {
+  .dk-alert .close-btn:hover {
     opacity: 1;
   }
 
-  /* ✅ PAGINATION GROUP */
+  .modal-alert-area {
+    margin-bottom: 12px;
+  }
+
+  /* ✅ tambahan: animasi “muncul” ulang saat spam (TANPA reload/bling) */
+  @keyframes dkPulseIn {
+    0% {
+      transform: translateY(-10px);
+      opacity: 0;
+    }
+
+    70% {
+      transform: translateY(2px);
+      opacity: 1;
+    }
+
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .dk-alert.dk-pulse {
+    animation: dkPulseIn .28s ease;
+  }
+
+  /* ✅ PAGINATION */
   .pager-area {
     display: flex;
     flex-direction: column;
@@ -440,7 +458,7 @@ if ($totalRows === 0) {
 
     table.table tbody td::before {
       content: attr(data-label);
-      font-weight: 700;
+      font-weight: 800;
       color: var(--ink);
     }
 
@@ -462,28 +480,25 @@ if ($totalRows === 0) {
       width: 100%;
     }
   }
-
-  .searchbox:focus-within {
-    box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
-  }
 </style>
 
 <main class="content">
   <div class="row g-3">
     <div class="col-12">
 
-      <!-- CONTAINER ALERT GLOBAL -->
-      <div id="globalAlertContainer">
+      <div id="alertAreaTop" style="position:relative;">
         <?php if (isset($_GET['status'])): ?>
           <?php if ($_GET['status'] === 'success'): ?>
-            <div class="alert alert-success alert-anim">
+            <div class="dk-alert dk-alert-success" data-auto-hide="4000">
               <span class="close-btn">&times;</span>
-              ✅ <?= htmlspecialchars($_GET['msg'] ?? 'Operasi berhasil.', ENT_QUOTES, 'UTF-8'); ?>
+              <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
+              <?= htmlspecialchars($_GET['msg'] ?? 'Operasi berhasil.', ENT_QUOTES, 'UTF-8'); ?>
             </div>
           <?php else: ?>
-            <div class="alert alert-danger alert-anim">
+            <div class="dk-alert dk-alert-danger" data-auto-hide="4000">
               <span class="close-btn">&times;</span>
-              ❌ <?= htmlspecialchars($_GET['msg'] ?? 'Terjadi kesalahan.', ENT_QUOTES, 'UTF-8'); ?>
+              <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
+              <?= htmlspecialchars($_GET['msg'] ?? 'Terjadi kesalahan.', ENT_QUOTES, 'UTF-8'); ?>
             </div>
           <?php endif; ?>
         <?php endif; ?>
@@ -648,9 +663,9 @@ if ($totalRows === 0) {
           <h5 class="modal-title">Tambah Data User</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
         </div>
-        <form action="proses_tambah_data_user.php" method="POST" autocomplete="off">
+        <form id="formTambahUser" action="proses_tambah_data_user.php" method="POST" autocomplete="off">
           <div class="modal-body">
-            <div id="addUserAlert" class="alert alert-danger alert-anim d-none mb-3"></div>
+            <div id="modalAlertTambahUser" class="modal-alert-area"></div>
 
             <div class="mb-3">
               <label for="add_role" class="form-label fw-semibold">Role</label>
@@ -685,7 +700,7 @@ if ($totalRows === 0) {
             <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-dismiss="modal">
               <i class="bi bi-x-lg"></i> Batal
             </button>
-            <button type="submit" class="btn btn-brand d-inline-flex align-items-center gap-2">
+            <button type="submit" id="btnSubmitTambahUser" class="btn btn-brand d-inline-flex align-items-center gap-2">
               <i class="bi bi-check2-circle"></i> Simpan
             </button>
           </div>
@@ -702,10 +717,10 @@ if ($totalRows === 0) {
           <h5 class="modal-title">Edit Data User</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
         </div>
-        <form action="proses_edit_data_user.php" method="POST" autocomplete="off">
+        <form id="formEditUser" action="proses_edit_data_user.php" method="POST" autocomplete="off">
           <input type="hidden" name="id_user" id="edit_id_user">
           <div class="modal-body">
-            <div id="editUserAlert" class="alert alert-danger alert-anim d-none mb-3"></div>
+            <div id="modalAlertEditUser" class="modal-alert-area"></div>
 
             <div class="mb-3">
               <label for="edit_role" class="form-label fw-semibold">Role</label>
@@ -740,7 +755,7 @@ if ($totalRows === 0) {
             <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" data-bs-dismiss="modal">
               <i class="bi bi-x-lg"></i> Batal
             </button>
-            <button type="submit" class="btn btn-brand d-inline-flex align-items-center gap-2">
+            <button type="submit" id="btnSubmitEditUser" class="btn btn-brand d-inline-flex align-items-center gap-2">
               <i class="bi bi-save"></i> Simpan Perubahan
             </button>
           </div>
@@ -794,10 +809,6 @@ if ($totalRows === 0) {
     const confirmBodyEl = document.getElementById('confirmDeleteBody');
     const confirmBtn = document.getElementById('confirmDeleteBtn');
 
-    const addUserAlert = document.getElementById('addUserAlert');
-    const editUserAlert = document.getElementById('editUserAlert');
-    const globalAlertContainer = document.getElementById('globalAlertContainer');
-
     const modalAddEl = document.getElementById('modalTambahUser');
     const modalEditEl = document.getElementById('modalEditUser');
 
@@ -812,8 +823,67 @@ if ($totalRows === 0) {
 
     let pendingDeleteHandler = null;
 
-    // ✅ AUTO SCROLL KE ATAS SAAT ALERT MUNCUL
-    function scrollToTopSmooth() {
+    const ALERT_DURATION = 4000;
+
+    function animateAlertIn(el) {
+      if (!el) return;
+      requestAnimationFrame(() => el.classList.add('dk-show'));
+    }
+
+    function animateAlertOut(el) {
+      if (!el) return;
+      el.classList.add('dk-hide');
+      setTimeout(() => {
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+      }, 450);
+    }
+
+    function wireAlert(el) {
+      if (!el) return;
+      animateAlertIn(el);
+
+      const ms = parseInt(el.getAttribute('data-auto-hide') || String(ALERT_DURATION), 10);
+      const timer = setTimeout(() => animateAlertOut(el), ms);
+      el.dataset.timerId = String(timer);
+
+      const close = el.querySelector('.close-btn');
+      if (close && !close.dataset.bound) {
+        close.dataset.bound = '1';
+        close.addEventListener('click', (e) => {
+          e.preventDefault();
+          const t = el.dataset.timerId ? parseInt(el.dataset.timerId, 10) : 0;
+          if (t) clearTimeout(t);
+          animateAlertOut(el);
+        });
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", "&#039;");
+    }
+
+    function showTopAlert(type, message) {
+      const area = document.getElementById('alertAreaTop');
+      if (!area) return;
+
+      const cls = (type === 'success') ? 'dk-alert-success' : 'dk-alert-danger';
+      const icon = (type === 'success') ?
+        '<i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>' :
+        '<i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>';
+
+      const div = document.createElement('div');
+      div.className = `dk-alert ${cls}`;
+      div.setAttribute('data-auto-hide', String(ALERT_DURATION));
+      div.innerHTML = `<span class="close-btn">&times;</span>${icon}${escapeHtml(message)}`;
+
+      area.prepend(div);
+      wireAlert(div);
+
       try {
         window.scrollTo({
           top: 0,
@@ -822,168 +892,71 @@ if ($totalRows === 0) {
       } catch (e) {
         window.scrollTo(0, 0);
       }
-      // fallback tambahan (beberapa browser)
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
     }
 
-    // ✅ PAKSA AUTO SCROLL KE ATAS jika ada alert (global / modal)
-    function forceScrollTopOnAlertRender(el) {
+    // ✅ bikin animasi muncul ulang tanpa bikin elemen baru
+    function pulseAlert(el) {
       if (!el) return;
+      el.classList.remove('dk-pulse');
+      void el.offsetWidth; // force reflow biar animasi ke-trigger ulang
+      el.classList.add('dk-pulse');
+    }
 
-      // Delay kecil supaya DOM sudah ke-render sebelum scroll
-      setTimeout(() => {
-        scrollToTopSmooth();
+    // ✅ Modal alert: SELALU warning kuning + icon warning
+    // ✅ kalau spam submit: update teks + reset timer + animasi muncul lagi
+    function showModalWarning(containerId, message) {
+      const box = document.getElementById(containerId);
+      if (!box) return;
 
-        // Kalau alert-nya di dalam modal, scroll body modal juga ke atas
-        const modal = el.closest('.modal');
-        if (modal) {
-          const modalBody = modal.querySelector('.modal-body');
-          if (modalBody) {
-            try {
-              modalBody.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-              });
-            } catch (e) {
-              modalBody.scrollTop = 0;
-            }
-          }
-          const modalDialog = modal.querySelector('.modal-dialog');
-          if (modalDialog) {
-            try {
-              modalDialog.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-              });
-            } catch (e) {}
-          }
+      const icon = '<i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>';
+      const existing = box.querySelector('.dk-alert');
+
+      if (existing) {
+        const oldTimer = existing.dataset.timerId ? parseInt(existing.dataset.timerId, 10) : 0;
+        if (oldTimer) clearTimeout(oldTimer);
+
+        const msgSpan = existing.querySelector('.dk-msg');
+        if (msgSpan) {
+          msgSpan.textContent = String(message ?? '');
+        } else {
+          existing.innerHTML = `<span class="close-btn">&times;</span>${icon}<span class="dk-msg"></span>`;
+          existing.querySelector('.dk-msg').textContent = String(message ?? '');
         }
-      }, 10);
-    }
 
-    /* ===========================
-       ✅ ALERT HELPERS (AMAN)
-       =========================== */
-    function animateIn(el) {
-      if (!el) return;
-      el.classList.add('alert-anim');
-      requestAnimationFrame(() => el.classList.add('alert-show'));
-      forceScrollTopOnAlertRender(el); // ✅ otomatis scroll saat alert muncul
-    }
+        existing.classList.remove('dk-hide');
+        existing.classList.add('dk-show');
 
-    function animateOut(el, after) {
-      if (!el) return;
-      if (!el.isConnected) return;
-      el.classList.remove('alert-show');
-      el.classList.add('alert-hide');
-      setTimeout(() => {
-        if (typeof after === 'function') after();
-      }, 350);
-    }
+        // ✅ trigger animasi “muncul” lagi
+        pulseAlert(existing);
 
-    function stopAlertTimer(box) {
-      if (!box) return;
-      const t = box.dataset.timerId ? parseInt(box.dataset.timerId, 10) : 0;
-      if (t) {
-        clearTimeout(t);
-        delete box.dataset.timerId;
+        const timer = setTimeout(() => animateAlertOut(existing), ALERT_DURATION);
+        existing.dataset.timerId = String(timer);
+
+        const close = existing.querySelector('.close-btn');
+        if (close && !close.dataset.bound) {
+          close.dataset.bound = '1';
+          close.addEventListener('click', (e) => {
+            e.preventDefault();
+            const t = existing.dataset.timerId ? parseInt(existing.dataset.timerId, 10) : 0;
+            if (t) clearTimeout(t);
+            animateAlertOut(existing);
+          });
+        }
+        return;
       }
+
+      // belum ada: buat sekali
+      const div = document.createElement('div');
+      div.className = 'dk-alert dk-alert-warning';
+      div.setAttribute('data-auto-hide', String(ALERT_DURATION));
+      div.innerHTML = `<span class="close-btn">&times;</span>${icon}<span class="dk-msg">${escapeHtml(message)}</span>`;
+      box.appendChild(div);
+      wireAlert(div);
+      pulseAlert(div);
     }
 
-    function clearModalAlert(mode) {
-      const box = (mode === 'add') ? addUserAlert : editUserAlert;
-      if (!box) return;
-      stopAlertTimer(box);
-      box.innerHTML = '';
-      box.classList.add('d-none');
-      box.classList.remove('alert-hide', 'alert-show');
-    }
-
-    function showModalAlert(mode, message) {
-      const box = (mode === 'add') ? addUserAlert : editUserAlert;
-      if (!box) return;
-
-      // ✅ bersihkan timer sebelumnya
-      stopAlertTimer(box);
-
-      box.classList.remove('d-none', 'alert-hide', 'alert-show');
-      box.innerHTML = `<span class="close-btn">&times;</span> ${message}`;
-      animateIn(box);
-
-      const closeBtn = box.querySelector('.close-btn');
-
-      const hide = () => {
-        if (!box.isConnected || box.classList.contains('d-none')) return;
-        animateOut(box, () => {
-          box.classList.add('d-none');
-          box.innerHTML = '';
-          box.classList.remove('alert-hide', 'alert-show');
-          stopAlertTimer(box);
-        });
-      };
-
-      const timer = setTimeout(hide, 4000);
-      box.dataset.timerId = String(timer);
-
-      if (closeBtn) {
-        closeBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          stopAlertTimer(box);
-          hide();
-        }, {
-          once: true
-        });
-      }
-    }
-
-    function showTopAlert(type, message) {
-      if (!globalAlertContainer) return;
-      const isSuccess = (type === 'success');
-
-      globalAlertContainer.innerHTML =
-        `<div class="alert ${isSuccess ? 'alert-success' : 'alert-danger'} alert-anim">
-        <span class="close-btn">&times;</span>
-        ${isSuccess ? '✅' : '❌'} ${message}
-      </div>`;
-
-      const alertEl = globalAlertContainer.querySelector('.alert');
-      if (!alertEl) return;
-
-      animateIn(alertEl);
-
-      const closeBtn = alertEl.querySelector('.close-btn');
-      const timer = setTimeout(() => animateOut(alertEl), 4000);
-
-      if (closeBtn) {
-        closeBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          clearTimeout(timer);
-          animateOut(alertEl);
-        });
-      }
-    }
-
-    // ✅ MutationObserver: kalau ada alert global baru (dari operasi apa pun), otomatis scroll ke atas
-    (function observeGlobalAlert() {
-      if (!globalAlertContainer || typeof MutationObserver === 'undefined') return;
-      const obs = new MutationObserver(() => {
-        const al = globalAlertContainer.querySelector('.alert');
-        if (al) forceScrollTopOnAlertRender(al);
-      });
-      obs.observe(globalAlertContainer, {
-        childList: true,
-        subtree: true
-      });
-    })();
-
-    // ✅ saat modal ditutup: matikan timer & bersihkan alert (fix error menghilang)
-    if (modalAddEl && typeof bootstrap !== 'undefined') {
-      modalAddEl.addEventListener('hidden.bs.modal', () => clearModalAlert('add'));
-    }
-    if (modalEditEl && typeof bootstrap !== 'undefined') {
-      modalEditEl.addEventListener('hidden.bs.modal', () => clearModalAlert('edit'));
-    }
+    // animasikan alert top dari PHP jika ada
+    document.querySelectorAll('#alertAreaTop .dk-alert').forEach(wireAlert);
 
     function scrollToTable() {
       if (!tableWrap) return;
@@ -1107,6 +1080,9 @@ if ($totalRows === 0) {
           if (inputUser) inputUser.value = username;
           if (inputPass) inputPass.value = '';
 
+          const box = document.getElementById('modalAlertEditUser');
+          if (box) box.innerHTML = '';
+
           if (typeof bootstrap !== 'undefined') {
             bootstrap.Modal.getOrCreateInstance(modalEl).show();
           }
@@ -1119,10 +1095,8 @@ if ($totalRows === 0) {
       buttons.forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.preventDefault();
-
           const href = btn.getAttribute('data-href');
           const label = btn.getAttribute('data-label') || 'user ini';
-
           showDeleteConfirm(`Yakin ingin menghapus user "${label}"?`, () => {
             window.location.href = href;
           });
@@ -1275,7 +1249,6 @@ if ($totalRows === 0) {
             const pg = parseInt(metaRow.getAttribute('data-page') || '1', 10);
             const pp = parseInt(metaRow.getAttribute('data-per') || String(currentPerPage), 10);
             metaRow.parentNode.removeChild(metaRow);
-
             buildPagination(isNaN(total) ? 0 : total, isNaN(pg) ? 1 : pg, isNaN(pp) ? currentPerPage : pp);
           }
 
@@ -1293,57 +1266,6 @@ if ($totalRows === 0) {
         });
     }
 
-    function handleFormSubmit(form, mode) {
-      clearModalAlert(mode);
-
-      const submitBtn = form.querySelector('button[type="submit"]');
-      const origHtml = submitBtn ? submitBtn.innerHTML : '';
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Menyimpan...';
-      }
-
-      fetch(form.action, {
-          method: 'POST',
-          body: new FormData(form),
-          headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-          }
-        })
-        .then(r => {
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          return r.json();
-        })
-        .then(data => {
-          if (!data || typeof data.success === 'undefined') throw new Error('Respon tidak valid');
-
-          if (!data.success) {
-            showModalAlert(mode, data.message || 'Terjadi kesalahan.');
-            return;
-          }
-
-          if (typeof bootstrap !== 'undefined') {
-            const modalEl = mode === 'add' ? modalAddEl : modalEditEl;
-            if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).hide();
-          }
-
-          showTopAlert('success', data.message || 'Berhasil menyimpan data.');
-          doSearch(currentQuery, currentPage, currentPerPage, true);
-
-          if (mode === 'add') form.reset();
-        })
-        .catch(err => {
-          console.error(err);
-          showModalAlert(mode, 'Gagal mengirim data ke server.');
-        })
-        .finally(() => {
-          if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = origHtml;
-          }
-        });
-    }
-
     input.addEventListener('input', () => {
       clearTimeout(typingTimer);
       typingTimer = setTimeout(() => doSearch(input.value, 1, currentPerPage, false), debounceMs);
@@ -1358,47 +1280,99 @@ if ($totalRows === 0) {
       });
     }
 
-    // init
+    function disableBtn(btn, loading) {
+      if (!btn) return;
+      btn.disabled = !!loading;
+      if (loading) {
+        btn.dataset.oldHtml = btn.innerHTML;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status"></span> Memproses...`;
+      } else if (btn.dataset.oldHtml) {
+        btn.innerHTML = btn.dataset.oldHtml;
+        delete btn.dataset.oldHtml;
+      }
+    }
+
+    async function postFormAjax(form, btn, modalAlertId, onSuccess) {
+      if (!form) return;
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+
+      disableBtn(btn, true);
+
+      try {
+        const fd = new FormData(form);
+        const res = await fetch(form.getAttribute('action'), {
+          method: 'POST',
+          body: fd,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        });
+
+        const data = await res.json().catch(() => null);
+        if (!data) {
+          showModalWarning(modalAlertId, 'Respon server tidak valid.');
+          return;
+        }
+
+        const ok = (typeof data.ok !== 'undefined') ? !!data.ok : !!data.success;
+        const msg = (data.msg ?? data.message ?? (ok ? 'Berhasil.' : 'Terjadi kesalahan.'));
+        const type = (data.type ?? (ok ? 'success' : 'danger'));
+
+        if (ok) {
+          onSuccess && onSuccess({
+            type: type,
+            msg: msg
+          });
+        } else {
+          showModalWarning(modalAlertId, msg);
+        }
+      } catch (err) {
+        showModalWarning(modalAlertId, 'Gagal terhubung ke server.');
+        console.error(err);
+      } finally {
+        disableBtn(btn, false);
+      }
+    }
+
+    const formTambah = document.getElementById('formTambahUser');
+    const btnTambah = document.getElementById('btnSubmitTambahUser');
+    if (formTambah) {
+      formTambah.addEventListener('submit', (e) => {
+        e.preventDefault();
+        postFormAjax(formTambah, btnTambah, 'modalAlertTambahUser', (data) => {
+          if (typeof bootstrap !== 'undefined' && modalAddEl) {
+            bootstrap.Modal.getOrCreateInstance(modalAddEl).hide();
+          }
+          formTambah.reset();
+          doSearch(currentQuery, 1, currentPerPage, true);
+          showTopAlert('success', data.msg || 'Berhasil menyimpan data.');
+        });
+      });
+    }
+
+    const formEdit = document.getElementById('formEditUser');
+    const btnEdit = document.getElementById('btnSubmitEditUser');
+    if (formEdit) {
+      formEdit.addEventListener('submit', (e) => {
+        e.preventDefault();
+        postFormAjax(formEdit, btnEdit, 'modalAlertEditUser', (data) => {
+          if (typeof bootstrap !== 'undefined' && modalEditEl) {
+            bootstrap.Modal.getOrCreateInstance(modalEditEl).hide();
+          }
+          doSearch(currentQuery, 1, currentPerPage, true);
+          showTopAlert('success', data.msg || 'Berhasil menyimpan data.');
+        });
+      });
+    }
+
     attachCheckboxEvents();
     attachPasswordToggleEvents();
     attachEditModalEvents();
     attachSingleDeleteEvents();
     buildPagination(currentTotalRows, currentPage, currentPerPage);
-
-    const formAdd = document.querySelector('#modalTambahUser form');
-    if (formAdd) formAdd.addEventListener('submit', (e) => {
-      e.preventDefault();
-      handleFormSubmit(formAdd, 'add');
-    });
-
-    const formEdit = document.querySelector('#modalEditUser form');
-    if (formEdit) formEdit.addEventListener('submit', (e) => {
-      e.preventDefault();
-      handleFormSubmit(formEdit, 'edit');
-    });
-
-    // animasikan alert global yang sudah ada dari PHP
-    document.addEventListener('DOMContentLoaded', () => {
-      const existing = globalAlertContainer ? globalAlertContainer.querySelectorAll('.alert.alert-anim') : [];
-
-      if (existing.length > 0) {
-        // ✅ kalau ada alert dari redirect hapus/tambah/edit dll, auto scroll ke atas
-        scrollToTopSmooth();
-      }
-
-      existing.forEach(alertEl => {
-        animateIn(alertEl);
-        const closeBtn = alertEl.querySelector('.close-btn');
-        const timer = setTimeout(() => animateOut(alertEl), 4000);
-        if (closeBtn) {
-          closeBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            clearTimeout(timer);
-            animateOut(alertEl);
-          });
-        }
-      });
-    });
 
   })();
 </script>
