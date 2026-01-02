@@ -2,7 +2,7 @@
 // pages/semester/data_semester.php
 
 // ====== CEK PARAMETER ALERT (SETELAH SIMPAN) ======
-$alertMsg = '';
+$alertMsg  = '';
 $alertType = ''; // success | danger
 
 if (isset($_GET['msg'])) {
@@ -27,7 +27,7 @@ include '../../includes/header.php';
   <?php include '../../includes/navbar.php'; ?>
 
   <style>
-    /* ===== Alert style (meniru pola di data guru) ===== */
+    /* ===== Alert style ===== */
     .dk-alert {
       padding: 12px 14px;
       border-radius: 12px;
@@ -92,15 +92,33 @@ include '../../includes/header.php';
   <div class="dk-page" style="margin-top: 50px;">
     <div class="dk-main">
 
-      <!-- ✅ ALERT DI LUAR BOX/CARD (SEPERTI DATA GURU) -->
+      <!-- ✅ ALERT DI LUAR BOX/CARD -->
       <div class="container py-3">
         <div id="alertAreaTop">
-          <?php if ($alertMsg !== ''): ?>
-            <div class="dk-alert <?= $alertType === 'success' ? 'dk-alert-success' : 'dk-alert-danger' ?>" data-auto-hide="5000">
-              <span class="close-btn">&times;</span>
-              <?= $alertType === 'success' ? '✅' : '❌' ?>
-              <?= htmlspecialchars($alertMsg, ENT_QUOTES, 'UTF-8'); ?>
-            </div>
+          <?php if ($alertMsg !== '' && $alertType !== ''): ?>
+            <?php
+            $storeType = ($alertType === 'success') ? 'success' : 'danger';
+            $storeMsg  = $alertMsg;
+            ?>
+            <?php if ($alertType === 'success'): ?>
+              <div class="dk-alert dk-alert-success"
+                data-auto-hide="4000"
+                data-dk-type="<?= htmlspecialchars($storeType, ENT_QUOTES, 'UTF-8'); ?>"
+                data-dk-msg="<?= htmlspecialchars($storeMsg, ENT_QUOTES, 'UTF-8'); ?>">
+                <span class="close-btn">&times;</span>
+                <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
+                <?= htmlspecialchars($alertMsg, ENT_QUOTES, 'UTF-8'); ?>
+              </div>
+            <?php else: ?>
+              <div class="dk-alert dk-alert-danger"
+                data-auto-hide="4000"
+                data-dk-type="<?= htmlspecialchars($storeType, ENT_QUOTES, 'UTF-8'); ?>"
+                data-dk-msg="<?= htmlspecialchars($storeMsg, ENT_QUOTES, 'UTF-8'); ?>">
+                <span class="close-btn">&times;</span>
+                <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
+                <?= htmlspecialchars($alertMsg, ENT_QUOTES, 'UTF-8'); ?>
+              </div>
+            <?php endif; ?>
           <?php endif; ?>
         </div>
       </div>
@@ -164,10 +182,28 @@ include '../../includes/header.php';
     </div>
   </div>
 
-  <!-- ✅ AUTO HIDE + CLOSE (DK ALERT) -->
+  <!-- ✅ ALERT: hanya bisa diulang saat REFRESH, bukan saat pindah halaman -->
   <script>
     (function() {
-      const ALERT_DURATION = 5000;
+      const ALERT_DURATION = 4000;
+      const DK_ALERT_STORE_KEY = 'dk_top_alert_semester_v2_last';
+
+      function escapeHtml(str) {
+        return String(str ?? '')
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", "&#039;");
+      }
+
+      function getNavType() {
+        try {
+          const nav = performance.getEntriesByType('navigation');
+          if (nav && nav[0] && nav[0].type) return nav[0].type; // 'navigate' | 'reload' | 'back_forward'
+        } catch (e) {}
+        return 'navigate';
+      }
 
       function animateAlertIn(el) {
         if (!el) return;
@@ -182,24 +218,120 @@ include '../../includes/header.php';
         }, 450);
       }
 
+      function saveLastAlert(type, message) {
+        try {
+          sessionStorage.setItem(DK_ALERT_STORE_KEY, JSON.stringify({
+            type: String(type || ''),
+            message: String(message || ''),
+            path: String(location.pathname || ''),
+            savedAt: Date.now()
+          }));
+        } catch (e) {}
+      }
+
+      function clearLastAlert() {
+        try {
+          sessionStorage.removeItem(DK_ALERT_STORE_KEY);
+        } catch (e) {}
+      }
+
+      function clearAllTopAlerts(area) {
+        if (!area) return;
+        area.querySelectorAll('.dk-alert').forEach((el) => el.remove());
+      }
+
       function wireAlert(el) {
         if (!el) return;
         animateAlertIn(el);
 
         const ms = parseInt(el.getAttribute('data-auto-hide') || String(ALERT_DURATION), 10);
         const timer = setTimeout(() => animateAlertOut(el), ms);
+        el.dataset.timerId = String(timer);
 
         const close = el.querySelector('.close-btn');
-        if (close) {
+        if (close && !close.dataset.bound) {
+          close.dataset.bound = '1';
           close.addEventListener('click', (e) => {
             e.preventDefault();
-            clearTimeout(timer);
+            const t = el.dataset.timerId ? parseInt(el.dataset.timerId, 10) : 0;
+            if (t) clearTimeout(t);
+
+            // klik X => jangan ulang saat refresh
+            clearLastAlert();
             animateAlertOut(el);
           });
         }
       }
 
-      document.querySelectorAll('#alertAreaTop .dk-alert').forEach(wireAlert);
+      // hapus param msg dari URL tanpa reload
+      function cleanStatusUrlParams() {
+        try {
+          const url = new URL(window.location.href);
+          if (!url.searchParams.has('msg')) return;
+
+          url.searchParams.delete('msg');
+          const newUrl = url.pathname + (url.searchParams.toString() ? ('?' + url.searchParams.toString()) : '') + url.hash;
+          window.history.replaceState({}, document.title, newUrl);
+        } catch (e) {}
+      }
+
+      // show 1 alert saja + simpan sebagai "terakhir"
+      window.dkShowTopAlert = function(type, message, persist = true) {
+        const area = document.getElementById('alertAreaTop');
+        if (!area) return;
+
+        clearAllTopAlerts(area);
+
+        const cls = (type === 'success') ? 'dk-alert-success' : 'dk-alert-danger';
+        const icon = (type === 'success') ?
+          '<i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>' :
+          '<i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>';
+
+        const div = document.createElement('div');
+        div.className = `dk-alert ${cls}`;
+        div.setAttribute('data-auto-hide', String(ALERT_DURATION));
+        div.innerHTML = `<span class="close-btn">&times;</span>${icon}${escapeHtml(message)}`;
+
+        area.prepend(div);
+        wireAlert(div);
+
+        if (persist) saveLastAlert(type, message);
+      };
+
+      const navType = getNavType();
+
+      // RULE UTAMA:
+      // - Jika bukan reload (navigate/back_forward) => hapus storage, supaya pindah halaman tidak bisa mengulang alert
+      if (navType !== 'reload') {
+        clearLastAlert();
+      }
+
+      // 1) kalau ada alert dari PHP: simpan sebagai last alert, bersihkan URL param, selesai
+      const phpAlerts = document.querySelectorAll('#alertAreaTop .dk-alert');
+      if (phpAlerts.length > 0) {
+        phpAlerts.forEach(wireAlert);
+
+        const first = phpAlerts[0];
+        const t = first.getAttribute('data-dk-type') || (first.classList.contains('dk-alert-success') ? 'success' : 'danger');
+        const m = first.getAttribute('data-dk-msg') || '';
+        if (m.trim() !== '') saveLastAlert(t, m);
+
+        cleanStatusUrlParams();
+        return;
+      }
+
+      // 2) tidak ada alert PHP => restore HANYA saat reload
+      if (navType === 'reload') {
+        try {
+          const raw = sessionStorage.getItem(DK_ALERT_STORE_KEY);
+          if (raw) {
+            const obj = JSON.parse(raw);
+            if (obj && obj.type && obj.message && obj.path === String(location.pathname || '')) {
+              window.dkShowTopAlert(obj.type, obj.message, false);
+            }
+          }
+        } catch (e) {}
+      }
     })();
   </script>
 

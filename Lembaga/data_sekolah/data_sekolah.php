@@ -687,7 +687,7 @@ $data = $res->fetch_assoc() ?: [];
   <script>
     (function() {
       const ALERT_DURATION = 4000;
-      const DK_ALERT_STORE_KEY = 'dk_top_alert_v3_last';
+      const DK_ALERT_STORE_KEY = 'dk_top_alert_v4_last';
 
       function escapeHtml(str) {
         return String(str ?? '')
@@ -696,6 +696,14 @@ $data = $res->fetch_assoc() ?: [];
           .replaceAll('>', '&gt;')
           .replaceAll('"', '&quot;')
           .replaceAll("'", "&#039;");
+      }
+
+      function getNavType() {
+        try {
+          const nav = performance.getEntriesByType('navigation');
+          if (nav && nav[0] && nav[0].type) return nav[0].type; // 'navigate' | 'reload' | 'back_forward'
+        } catch (e) {}
+        return 'navigate';
       }
 
       function animateAlertIn(el) {
@@ -716,6 +724,7 @@ $data = $res->fetch_assoc() ?: [];
           sessionStorage.setItem(DK_ALERT_STORE_KEY, JSON.stringify({
             type: String(type || ''),
             message: String(message || ''),
+            path: String(location.pathname || ''),
             savedAt: Date.now()
           }));
         } catch (e) {}
@@ -803,6 +812,15 @@ $data = $res->fetch_assoc() ?: [];
         }
       };
 
+      const navType = getNavType();
+
+      // RULE UTAMA:
+      // - Kalau user MASUK halaman karena navigate/back_forward => jangan pernah restore alert
+      // - Alert hanya boleh "repeat" saat reload
+      if (navType !== 'reload') {
+        clearLastAlert();
+      }
+
       // 1) kalau ada alert dari PHP: jadikan "last alert", lalu bersihkan URL paramnya
       const phpAlerts = document.querySelectorAll('#alertAreaTop .dk-alert');
       if (phpAlerts.length > 0) {
@@ -813,21 +831,23 @@ $data = $res->fetch_assoc() ?: [];
         const m = first.getAttribute('data-dk-msg') || '';
         if (m.trim() !== '') saveLastAlert(t, m);
 
-        // ini kunci utama biar refresh berikutnya tidak selalu memunculkan alert PHP yang sama
+        // penting: biar URL bersih, tapi alert masih bisa diulang via refresh
         cleanStatusUrlParams();
         return;
       }
 
-      // 2) tidak ada alert PHP => restore last alert
-      try {
-        const raw = sessionStorage.getItem(DK_ALERT_STORE_KEY);
-        if (raw) {
-          const obj = JSON.parse(raw);
-          if (obj && obj.type && obj.message) {
-            window.dkShowTopAlert(obj.type, obj.message, false);
+      // 2) tidak ada alert PHP => restore HANYA saat reload
+      if (navType === 'reload') {
+        try {
+          const raw = sessionStorage.getItem(DK_ALERT_STORE_KEY);
+          if (raw) {
+            const obj = JSON.parse(raw);
+            if (obj && obj.type && obj.message && obj.path === String(location.pathname || '')) {
+              window.dkShowTopAlert(obj.type, obj.message, false);
+            }
           }
-        }
-      } catch (e) {}
+        } catch (e) {}
+      }
     })();
   </script>
 
