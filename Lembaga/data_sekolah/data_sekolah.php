@@ -491,25 +491,50 @@ $data = $res->fetch_assoc() ?: [];
               <?php if (isset($_GET['status'])): ?>
                 <?php
                 $st = (string)$_GET['status'];
-                $msg = $_GET['msg'] ?? '';
+                $msgRaw = (string)($_GET['msg'] ?? '');
+
+                // pesan plain (buat disimpan)
+                $storeType = 'danger';
+                $storeMsg  = $msgRaw ?: 'Gagal menyimpan data sekolah.';
+
+                if ($st === 'success') {
+                  $storeType = 'success';
+                  $storeMsg  = $msgRaw ?: 'Data sekolah berhasil disimpan.';
+                } elseif ($st === 'deleted') {
+                  $storeType = 'success';
+                  $item = (string)($_GET['item'] ?? '-');
+                  $storeMsg = 'Berhasil menghapus data: ' . $item;
+                } else {
+                  $storeType = 'danger';
+                  $storeMsg  = $msgRaw ?: 'Gagal menyimpan data sekolah.';
+                }
                 ?>
                 <?php if ($st === 'success'): ?>
-                  <div class="dk-alert dk-alert-success" data-auto-hide="4000">
+                  <div class="dk-alert dk-alert-success"
+                    data-auto-hide="4000"
+                    data-dk-type="<?= htmlspecialchars($storeType, ENT_QUOTES, 'UTF-8'); ?>"
+                    data-dk-msg="<?= htmlspecialchars($storeMsg, ENT_QUOTES, 'UTF-8'); ?>">
                     <span class="close-btn">&times;</span>
                     <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
-                    <?= htmlspecialchars($msg ?: 'Data sekolah berhasil disimpan.', ENT_QUOTES, 'UTF-8'); ?>
+                    <?= htmlspecialchars($msgRaw ?: 'Data sekolah berhasil disimpan.', ENT_QUOTES, 'UTF-8'); ?>
                   </div>
                 <?php elseif ($st === 'deleted'): ?>
-                  <div class="dk-alert dk-alert-success" data-auto-hide="4000">
+                  <div class="dk-alert dk-alert-success"
+                    data-auto-hide="4000"
+                    data-dk-type="<?= htmlspecialchars($storeType, ENT_QUOTES, 'UTF-8'); ?>"
+                    data-dk-msg="<?= htmlspecialchars($storeMsg, ENT_QUOTES, 'UTF-8'); ?>">
                     <span class="close-btn">&times;</span>
                     <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
                     Berhasil menghapus data: <strong><?= htmlspecialchars($_GET['item'] ?? '-', ENT_QUOTES, 'UTF-8'); ?></strong>
                   </div>
                 <?php else: ?>
-                  <div class="dk-alert dk-alert-danger" data-auto-hide="4000">
+                  <div class="dk-alert dk-alert-danger"
+                    data-auto-hide="4000"
+                    data-dk-type="<?= htmlspecialchars($storeType, ENT_QUOTES, 'UTF-8'); ?>"
+                    data-dk-msg="<?= htmlspecialchars($storeMsg, ENT_QUOTES, 'UTF-8'); ?>">
                     <span class="close-btn">&times;</span>
                     <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
-                    <?= htmlspecialchars($msg ?: 'Gagal menyimpan data sekolah.', ENT_QUOTES, 'UTF-8'); ?>
+                    <?= htmlspecialchars($msgRaw ?: 'Gagal menyimpan data sekolah.', ENT_QUOTES, 'UTF-8'); ?>
                   </div>
                 <?php endif; ?>
               <?php endif; ?>
@@ -662,6 +687,7 @@ $data = $res->fetch_assoc() ?: [];
   <script>
     (function() {
       const ALERT_DURATION = 4000;
+      const DK_ALERT_STORE_KEY = 'dk_top_alert_v3_last';
 
       function escapeHtml(str) {
         return String(str ?? '')
@@ -685,6 +711,27 @@ $data = $res->fetch_assoc() ?: [];
         }, 450);
       }
 
+      function saveLastAlert(type, message) {
+        try {
+          sessionStorage.setItem(DK_ALERT_STORE_KEY, JSON.stringify({
+            type: String(type || ''),
+            message: String(message || ''),
+            savedAt: Date.now()
+          }));
+        } catch (e) {}
+      }
+
+      function clearLastAlert() {
+        try {
+          sessionStorage.removeItem(DK_ALERT_STORE_KEY);
+        } catch (e) {}
+      }
+
+      function clearAllTopAlerts(area) {
+        if (!area) return;
+        area.querySelectorAll('.dk-alert').forEach((el) => el.remove());
+      }
+
       function wireAlert(el) {
         if (!el) return;
         animateAlertIn(el);
@@ -700,15 +747,36 @@ $data = $res->fetch_assoc() ?: [];
             e.preventDefault();
             const t = el.dataset.timerId ? parseInt(el.dataset.timerId, 10) : 0;
             if (t) clearTimeout(t);
+
+            // klik X => jangan ulang saat refresh
+            clearLastAlert();
             animateAlertOut(el);
           });
         }
       }
 
-      // ✅ Top alert (success/danger)
-      window.dkShowTopAlert = function(type, message) {
+      // hapus param status/msg/item dari URL tanpa reload
+      function cleanStatusUrlParams() {
+        try {
+          const url = new URL(window.location.href);
+          const has = url.searchParams.has('status') || url.searchParams.has('msg') || url.searchParams.has('item');
+          if (!has) return;
+
+          url.searchParams.delete('status');
+          url.searchParams.delete('msg');
+          url.searchParams.delete('item');
+
+          const newUrl = url.pathname + (url.searchParams.toString() ? ('?' + url.searchParams.toString()) : '') + url.hash;
+          window.history.replaceState({}, document.title, newUrl);
+        } catch (e) {}
+      }
+
+      // show 1 alert saja + simpan sebagai "terakhir"
+      window.dkShowTopAlert = function(type, message, persist = true) {
         const area = document.getElementById('alertAreaTop');
         if (!area) return;
+
+        clearAllTopAlerts(area);
 
         const cls = (type === 'success') ? 'dk-alert-success' : 'dk-alert-danger';
         const icon = (type === 'success') ?
@@ -723,6 +791,8 @@ $data = $res->fetch_assoc() ?: [];
         area.prepend(div);
         wireAlert(div);
 
+        if (persist) saveLastAlert(type, message);
+
         try {
           window.scrollTo({
             top: 0,
@@ -733,8 +803,31 @@ $data = $res->fetch_assoc() ?: [];
         }
       };
 
-      // ✅ auto wire alert yang sudah ada dari PHP
-      document.querySelectorAll('#alertAreaTop .dk-alert').forEach(wireAlert);
+      // 1) kalau ada alert dari PHP: jadikan "last alert", lalu bersihkan URL paramnya
+      const phpAlerts = document.querySelectorAll('#alertAreaTop .dk-alert');
+      if (phpAlerts.length > 0) {
+        phpAlerts.forEach(wireAlert);
+
+        const first = phpAlerts[0];
+        const t = first.getAttribute('data-dk-type') || (first.classList.contains('dk-alert-success') ? 'success' : 'danger');
+        const m = first.getAttribute('data-dk-msg') || '';
+        if (m.trim() !== '') saveLastAlert(t, m);
+
+        // ini kunci utama biar refresh berikutnya tidak selalu memunculkan alert PHP yang sama
+        cleanStatusUrlParams();
+        return;
+      }
+
+      // 2) tidak ada alert PHP => restore last alert
+      try {
+        const raw = sessionStorage.getItem(DK_ALERT_STORE_KEY);
+        if (raw) {
+          const obj = JSON.parse(raw);
+          if (obj && obj.type && obj.message) {
+            window.dkShowTopAlert(obj.type, obj.message, false);
+          }
+        }
+      } catch (e) {}
     })();
   </script>
 
@@ -829,7 +922,7 @@ $data = $res->fetch_assoc() ?: [];
             });
 
             if (typeof window.dkShowTopAlert === 'function') {
-              window.dkShowTopAlert('danger', '❌ Mohon lengkapi semua field yang wajib diisi.');
+              window.dkShowTopAlert('danger', 'Mohon lengkapi semua field yang wajib diisi.');
             }
           }
         }
@@ -906,7 +999,7 @@ $data = $res->fetch_assoc() ?: [];
         const okTypes = ['image/jpeg', 'image/png', 'image/webp'];
         if (!okTypes.includes(f.type)) {
           if (typeof window.dkShowTopAlert === 'function') {
-            window.dkShowTopAlert('danger', '❌ Format gambar harus JPG / PNG / WebP.');
+            window.dkShowTopAlert('danger', 'Format gambar harus JPG / PNG / WebP.');
           }
           resetFileInput();
           return;
@@ -915,7 +1008,7 @@ $data = $res->fetch_assoc() ?: [];
         const max = 10 * 1024 * 1024;
         if (f.size > max) {
           if (typeof window.dkShowTopAlert === 'function') {
-            window.dkShowTopAlert('danger', '❌ Ukuran logo melebihi 10MB.');
+            window.dkShowTopAlert('danger', 'Ukuran logo melebihi 10MB.');
           }
           resetFileInput();
           return;
@@ -988,7 +1081,7 @@ $data = $res->fetch_assoc() ?: [];
           imgPreview.onload = () => URL.revokeObjectURL(previewUrl);
 
           if (typeof window.dkShowTopAlert === 'function') {
-            window.dkShowTopAlert('success', '✅ Logo berhasil diproses. Jangan lupa klik Simpan.');
+            window.dkShowTopAlert('success', 'Logo berhasil diproses. Jangan lupa klik Simpan.');
           }
 
           destroyCropper();
