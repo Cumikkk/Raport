@@ -677,6 +677,7 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
                     <th style="width:50px;" class="text-center">
                       <input type="checkbox" id="checkAll" title="Pilih Semua">
                     </th>
+                    <th style="width:70px;">No</th>
                     <th style="width:160px;">NIS</th>
                     <th>Nama Siswa</th>
                     <th style="width:220px;">Kelas</th>
@@ -688,10 +689,11 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
                 <tbody id="siswaTbody" class="text-center tbody-loaded">
                   <?php if ($totalRows === 0): ?>
                     <tr>
-                      <td colspan="6">Belum ada data.</td>
+                      <td colspan="7">Belum ada data.</td>
                     </tr>
                     <?php else:
                     $rowClass = ($search !== '') ? 'highlight-row' : '';
+                    $no = $offset + 1; // ✅ nomor mengikuti pagination
                     while ($row = mysqli_fetch_assoc($result)):
                     ?>
                       <tr class="<?= $rowClass; ?>">
@@ -699,6 +701,7 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
                           <input type="checkbox" class="row-check" value="<?= (int)$row['id_siswa'] ?>">
                         </td>
 
+                        <td data-label="No" class="text-center"><?= (int)$no ?></td>
                         <td data-label="NIS" class="text-center"><?= htmlspecialchars($row['no_induk_siswa']) ?></td>
                         <td data-label="Nama"><?= htmlspecialchars($row['nama_siswa']) ?></td>
                         <td data-label="Kelas" class="text-center"><?= htmlspecialchars($row['nama_kelas'] ?? '-') ?></td>
@@ -725,7 +728,9 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
                           </div>
                         </td>
                       </tr>
-                  <?php endwhile;
+                  <?php
+                      $no++;
+                    endwhile;
                   endif; ?>
                 </tbody>
               </table>
@@ -1053,8 +1058,6 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
           sp.set('status', String(status || 'success'));
           sp.set('msg', String(message || ''));
 
-          // biar tidak bentrok dengan pagination yang sedang berjalan,
-          // kita tetap pertahankan q/per/page/tingkat/kelas yang sudah ada.
           url.search = sp.toString();
           window.history.replaceState({}, '', url.toString());
         } catch (e) {}
@@ -1184,11 +1187,9 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
       function showTop(type, msg) {
         if (type === 'success') {
           window.dkShowTopAlert('success', msg);
-          // ✅ simpan ke URL agar refresh tetap muncul
           window.dkPersistAlertToUrl('success', msg);
           return;
         }
-        // warning/danger => red top
         window.dkShowTopAlert('danger', msg);
         window.dkPersistAlertToUrl('error', msg);
       }
@@ -1517,7 +1518,7 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
           })
           .catch(e => {
             if (e.name === 'AbortError') return;
-            tbody.innerHTML = `<tr><td colspan="6">Gagal memuat data.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7">Gagal memuat data.</td></tr>`;
             finishLoading();
             console.error(e);
           });

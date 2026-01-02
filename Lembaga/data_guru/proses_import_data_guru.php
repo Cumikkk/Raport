@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
   exit;
 }
 
-// support name input: excel_file (punyamu) atau excelFile (contoh siswa)
+// support name input: excel_file (punyamu) atau excelFile
 $file = null;
 if (isset($_FILES['excel_file'])) $file = $_FILES['excel_file'];
 if (!$file && isset($_FILES['excelFile'])) $file = $_FILES['excelFile'];
@@ -87,12 +87,12 @@ try {
   $highestCol = (string)$sheet->getHighestDataColumn();
   $highestColIndex = (int)Coordinate::columnIndexFromString($highestCol);
 
-  // Template guru: A No, B Nama Guru, C Jabatan
-  if ($highestRow < 2 || $highestColIndex < 3) {
+  // Template guru: A No, B NPK, C Nama Guru, D Jabatan
+  if ($highestRow < 2 || $highestColIndex < 4) {
     echo json_encode([
       'ok' => false,
       'type' => 'warning',
-      'msg' => 'File Excel tidak sesuai. Pastikan kolom sampai C (No, Nama Guru, Jabatan).'
+      'msg' => 'File Excel tidak sesuai. Pastikan kolom sampai D (No, NPK, Nama Guru, Jabatan).'
     ]);
     exit;
   }
@@ -110,49 +110,64 @@ try {
   $inserted = 0;
   $skipped_empty = 0;
   $skipped_invalid = 0;
-  $duplicates_db = 0;
-  $duplicates_file = 0;
+
+  $duplicates_db_npk = 0;     // ✅ duplikat karena NPK sama di DB
+  $duplicates_file_npk = 0;   // ✅ duplikat karena NPK sama di file
   $errors = [];
 
   $allowedJabatan = ['Kepala Sekolah', 'Guru'];
 
-  // prepared: cek duplikat di DB berdasarkan (nama|jabatan) case-insensitive
-  $stmtFind = mysqli_prepare(
+  // ✅ cek duplikat NPK di DB (tanpa peduli nama)
+  $stmtFindNpk = mysqli_prepare(
     $koneksi,
-    "SELECT id_guru FROM guru WHERE LOWER(nama_guru)=LOWER(?) AND jabatan_guru=? LIMIT 1"
+    "SELECT id_guru FROM guru WHERE npk_guru = ? LIMIT 1"
   );
 
-  // prepared: insert
+  // insert
   $stmtIns  = mysqli_prepare(
     $koneksi,
-    "INSERT INTO guru (nama_guru, jabatan_guru) VALUES (?, ?)"
+    "INSERT INTO guru (npk_guru, nama_guru, jabatan_guru) VALUES (?, ?, ?)"
   );
 
-  // deteksi duplikat di dalam file (nama|jabatan)
-  $seen = [];
+  // ✅ deteksi duplikat NPK di file
+  $seenNpk = [];
 
   for ($r = 2; $r <= $highestRow; $r++) {
     // A: No (abaikan)
-    // B: Nama Guru
-    // C: Jabatan
-    $namaRaw    = $sheet->getCell("B{$r}")->getFormattedValue();
-    $jabatanRaw = $sheet->getCell("C{$r}")->getFormattedValue();
+    // B: NPK
+    // C: Nama Guru
+    // D: Jabatan
+    $npkRaw     = $sheet->getCell("B{$r}")->getFormattedValue();
+    $namaRaw    = $sheet->getCell("C{$r}")->getFormattedValue();
+    $jabatanRaw = $sheet->getCell("D{$r}")->getFormattedValue();
 
+    $npk     = norm($npkRaw);
     $nama    = norm($namaRaw);
     $jabatan = norm($jabatanRaw);
 
-    if ($nama === '' && $jabatan === '') {
+    if ($npk === '' && $nama === '' && $jabatan === '') {
       $skipped_empty++;
       continue;
     }
 
-    if ($nama === '' || $jabatan === '') {
+    if ($npk === '' || $nama === '' || $jabatan === '') {
       $skipped_invalid++;
-      $errors[] = "Baris {$r}: data belum lengkap (Nama/Jabatan wajib).";
+      $errors[] = "Baris {$r}: data belum lengkap (NPK/Nama/Jabatan wajib).";
       continue;
     }
 
-    // Normalisasi jabatan agar konsisten
+    if (mb_strlen($npk, 'UTF-8') > 50) {
+      $skipped_invalid++;
+      $errors[] = "Baris {$r}: NPK terlalu panjang (maks 50).";
+      continue;
+    }
+    if (mb_strlen($nama, 'UTF-8') > 100) {
+      $skipped_invalid++;
+      $errors[] = "Baris {$r}: Nama terlalu panjang (maks 100).";
+      continue;
+    }
+
+    // normalisasi jabatan
     $jabKey = lower_key($jabatan);
     if ($jabKey === 'kepala sekolah' || $jabKey === 'kepalasekolah') $jabatan = 'Kepala Sekolah';
     else if ($jabKey === 'guru') $jabatan = 'Guru';
@@ -163,36 +178,36 @@ try {
       continue;
     }
 
-    // duplikat di file (pakai nama|jabatan)
-    $key = lower_key($nama . '|' . $jabatan);
-    if (isset($seen[$key])) {
-      $duplicates_file++;
-      $errors[] = "Baris {$r}: Duplikat di file ({$nama} - {$jabatan}).";
+    // ✅ duplikat NPK di file
+    $npkKey = $npk;
+    if (isset($seenNpk[$npkKey])) {
+      $duplicates_file_npk++;
+      $errors[] = "Baris {$r}: NPK {$npk} duplikat di file. Baris di-skip.";
       continue;
     }
-    $seen[$key] = true;
+    $seenNpk[$npkKey] = true;
 
-    // aturan kepsek hanya 1 (di DB atau sudah masuk pada baris sebelumnya)
+    // aturan kepsek hanya 1 (di DB atau sudah masuk baris sebelumnya)
     if ($jabatan === 'Kepala Sekolah' && $kepsekExists) {
       $skipped_invalid++;
       $errors[] = "Baris {$r}: Kepala Sekolah sudah ada. Baris di-skip.";
       continue;
     }
 
-    // duplikat di DB (nama|jabatan)
-    mysqli_stmt_bind_param($stmtFind, 'ss', $nama, $jabatan);
-    mysqli_stmt_execute($stmtFind);
-    $resFind = mysqli_stmt_get_result($stmtFind);
+    // ✅ duplikat NPK di DB
+    mysqli_stmt_bind_param($stmtFindNpk, 's', $npk);
+    mysqli_stmt_execute($stmtFindNpk);
+    $resFind = mysqli_stmt_get_result($stmtFindNpk);
     $found = mysqli_fetch_assoc($resFind);
 
     if (!empty($found)) {
-      $duplicates_db++;
-      $errors[] = "Baris {$r}: {$nama} ({$jabatan}) sudah ada di database. Baris di-skip.";
+      $duplicates_db_npk++;
+      $errors[] = "Baris {$r}: NPK {$npk} sudah ada di database. Baris di-skip.";
       continue;
     }
 
-    // insert
-    mysqli_stmt_bind_param($stmtIns, 'ss', $nama, $jabatan);
+    // insert (nama boleh sama, asal NPK beda)
+    mysqli_stmt_bind_param($stmtIns, 'sss', $npk, $nama, $jabatan);
     mysqli_stmt_execute($stmtIns);
     $inserted++;
 
@@ -201,12 +216,12 @@ try {
     }
   }
 
-  mysqli_stmt_close($stmtFind);
+  mysqli_stmt_close($stmtFindNpk);
   mysqli_stmt_close($stmtIns);
 
   mysqli_commit($koneksi);
 
-  $msg = "Import selesai. Data masuk: {$inserted}, Data duplikat dalam sistem: {$duplicates_db}, Data duplikat dalam file excel: {$duplicates_file}, Baris kosong dilewati: {$skipped_empty}, Data tidak valid: {$skipped_invalid}.";
+  $msg = "Import selesai. Data masuk: {$inserted}, Data duplikat dalam sistem: {$duplicates_db_npk}, Data duplikat dalam file excel: {$duplicates_file_npk}, Baris kosong dilewati: {$skipped_empty}, Data tidak valid: {$skipped_invalid}.";
   if (!empty($errors)) $msg .= " Ada " . count($errors) . " catatan.";
 
   echo json_encode([
@@ -215,8 +230,8 @@ try {
     'msg' => $msg,
     'detail' => [
       'inserted' => $inserted,
-      'duplicates_db' => $duplicates_db,
-      'duplicates_file' => $duplicates_file,
+      'duplicates_db_npk' => $duplicates_db_npk,
+      'duplicates_file_npk' => $duplicates_file_npk,
       'skipped_empty' => $skipped_empty,
       'skipped_invalid' => $skipped_invalid,
       'errors' => $errors

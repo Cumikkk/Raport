@@ -111,12 +111,14 @@ mysqli_stmt_execute($stmt);
 $res = mysqli_stmt_get_result($stmt);
 
 if ($totalRows === 0) {
-  echo '<tr><td colspan="6">Tidak ada data yang cocok.</td></tr>';
+  echo '<tr><td colspan="7">Tidak ada data yang cocok.</td></tr>';
   echo '<tr class="meta-row" data-total="0" data-page="1" data-per="' . (int)$perPage . '"></tr>';
   exit;
 }
 
 $rowClass = ($search !== '') ? 'highlight-row' : '';
+
+$no = $offset + 1; // ✅ nomor mengikuti pagination
 
 while ($row = mysqli_fetch_assoc($res)) {
   $id = (int)$row['id_siswa'];
@@ -128,6 +130,7 @@ while ($row = mysqli_fetch_assoc($res)) {
 
   echo '<tr class="' . $rowClass . '">';
   echo '  <td class="text-center" data-label="Pilih"><input type="checkbox" class="row-check" value="' . $id . '"></td>';
+  echo '  <td data-label="No" class="text-center">' . (int)$no . '</td>';
   echo '  <td data-label="NIS" class="text-center">' . $nis . '</td>';
   echo '  <td data-label="Nama">' . $nama . '</td>';
   echo '  <td data-label="Kelas" class="text-center">' . $nama_kelas . '</td>';
@@ -150,6 +153,8 @@ while ($row = mysqli_fetch_assoc($res)) {
   echo '    </div>';
   echo '  </td>';
   echo '</tr>';
+
+  $no++;
 }
 
 echo '<tr class="meta-row" data-total="' . (int)$totalRows . '" data-page="' . (int)$page . '" data-per="' . (int)$perPage . '"></tr>';

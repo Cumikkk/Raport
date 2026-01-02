@@ -14,8 +14,8 @@ $like   = "%{$search}%";
 
 // ✅ perPage dukung 0 = Semua
 $perPage = isset($_GET['per']) ? (int)$_GET['per'] : 10;
-if ($perPage < 0) $perPage = 10;   // jangan minus
-if ($perPage > 100) $perPage = 100; // batas max, kecuali 0 (semua)
+if ($perPage < 0) $perPage = 10;     // jangan minus
+if ($perPage > 100) $perPage = 100;  // batas max, kecuali 0 (semua)
 
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($page < 1) $page = 1;
@@ -24,9 +24,9 @@ if ($page < 1) $page = 1;
 // Hitung total data
 // ==========================
 if ($search !== '') {
-  $countSql = "SELECT COUNT(*) AS total FROM guru WHERE nama_guru LIKE ?";
+  $countSql = "SELECT COUNT(*) AS total FROM guru WHERE nama_guru LIKE ? OR npk_guru LIKE ?";
   $stmtCount = mysqli_prepare($koneksi, $countSql);
-  mysqli_stmt_bind_param($stmtCount, 's', $like);
+  mysqli_stmt_bind_param($stmtCount, 'ss', $like, $like);
 } else {
   $countSql = "SELECT COUNT(*) AS total FROM guru";
   $stmtCount = mysqli_prepare($koneksi, $countSql);
@@ -53,16 +53,16 @@ if ($perPage === 0) {
   // ✅ Semua data: tanpa LIMIT/OFFSET
   if ($search !== '') {
     $sql = "
-      SELECT id_guru, nama_guru, jabatan_guru
+      SELECT id_guru, npk_guru, nama_guru, jabatan_guru
       FROM guru
-      WHERE nama_guru LIKE ?
+      WHERE nama_guru LIKE ? OR npk_guru LIKE ?
       ORDER BY nama_guru ASC
     ";
     $stmt = mysqli_prepare($koneksi, $sql);
-    mysqli_stmt_bind_param($stmt, 's', $like);
+    mysqli_stmt_bind_param($stmt, 'ss', $like, $like);
   } else {
     $sql = "
-      SELECT id_guru, nama_guru, jabatan_guru
+      SELECT id_guru, npk_guru, nama_guru, jabatan_guru
       FROM guru
       ORDER BY nama_guru ASC
     ";
@@ -72,17 +72,17 @@ if ($perPage === 0) {
   // ✅ Normal: pakai LIMIT/OFFSET
   if ($search !== '') {
     $sql = "
-      SELECT id_guru, nama_guru, jabatan_guru
+      SELECT id_guru, npk_guru, nama_guru, jabatan_guru
       FROM guru
-      WHERE nama_guru LIKE ?
+      WHERE nama_guru LIKE ? OR npk_guru LIKE ?
       ORDER BY nama_guru ASC
       LIMIT ? OFFSET ?
     ";
     $stmt = mysqli_prepare($koneksi, $sql);
-    mysqli_stmt_bind_param($stmt, 'sii', $like, $perPage, $offset);
+    mysqli_stmt_bind_param($stmt, 'ssii', $like, $like, $perPage, $offset);
   } else {
     $sql = "
-      SELECT id_guru, nama_guru, jabatan_guru
+      SELECT id_guru, npk_guru, nama_guru, jabatan_guru
       FROM guru
       ORDER BY nama_guru ASC
       LIMIT ? OFFSET ?
@@ -101,18 +101,20 @@ $rowClass = ($search !== '') ? 'highlight-row' : '';
 $no = $offset + 1;
 
 if ($totalRows === 0) {
-  echo '<tr><td colspan="5">Tidak ada data yang cocok.</td></tr>';
+  echo '<tr><td colspan="6">Tidak ada data yang cocok.</td></tr>';
 } else {
   while ($row = mysqli_fetch_assoc($result)) {
     $id = (int)$row['id_guru'];
-    $nama = htmlspecialchars($row['nama_guru'], ENT_QUOTES, 'UTF-8');
-    $jabatan = htmlspecialchars($row['jabatan_guru'], ENT_QUOTES, 'UTF-8');
+    $npk = htmlspecialchars((string)($row['npk_guru'] ?? ''), ENT_QUOTES, 'UTF-8');
+    $nama = htmlspecialchars((string)($row['nama_guru'] ?? ''), ENT_QUOTES, 'UTF-8');
+    $jabatan = htmlspecialchars((string)($row['jabatan_guru'] ?? ''), ENT_QUOTES, 'UTF-8');
 
     echo '<tr class="' . $rowClass . '">';
     echo '<td class="text-center" data-label="Pilih">
             <input type="checkbox" class="row-check" value="' . $id . '">
           </td>';
     echo '<td data-label="No">' . $no++ . '</td>';
+    echo '<td data-label="NPK">' . $npk . '</td>';
     echo '<td data-label="Nama Guru">' . $nama . '</td>';
     echo '<td data-label="Jabatan" class="text-center">' . $jabatan . '</td>';
     echo '<td data-label="Aksi">
@@ -120,6 +122,7 @@ if ($totalRows === 0) {
               <button type="button"
                 class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-edit-guru"
                 data-id="' . $id . '"
+                data-npk="' . $npk . '"
                 data-nama="' . $nama . '"
                 data-jabatan="' . $jabatan . '">
                 <i class="bi bi-pencil-square"></i> Edit

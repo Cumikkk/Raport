@@ -25,6 +25,13 @@ function redirect_with(string $status, string $msg): void
   exit;
 }
 
+function norm(string $v): string
+{
+  $v = trim($v);
+  $v = preg_replace('/\s+/', ' ', $v);
+  return $v;
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
   $msg = 'Metode tidak diizinkan.';
   if (is_ajax_request()) json_out(['ok' => false, 'type' => 'danger', 'msg' => $msg], 405);
@@ -42,11 +49,10 @@ if ($id <= 0) {
 }
 
 // Pastikan data ada
-$stmtFind = $koneksi->prepare("SELECT id_guru, jabatan_guru FROM guru WHERE id_guru = ?");
+$stmtFind = $koneksi->prepare("SELECT id_guru, jabatan_guru, npk_guru FROM guru WHERE id_guru = ?");
 $stmtFind->bind_param('i', $id);
 $stmtFind->execute();
-$res = $stmtFind->get_result();
-$current = $res->fetch_assoc();
+$current = $stmtFind->get_result()->fetch_assoc();
 $stmtFind->close();
 
 if (!$current) {
@@ -55,12 +61,22 @@ if (!$current) {
   redirect_with('error', $msg);
 }
 
-$nama_guru    = isset($_POST['nama_guru']) ? trim($_POST['nama_guru']) : '';
-$jabatan_guru = isset($_POST['jabatan_guru']) ? trim($_POST['jabatan_guru']) : '';
+$npk_guru     = isset($_POST['npk_guru']) ? norm((string)$_POST['npk_guru']) : '';
+$nama_guru    = isset($_POST['nama_guru']) ? norm((string)$_POST['nama_guru']) : '';
+$jabatan_guru = isset($_POST['jabatan_guru']) ? norm((string)$_POST['jabatan_guru']) : '';
+
+if ($npk_guru === '') {
+  $errors[] = 'NPK wajib diisi.';
+} elseif (mb_strlen($npk_guru, 'UTF-8') > 50) {
+  $errors[] = 'NPK maksimal 50 karakter.';
+}
 
 if ($nama_guru === '') {
   $errors[] = 'Nama Guru wajib diisi.';
+} elseif (mb_strlen($nama_guru, 'UTF-8') > 100) {
+  $errors[] = 'Nama Guru maksimal 100 karakter.';
 }
+
 if (!in_array($jabatan_guru, $ALLOWED_JABATAN, true)) {
   $errors[] = 'Jabatan tidak valid. Pilih "Kepala Sekolah" atau "Guru".';
 }
@@ -71,24 +87,37 @@ if (!empty($errors)) {
   redirect_with('error', $msg);
 }
 
+// ✅ Aturan baru: tolak jika NPK sudah dipakai data lain (exclude dirinya)
+$stmtDup = $koneksi->prepare("SELECT COUNT(*) AS cnt FROM guru WHERE npk_guru = ? AND id_guru <> ?");
+$stmtDup->bind_param('si', $npk_guru, $id);
+$stmtDup->execute();
+$cntDup = (int)$stmtDup->get_result()->fetch_assoc()['cnt'];
+$stmtDup->close();
+
+if ($cntDup > 0) {
+  $msg = 'NPK sudah terpakai.';
+  if (is_ajax_request()) json_out(['ok' => false, 'type' => 'warning', 'msg' => $msg], 409);
+  redirect_with('error', $msg);
+}
+
 // ✅ KEPALA SEKOLAH CUMA 1 (kecuali dirinya sendiri)
 if ($jabatan_guru === 'Kepala Sekolah') {
-  $stmtKS = $koneksi->prepare("SELECT COUNT(*) AS cnt FROM guru WHERE jabatan_guru = 'Kepala Sekolah' AND id_guru <> ?");
+  $stmtKS = $koneksi->prepare("SELECT COUNT(*) AS cnt FROM guru WHERE jabatan_guru='Kepala Sekolah' AND id_guru <> ?");
   $stmtKS->bind_param('i', $id);
   $stmtKS->execute();
   $cntKS = (int)$stmtKS->get_result()->fetch_assoc()['cnt'];
   $stmtKS->close();
 
   if ($cntKS > 0) {
-    $msg = 'Kepala Sekolah hanya boleh 1. Sudah ada data Kepala Sekolah.';
+    $msg = 'Kepala Sekolah sudah ada.';
     if (is_ajax_request()) json_out(['ok' => false, 'type' => 'warning', 'msg' => $msg], 409);
     redirect_with('error', $msg);
   }
 }
 
-// Update (nama boleh sama)
-$stmtUpd = $koneksi->prepare("UPDATE guru SET nama_guru = ?, jabatan_guru = ? WHERE id_guru = ?");
-$stmtUpd->bind_param('ssi', $nama_guru, $jabatan_guru, $id);
+// Update
+$stmtUpd = $koneksi->prepare("UPDATE guru SET npk_guru = ?, nama_guru = ?, jabatan_guru = ? WHERE id_guru = ?");
+$stmtUpd->bind_param('sssi', $npk_guru, $nama_guru, $jabatan_guru, $id);
 
 if ($stmtUpd->execute()) {
   $stmtUpd->close();

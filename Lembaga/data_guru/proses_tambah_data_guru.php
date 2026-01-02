@@ -25,6 +25,13 @@ function redirect_with(string $status, string $msg): void
   exit;
 }
 
+function norm(string $v): string
+{
+  $v = trim($v);
+  $v = preg_replace('/\s+/', ' ', $v);
+  return $v;
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
   $msg = 'Metode tidak diizinkan.';
   if (is_ajax_request()) json_out(['ok' => false, 'type' => 'danger', 'msg' => $msg], 405);
@@ -34,12 +41,22 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $ALLOWED_JABATAN = ['Kepala Sekolah', 'Guru'];
 $errors = [];
 
-$nama_guru    = isset($_POST['nama_guru']) ? trim($_POST['nama_guru']) : '';
-$jabatan_guru = isset($_POST['jabatan_guru']) ? trim($_POST['jabatan_guru']) : '';
+$npk_guru     = isset($_POST['npk_guru']) ? norm((string)$_POST['npk_guru']) : '';
+$nama_guru    = isset($_POST['nama_guru']) ? norm((string)$_POST['nama_guru']) : '';
+$jabatan_guru = isset($_POST['jabatan_guru']) ? norm((string)$_POST['jabatan_guru']) : '';
+
+if ($npk_guru === '') {
+  $errors[] = 'NPK wajib diisi.';
+} elseif (mb_strlen($npk_guru, 'UTF-8') > 50) {
+  $errors[] = 'NPK maksimal 50 karakter.';
+}
 
 if ($nama_guru === '') {
   $errors[] = 'Nama Guru wajib diisi.';
+} elseif (mb_strlen($nama_guru, 'UTF-8') > 100) {
+  $errors[] = 'Nama Guru maksimal 100 karakter.';
 }
+
 if (!in_array($jabatan_guru, $ALLOWED_JABATAN, true)) {
   $errors[] = 'Jabatan tidak valid. Pilih "Kepala Sekolah" atau "Guru".';
 }
@@ -47,6 +64,19 @@ if (!in_array($jabatan_guru, $ALLOWED_JABATAN, true)) {
 if (!empty($errors)) {
   $msg = implode(' | ', $errors);
   if (is_ajax_request()) json_out(['ok' => false, 'type' => 'warning', 'msg' => $msg], 422);
+  redirect_with('error', $msg);
+}
+
+// ✅ Aturan baru: tolak jika NPK sudah ada (tanpa peduli nama)
+$stmtDup = $koneksi->prepare("SELECT COUNT(*) AS cnt FROM guru WHERE npk_guru = ?");
+$stmtDup->bind_param('s', $npk_guru);
+$stmtDup->execute();
+$cntDup = (int)$stmtDup->get_result()->fetch_assoc()['cnt'];
+$stmtDup->close();
+
+if ($cntDup > 0) {
+  $msg = 'NPK sudah terpakai.';
+  if (is_ajax_request()) json_out(['ok' => false, 'type' => 'warning', 'msg' => $msg], 409);
   redirect_with('error', $msg);
 }
 
@@ -58,23 +88,25 @@ if ($jabatan_guru === 'Kepala Sekolah') {
   $stmtKS->close();
 
   if ($cntKS > 0) {
-    $msg = 'Kepala Sekolah hanya boleh 1. Sudah ada data Kepala Sekolah.';
+    $msg = 'Kepala Sekolah sudah ada.';
     if (is_ajax_request()) json_out(['ok' => false, 'type' => 'warning', 'msg' => $msg], 409);
     redirect_with('error', $msg);
   }
 }
 
-// Insert (nama boleh sama)
-$sql = "INSERT INTO guru (nama_guru, jabatan_guru) VALUES (?, ?)";
+// Insert
+$sql = "INSERT INTO guru (npk_guru, nama_guru, jabatan_guru) VALUES (?, ?, ?)";
 $stmt = $koneksi->prepare($sql);
-$stmt->bind_param('ss', $nama_guru, $jabatan_guru);
+$stmt->bind_param('sss', $npk_guru, $nama_guru, $jabatan_guru);
 
 if ($stmt->execute()) {
+  $stmt->close();
   $msg = 'Data guru berhasil ditambahkan.';
   if (is_ajax_request()) json_out(['ok' => true, 'type' => 'success', 'msg' => $msg]);
   redirect_with('success', $msg);
 }
 
+$stmt->close();
 $msg = 'Gagal menambahkan data guru.';
 if (is_ajax_request()) json_out(['ok' => false, 'type' => 'danger', 'msg' => $msg], 500);
 redirect_with('error', $msg);

@@ -44,9 +44,9 @@ if ($page < 1) $page = 1;
 
 // Hitung total data
 if ($search !== '') {
-  $countSql = "SELECT COUNT(*) AS total FROM guru WHERE nama_guru LIKE ?";
+  $countSql = "SELECT COUNT(*) AS total FROM guru WHERE nama_guru LIKE ? OR npk_guru LIKE ?";
   $stmtCount = mysqli_prepare($koneksi, $countSql);
-  mysqli_stmt_bind_param($stmtCount, 's', $like);
+  mysqli_stmt_bind_param($stmtCount, 'ss', $like, $like);
 } else {
   $countSql = "SELECT COUNT(*) AS total FROM guru";
   $stmtCount = mysqli_prepare($koneksi, $countSql);
@@ -71,16 +71,16 @@ if ($perPage === 0) {
 if ($perPage === 0) {
   if ($search !== '') {
     $sql = "
-      SELECT id_guru, nama_guru, jabatan_guru
+      SELECT id_guru, npk_guru, nama_guru, jabatan_guru
       FROM guru
-      WHERE nama_guru LIKE ?
+      WHERE nama_guru LIKE ? OR npk_guru LIKE ?
       ORDER BY nama_guru ASC
     ";
     $stmt = mysqli_prepare($koneksi, $sql);
-    mysqli_stmt_bind_param($stmt, 's', $like);
+    mysqli_stmt_bind_param($stmt, 'ss', $like, $like);
   } else {
     $sql = "
-      SELECT id_guru, nama_guru, jabatan_guru
+      SELECT id_guru, npk_guru, nama_guru, jabatan_guru
       FROM guru
       ORDER BY nama_guru ASC
     ";
@@ -89,17 +89,17 @@ if ($perPage === 0) {
 } else {
   if ($search !== '') {
     $sql = "
-      SELECT id_guru, nama_guru, jabatan_guru
+      SELECT id_guru, npk_guru, nama_guru, jabatan_guru
       FROM guru
-      WHERE nama_guru LIKE ?
+      WHERE nama_guru LIKE ? OR npk_guru LIKE ?
       ORDER BY nama_guru ASC
       LIMIT ? OFFSET ?
     ";
     $stmt = mysqli_prepare($koneksi, $sql);
-    mysqli_stmt_bind_param($stmt, 'sii', $like, $perPage, $offset);
+    mysqli_stmt_bind_param($stmt, 'ssii', $like, $like, $perPage, $offset);
   } else {
     $sql = "
-      SELECT id_guru, nama_guru, jabatan_guru
+      SELECT id_guru, npk_guru, nama_guru, jabatan_guru
       FROM guru
       ORDER BY nama_guru ASC
       LIMIT ? OFFSET ?
@@ -582,42 +582,46 @@ if ($totalRows === 0) {
                       <input type="checkbox" id="checkAll" title="Pilih Semua">
                     </th>
                     <th style="width:70px;">No</th>
+                    <th style="width:170px;">NPK</th>
                     <th>Nama Guru</th>
-                    <th>Jabatan</th>
+                    <th style="width:170px;">Jabatan</th>
                     <th style="width:200px;">Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="guruTbody" class="text-center tbody-loaded">
                   <?php if ($totalRows === 0): ?>
                     <tr>
-                      <td colspan="5">Belum ada data.</td>
+                      <td colspan="6">Belum ada data.</td>
                     </tr>
                     <?php else:
                     $no = $offset + 1;
                     $rowClass = ($search !== '') ? 'highlight-row' : '';
                     while ($row = mysqli_fetch_assoc($result)):
+                      $npkVal = (string)($row['npk_guru'] ?? '');
                     ?>
                       <tr class="<?= $rowClass; ?>">
                         <td class="text-center" data-label="Pilih">
                           <input type="checkbox" class="row-check" value="<?= (int)$row['id_guru'] ?>">
                         </td>
                         <td data-label="No"><?= $no++; ?></td>
-                        <td data-label="Nama Guru"><?= htmlspecialchars($row['nama_guru']) ?></td>
-                        <td data-label="Jabatan" class="text-center"><?= htmlspecialchars($row['jabatan_guru']) ?></td>
+                        <td data-label="NPK"><?= htmlspecialchars($npkVal) ?></td>
+                        <td data-label="Nama Guru"><?= htmlspecialchars((string)$row['nama_guru']) ?></td>
+                        <td data-label="Jabatan" class="text-center"><?= htmlspecialchars((string)$row['jabatan_guru']) ?></td>
                         <td data-label="Aksi">
                           <div class="d-flex gap-2 justify-content-center flex-wrap">
                             <button type="button"
                               class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-edit-guru"
                               data-id="<?= (int)$row['id_guru'] ?>"
-                              data-nama="<?= htmlspecialchars($row['nama_guru'], ENT_QUOTES, 'UTF-8') ?>"
-                              data-jabatan="<?= htmlspecialchars($row['jabatan_guru'], ENT_QUOTES, 'UTF-8') ?>">
+                              data-npk="<?= htmlspecialchars($npkVal, ENT_QUOTES, 'UTF-8') ?>"
+                              data-nama="<?= htmlspecialchars((string)$row['nama_guru'], ENT_QUOTES, 'UTF-8') ?>"
+                              data-jabatan="<?= htmlspecialchars((string)$row['jabatan_guru'], ENT_QUOTES, 'UTF-8') ?>">
                               <i class="bi bi-pencil-square"></i> Edit
                             </button>
 
                             <button type="button"
                               class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-delete-single"
                               data-id="<?= (int)$row['id_guru'] ?>"
-                              data-label="<?= htmlspecialchars($row['nama_guru'], ENT_QUOTES, 'UTF-8') ?>">
+                              data-label="<?= htmlspecialchars((string)$row['nama_guru'], ENT_QUOTES, 'UTF-8') ?>">
                               <i class="bi bi-trash"></i> Hapus
                             </button>
                           </div>
@@ -667,7 +671,7 @@ if ($totalRows === 0) {
     </div>
   </main>
 
-  <!-- MODALS (tetap seperti punyamu) -->
+  <!-- MODALS -->
   <div class="modal fade" id="modalTambahGuru" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
@@ -679,6 +683,11 @@ if ($totalRows === 0) {
         <form id="formTambahGuru" action="proses_tambah_data_guru.php" method="POST" autocomplete="off">
           <div class="modal-body">
             <div id="modalAlertTambah" class="modal-alert-area"></div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold" for="add_npk_guru">NPK</label>
+              <input type="text" id="add_npk_guru" name="npk_guru" class="form-control" maxlength="50" required placeholder="NPK Guru">
+            </div>
 
             <div class="mb-3">
               <label class="form-label fw-semibold" for="add_nama_guru">Nama Guru</label>
@@ -720,6 +729,11 @@ if ($totalRows === 0) {
           <input type="hidden" name="id_guru" id="edit_id_guru">
           <div class="modal-body">
             <div id="modalAlertEdit" class="modal-alert-area"></div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold" for="edit_npk_guru">NPK</label>
+              <input type="text" id="edit_npk_guru" name="npk_guru" class="form-control" maxlength="50" required>
+            </div>
 
             <div class="mb-3">
               <label class="form-label fw-semibold" for="edit_nama_guru">Nama Guru</label>
@@ -775,7 +789,7 @@ if ($totalRows === 0) {
                   </ol>
                   <span class="text-muted">
                     Struktur kolom template:
-                    <strong>A: Nomor</strong>, <strong>B: Nama Guru</strong>, <strong>C: Jabatan</strong>
+                    <strong>A: Nomor</strong>, <strong>B: NPK</strong>, <strong>C: Nama Guru</strong>, <strong>D: Jabatan</strong>
                     (<em>hanya “Kepala Sekolah” atau “Guru”</em>).
                   </span>
                 </div>
@@ -919,7 +933,6 @@ if ($totalRows === 0) {
             sp.set('status', 'success');
             sp.set('msg', String(successMsg));
           } else {
-            // kalau tidak ada success, msg boleh kosong
             sp.delete('status');
             sp.delete('msg');
           }
@@ -938,14 +951,23 @@ if ($totalRows === 0) {
         } catch (e) {}
       };
 
+      // ✅ PERBAIKAN UTAMA:
+      // Saat persist status/msg (aksi tambah/edit/import), otomatis bersihkan `err`
+      // agar alert "gagal hapus karena relasi" tidak ikut muncul setelah aksi lain.
       window.dkPersistAlertToUrl = function(status, message) {
         try {
           const url = new URL(window.location.href);
           const sp = url.searchParams;
+
           sp.set('status', String(status || 'success'));
           sp.set('msg', String(message || ''));
+
+          // ✅ selalu bersihkan err untuk aksi non-hapus
+          sp.delete('err');
+
           // jangan bawa alert token
           sp.delete('alert');
+
           url.search = sp.toString();
           window.history.replaceState({}, '', url.toString());
         } catch (e) {}
@@ -1175,6 +1197,7 @@ if ($totalRows === 0) {
         if (!modalEl) return;
 
         const inputId = document.getElementById('edit_id_guru');
+        const inputNpk = document.getElementById('edit_npk_guru');
         const inputNama = document.getElementById('edit_nama_guru');
         const inputJabatan = document.getElementById('edit_jabatan_guru');
 
@@ -1182,10 +1205,12 @@ if ($totalRows === 0) {
           btn.addEventListener('click', (e) => {
             e.preventDefault();
             const id = btn.getAttribute('data-id') || '';
+            const npk = btn.getAttribute('data-npk') || '';
             const nama = btn.getAttribute('data-nama') || '';
             const jabatan = btn.getAttribute('data-jabatan') || '';
 
             if (inputId) inputId.value = id;
+            if (inputNpk) inputNpk.value = npk;
             if (inputNama) inputNama.value = nama;
             if (inputJabatan) inputJabatan.value = jabatan;
 
@@ -1211,7 +1236,7 @@ if ($totalRows === 0) {
             showDeleteConfirm(`Yakin ingin menghapus guru "${label}"?`, () => {
               const form = document.createElement('form');
               form.method = 'post';
-              form.action = 'hapus_data_guru.php';
+              form.action = 'proses_hapus_data_guru.php';
 
               const csrfInput = document.createElement('input');
               csrfInput.type = 'hidden';
@@ -1309,7 +1334,7 @@ if ($totalRows === 0) {
         const count = boxes.length;
         const form = document.createElement('form');
         form.method = 'post';
-        form.action = 'hapus_data_guru.php';
+        form.action = 'proses_hapus_data_guru.php';
 
         const csrfInput = document.createElement('input');
         csrfInput.type = 'hidden';
@@ -1392,7 +1417,7 @@ if ($totalRows === 0) {
           })
           .catch(e => {
             if (e.name === 'AbortError') return;
-            tbody.innerHTML = `<tr><td colspan="5">Gagal memuat data.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6">Gagal memuat data.</td></tr>`;
             finishLoading();
             console.error(e);
           });
@@ -1533,7 +1558,6 @@ if ($totalRows === 0) {
       attachSingleDeleteEvents();
       buildPagination(currentTotalRows, currentPage, currentPerPage);
       if (tbody) tbody.classList.add('tbody-loaded');
-
     })();
   </script>
 
