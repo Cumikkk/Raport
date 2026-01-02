@@ -623,7 +623,7 @@ include '../../includes/header.php';
                       <i class="bi bi-search icon"></i>
                       <input type="text"
                         id="searchInput"
-                        placeholder="Ketik untuk mencari (Nama/NIS/Kelas/Sakit/Izin/Alpha)"
+                        placeholder="Ketik untuk mencari"
                         value="<?= htmlspecialchars($search, ENT_QUOTES, 'UTF-8'); ?>"
                         autofocus>
                     </div>
