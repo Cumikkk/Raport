@@ -121,14 +121,14 @@ $rowClass = ($search !== '') ? 'highlight-row' : '';
 while ($row = mysqli_fetch_assoc($res)) {
   $id = (int)$row['id_siswa'];
   $nama = htmlspecialchars($row['nama_siswa']);
-  $nisn = htmlspecialchars($row['no_induk_siswa']);
+  $nis = htmlspecialchars($row['no_induk_siswa']);
   $absen = htmlspecialchars($row['no_absen_siswa']);
   $nama_kelas = htmlspecialchars($row['nama_kelas'] ?? '-');
   $id_kelas = (int)($row['id_kelas'] ?? 0);
 
   echo '<tr class="' . $rowClass . '">';
   echo '  <td class="text-center" data-label="Pilih"><input type="checkbox" class="row-check" value="' . $id . '"></td>';
-  echo '  <td data-label="NISN" class="text-center">' . $nisn . '</td>';
+  echo '  <td data-label="NIS" class="text-center">' . $nis . '</td>';
   echo '  <td data-label="Nama">' . $nama . '</td>';
   echo '  <td data-label="Kelas" class="text-center">' . $nama_kelas . '</td>';
   echo '  <td data-label="Absen" class="text-center">' . $absen . '</td>';
@@ -137,7 +137,7 @@ while ($row = mysqli_fetch_assoc($res)) {
   echo '      <button type="button" class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-edit-siswa"
               data-id="' . $id . '"
               data-nama="' . htmlspecialchars($row['nama_siswa'], ENT_QUOTES, 'UTF-8') . '"
-              data-nisn="' . htmlspecialchars($row['no_induk_siswa'], ENT_QUOTES, 'UTF-8') . '"
+              data-nis="' . htmlspecialchars($row['no_induk_siswa'], ENT_QUOTES, 'UTF-8') . '"
               data-absen="' . htmlspecialchars($row['no_absen_siswa'], ENT_QUOTES, 'UTF-8') . '"
               data-id_kelas="' . $id_kelas . '">
               <i class="bi bi-pencil-square"></i> Edit

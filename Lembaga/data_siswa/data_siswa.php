@@ -367,10 +367,13 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
       font-size: .95rem;
     }
 
+    /* =========================
+      [ALERT PACK TEMPLATE] (DATA SISWA)
+    ========================= */
     .dk-alert {
       padding: 12px 14px;
       border-radius: 12px;
-      margin-bottom: 20px;
+      margin-bottom: 12px;
       font-size: 14px;
       max-height: 220px;
       overflow: hidden;
@@ -383,7 +386,7 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
 
     .dk-alert.dk-show {
       opacity: 1;
-      transform: translateY(0);
+      transform: translateY(0)
     }
 
     .dk-alert.dk-hide {
@@ -422,10 +425,32 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
       opacity: .6;
       font-size: 18px;
       line-height: 1;
+      user-select: none;
     }
 
     .dk-alert .close-btn:hover {
       opacity: 1;
+    }
+
+    @keyframes dkPulseIn {
+      0% {
+        transform: translateY(-10px);
+        opacity: 0
+      }
+
+      70% {
+        transform: translateY(2px);
+        opacity: 1
+      }
+
+      100% {
+        transform: translateY(0);
+        opacity: 1
+      }
+    }
+
+    .dk-alert.dk-pulse {
+      animation: dkPulseIn .28s ease;
     }
 
     #alertAreaTop {
@@ -534,8 +559,6 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
         text-align: left;
         text-align-last: left;
       }
-
-      /* biar nyaman di mobile */
     }
   </style>
 
@@ -543,19 +566,40 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
     <div class="row g-3">
       <div class="col-12">
 
+        <!-- ========== ALERT TOP AREA (TEMPLATE) ========== -->
         <div id="alertAreaTop">
-          <?php if (isset($_GET['msg']) && $_GET['msg'] !== ''): ?>
-            <div class="dk-alert dk-alert-success" data-auto-hide="4000">
-              <span class="close-btn">&times;</span>
-              ✅ <?= htmlspecialchars($_GET['msg'], ENT_QUOTES, 'UTF-8'); ?>
-            </div>
-          <?php endif; ?>
+          <?php
+          // ✅ PESAN HAPUS DISIMPAN DI SESSION & BOLEH MUNCUL LAGI SAAT REFRESH
+          $flashDeleted = '';
+          if (!empty($_SESSION['flash_deleted_msg'])) {
+            $flashDeleted = (string)$_SESSION['flash_deleted_msg'];
+            // ❌ JANGAN di-unset, biar refresh tetap muncul pesan yang benar
+            // unset($_SESSION['flash_deleted_msg']);
+          }
+          ?>
 
-          <?php if (isset($_GET['err']) && $_GET['err'] !== ''): ?>
-            <div class="dk-alert dk-alert-danger" data-auto-hide="4000">
-              <span class="close-btn">&times;</span>
-              ❌ <?= htmlspecialchars($_GET['err'], ENT_QUOTES, 'UTF-8'); ?>
-            </div>
+          <?php if (isset($_GET['status'])): ?>
+            <?php if ($_GET['status'] === 'success'): ?>
+              <div class="dk-alert dk-alert-success" data-auto-hide="4000">
+                <span class="close-btn">&times;</span>
+                <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
+                <?= htmlspecialchars($_GET['msg'] ?? 'Operasi berhasil.', ENT_QUOTES, 'UTF-8'); ?>
+              </div>
+
+            <?php elseif ($_GET['status'] === 'deleted'): ?>
+              <div class="dk-alert dk-alert-success" data-auto-hide="4000">
+                <span class="close-btn">&times;</span>
+                <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
+                <?= htmlspecialchars($flashDeleted !== '' ? $flashDeleted : ($_GET['msg'] ?? 'Data berhasil dihapus.'), ENT_QUOTES, 'UTF-8'); ?>
+              </div>
+
+            <?php else: ?>
+              <div class="dk-alert dk-alert-danger" data-auto-hide="4000">
+                <span class="close-btn">&times;</span>
+                <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
+                <?= htmlspecialchars($_GET['msg'] ?? 'Terjadi kesalahan.', ENT_QUOTES, 'UTF-8'); ?>
+              </div>
+            <?php endif; ?>
           <?php endif; ?>
         </div>
 
@@ -633,7 +677,7 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
                     <th style="width:50px;" class="text-center">
                       <input type="checkbox" id="checkAll" title="Pilih Semua">
                     </th>
-                    <th style="width:160px;">NISN</th>
+                    <th style="width:160px;">NIS</th>
                     <th>Nama Siswa</th>
                     <th style="width:220px;">Kelas</th>
                     <th style="width:120px;">Absen</th>
@@ -655,7 +699,7 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
                           <input type="checkbox" class="row-check" value="<?= (int)$row['id_siswa'] ?>">
                         </td>
 
-                        <td data-label="NISN" class="text-center"><?= htmlspecialchars($row['no_induk_siswa']) ?></td>
+                        <td data-label="NIS" class="text-center"><?= htmlspecialchars($row['no_induk_siswa']) ?></td>
                         <td data-label="Nama"><?= htmlspecialchars($row['nama_siswa']) ?></td>
                         <td data-label="Kelas" class="text-center"><?= htmlspecialchars($row['nama_kelas'] ?? '-') ?></td>
                         <td data-label="Absen" class="text-center"><?= htmlspecialchars($row['no_absen_siswa']) ?></td>
@@ -666,7 +710,7 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
                               class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-edit-siswa"
                               data-id="<?= (int)$row['id_siswa'] ?>"
                               data-nama="<?= htmlspecialchars($row['nama_siswa'], ENT_QUOTES, 'UTF-8') ?>"
-                              data-nisn="<?= htmlspecialchars($row['no_induk_siswa'], ENT_QUOTES, 'UTF-8') ?>"
+                              data-nis="<?= htmlspecialchars($row['no_induk_siswa'], ENT_QUOTES, 'UTF-8') ?>"
                               data-absen="<?= htmlspecialchars($row['no_absen_siswa'], ENT_QUOTES, 'UTF-8') ?>"
                               data-id_kelas="<?= (int)($row['id_kelas'] ?? 0) ?>">
                               <i class="bi bi-pencil-square"></i> Edit
@@ -738,10 +782,9 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
           <div class="modal-body">
             <div id="modalAlertTambah" class="modal-alert-area"></div>
 
-            <!-- ✅ urutan: NISN, Nama, Kelas, Absen (atas-bawah) -->
             <div class="mb-3">
-              <label class="form-label fw-semibold" for="add_nisn">NISN</label>
-              <input type="text" id="add_nisn" name="no_induk_siswa" class="form-control" maxlength="50" required placeholder="NISN">
+              <label class="form-label fw-semibold" for="add_nis">NIS</label>
+              <input type="text" id="add_nis" name="no_induk_siswa" class="form-control" maxlength="50" required placeholder="NIS">
             </div>
 
             <div class="mb-3">
@@ -795,10 +838,9 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
           <div class="modal-body">
             <div id="modalAlertEdit" class="modal-alert-area"></div>
 
-            <!-- ✅ urutan: NISN, Nama, Kelas, Absen (atas-bawah) -->
             <div class="mb-3">
-              <label class="form-label fw-semibold" for="edit_nisn">NISN</label>
-              <input type="text" id="edit_nisn" name="no_induk_siswa" class="form-control" maxlength="50" required>
+              <label class="form-label fw-semibold" for="edit_nis">NIS</label>
+              <input type="text" id="edit_nis" name="no_induk_siswa" class="form-control" maxlength="50" required>
             </div>
 
             <div class="mb-3">
@@ -838,7 +880,7 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
     </div>
   </div>
 
-  <!-- MODAL IMPORT SISWA (tetap) -->
+  <!-- MODAL IMPORT SISWA -->
   <div class="modal fade" id="modalImportSiswa" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content">
@@ -866,7 +908,7 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
                   </ol>
                   <span class="text-muted">
                     Struktur kolom template:
-                    <strong>A: Nomor</strong>, <strong>B: Nama Siswa</strong>, <strong>C: NISN</strong>, <strong>D: Absen</strong>, <strong>E: Kelas</strong>.
+                    <strong>A: Nomor</strong>, <strong>B: Nama Siswa</strong>, <strong>C: NIS</strong>, <strong>D: Absen</strong>, <strong>E: Kelas</strong>.
                   </span>
                 </div>
               </div>
@@ -946,6 +988,162 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
     }
   </script>
 
+  <!-- =========================
+    [ALERT PACK TEMPLATE] JS
+  ========================= -->
+  <script>
+    (function() {
+      const ALERT_DURATION = 4000;
+
+      function escapeHtml(str) {
+        return String(str ?? '')
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", "&#039;");
+      }
+
+      function animateAlertIn(el) {
+        if (!el) return;
+        requestAnimationFrame(() => el.classList.add('dk-show'));
+      }
+
+      function animateAlertOut(el) {
+        if (!el) return;
+        el.classList.add('dk-hide');
+        setTimeout(() => {
+          if (el && el.parentNode) el.parentNode.removeChild(el);
+        }, 450);
+      }
+
+      function wireAlert(el) {
+        if (!el) return;
+        animateAlertIn(el);
+
+        const ms = parseInt(el.getAttribute('data-auto-hide') || String(ALERT_DURATION), 10);
+        const timer = setTimeout(() => animateAlertOut(el), ms);
+        el.dataset.timerId = String(timer);
+
+        const close = el.querySelector('.close-btn');
+        if (close && !close.dataset.bound) {
+          close.dataset.bound = '1';
+          close.addEventListener('click', (e) => {
+            e.preventDefault();
+            const t = el.dataset.timerId ? parseInt(el.dataset.timerId, 10) : 0;
+            if (t) clearTimeout(t);
+            animateAlertOut(el);
+          });
+        }
+      }
+
+      function pulseAlert(el) {
+        if (!el) return;
+        el.classList.remove('dk-pulse');
+        void el.offsetWidth;
+        el.classList.add('dk-pulse');
+      }
+
+      // ✅ update URL supaya saat refresh alert tetap muncul lagi
+      window.dkPersistAlertToUrl = function(status, message) {
+        try {
+          const url = new URL(window.location.href);
+          const sp = url.searchParams;
+
+          sp.set('status', String(status || 'success'));
+          sp.set('msg', String(message || ''));
+
+          // biar tidak bentrok dengan pagination yang sedang berjalan,
+          // kita tetap pertahankan q/per/page/tingkat/kelas yang sudah ada.
+          url.search = sp.toString();
+          window.history.replaceState({}, '', url.toString());
+        } catch (e) {}
+      };
+
+      // ✅ Top alert (success/danger)
+      window.dkShowTopAlert = function(type, message) {
+        const area = document.getElementById('alertAreaTop');
+        if (!area) return;
+
+        const ok = (type === 'success');
+        const cls = ok ? 'dk-alert-success' : 'dk-alert-danger';
+        const icon = ok ?
+          '<i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>' :
+          '<i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>';
+
+        const div = document.createElement('div');
+        div.className = `dk-alert ${cls}`;
+        div.setAttribute('data-auto-hide', String(ALERT_DURATION));
+        div.innerHTML = `<span class="close-btn">&times;</span>${icon}${escapeHtml(message)}`;
+
+        area.prepend(div);
+        wireAlert(div);
+
+        try {
+          window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+          });
+        } catch (e) {
+          window.scrollTo(0, 0);
+        }
+      };
+
+      // ✅ Modal warning (kuning) + spam pulse
+      window.dkShowModalWarning = function(containerId, message) {
+        const box = document.getElementById(containerId);
+        if (!box) return;
+
+        const icon = '<i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>';
+        const existing = box.querySelector('.dk-alert');
+
+        if (existing) {
+          const oldTimer = existing.dataset.timerId ? parseInt(existing.dataset.timerId, 10) : 0;
+          if (oldTimer) clearTimeout(oldTimer);
+
+          const msgSpan = existing.querySelector('.dk-msg');
+          if (msgSpan) {
+            msgSpan.textContent = String(message ?? '');
+          } else {
+            existing.innerHTML = `<span class="close-btn">&times;</span>${icon}<span class="dk-msg"></span>`;
+            existing.querySelector('.dk-msg').textContent = String(message ?? '');
+          }
+
+          existing.classList.remove('dk-hide');
+          existing.classList.add('dk-show');
+
+          pulseAlert(existing);
+
+          const timer = setTimeout(() => animateAlertOut(existing), ALERT_DURATION);
+          existing.dataset.timerId = String(timer);
+
+          const close = existing.querySelector('.close-btn');
+          if (close && !close.dataset.bound) {
+            close.dataset.bound = '1';
+            close.addEventListener('click', (e) => {
+              e.preventDefault();
+              const t = existing.dataset.timerId ? parseInt(existing.dataset.timerId, 10) : 0;
+              if (t) clearTimeout(t);
+              animateAlertOut(existing);
+            });
+          }
+          return;
+        }
+
+        const div = document.createElement('div');
+        div.className = 'dk-alert dk-alert-warning';
+        div.setAttribute('data-auto-hide', String(ALERT_DURATION));
+        div.innerHTML = `<span class="close-btn">&times;</span>${icon}<span class="dk-msg">${escapeHtml(message)}</span>`;
+        box.appendChild(div);
+        wireAlert(div);
+        pulseAlert(div);
+      };
+
+      // auto wire alert dari PHP
+      document.querySelectorAll('#alertAreaTop .dk-alert').forEach(wireAlert);
+    })();
+  </script>
+
   <script>
     (function() {
       const input = document.getElementById('searchInput');
@@ -983,87 +1181,21 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
 
       let pendingDeleteHandler = null;
 
-      const ALERT_DURATION = 4000;
-
-      function animateAlertIn(el) {
-        if (!el) return;
-        requestAnimationFrame(() => el.classList.add('dk-show'));
-      }
-
-      function animateAlertOut(el) {
-        if (!el) return;
-        el.classList.add('dk-hide');
-        setTimeout(() => {
-          if (el && el.parentNode) el.parentNode.removeChild(el);
-        }, 450);
-      }
-
-      function wireAlert(el) {
-        if (!el) return;
-        animateAlertIn(el);
-        const ms = parseInt(el.getAttribute('data-auto-hide') || String(ALERT_DURATION), 10);
-        const timer = setTimeout(() => animateAlertOut(el), ms);
-        const close = el.querySelector('.close-btn');
-        if (close) {
-          close.addEventListener('click', (e) => {
-            e.preventDefault();
-            clearTimeout(timer);
-            animateAlertOut(el);
-          });
+      function showTop(type, msg) {
+        if (type === 'success') {
+          window.dkShowTopAlert('success', msg);
+          // ✅ simpan ke URL agar refresh tetap muncul
+          window.dkPersistAlertToUrl('success', msg);
+          return;
         }
+        // warning/danger => red top
+        window.dkShowTopAlert('danger', msg);
+        window.dkPersistAlertToUrl('error', msg);
       }
 
-      function escapeHtml(str) {
-        return String(str ?? '')
-          .replaceAll('&', '&amp;')
-          .replaceAll('<', '&lt;')
-          .replaceAll('>', '&gt;')
-          .replaceAll('"', '&quot;')
-          .replaceAll("'", "&#039;");
+      function showModalWarn(containerId, msg) {
+        window.dkShowModalWarning(containerId, msg);
       }
-
-      function showTopAlert(type, message) {
-        const area = document.getElementById('alertAreaTop');
-        if (!area) return;
-
-        const cls = type === 'success' ? 'dk-alert-success' :
-          type === 'warning' ? 'dk-alert-warning' :
-          'dk-alert-danger';
-        const icon = type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '❌';
-
-        const div = document.createElement('div');
-        div.className = `dk-alert ${cls}`;
-        div.setAttribute('data-auto-hide', String(ALERT_DURATION));
-        div.innerHTML = `<span class="close-btn">&times;</span> ${icon} ${escapeHtml(message)}`;
-
-        area.prepend(div);
-        wireAlert(div);
-        window.scrollTo({
-          top: 0,
-          behavior: 'smooth'
-        });
-      }
-
-      function showModalAlert(containerId, type, message) {
-        const box = document.getElementById(containerId);
-        if (!box) return;
-
-        box.innerHTML = '';
-        const cls = type === 'success' ? 'dk-alert-success' :
-          type === 'warning' ? 'dk-alert-warning' :
-          'dk-alert-danger';
-        const icon = type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '❌';
-
-        const div = document.createElement('div');
-        div.className = `dk-alert ${cls}`;
-        div.setAttribute('data-auto-hide', String(ALERT_DURATION));
-        div.innerHTML = `<span class="close-btn">&times;</span> ${icon} ${escapeHtml(message)}`;
-
-        box.appendChild(div);
-        wireAlert(div);
-      }
-
-      document.querySelectorAll('#alertAreaTop .dk-alert').forEach(wireAlert);
 
       function scrollToTable() {
         if (!tableWrap) return;
@@ -1135,7 +1267,7 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
 
         const inputId = document.getElementById('edit_id_siswa');
         const inputNama = document.getElementById('edit_nama_siswa');
-        const inputNisn = document.getElementById('edit_nisn');
+        const inputNis = document.getElementById('edit_nis');
         const inputAbsen = document.getElementById('edit_absen');
         const inputKelas = document.getElementById('edit_id_kelas');
 
@@ -1144,12 +1276,12 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
             e.preventDefault();
             const id = btn.getAttribute('data-id') || '';
             const nama = btn.getAttribute('data-nama') || '';
-            const nisn = btn.getAttribute('data-nisn') || '';
+            const nis = btn.getAttribute('data-nis') || '';
             const absen = btn.getAttribute('data-absen') || '';
             const idKelas = btn.getAttribute('data-id_kelas') || '';
 
             if (inputId) inputId.value = id;
-            if (inputNisn) inputNisn.value = nisn;
+            if (inputNis) inputNis.value = nis;
             if (inputNama) inputNama.value = nama;
             if (inputKelas) inputKelas.value = idKelas;
             if (inputAbsen) inputAbsen.value = absen;
@@ -1292,7 +1424,7 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
           form.appendChild(inp);
         });
 
-        showDeleteConfirm(`Yakin ingin menghapus ${count} data siswa terpilih?`, () => {
+        showDeleteConfirm(`Yakin ingin menghapus ${count} siswa terpilih?`, () => {
           document.body.appendChild(form);
           form.submit();
         });
@@ -1324,12 +1456,11 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
           if (v === 0) {
             opt.hidden = false;
             return;
-          } // "Semua Kelas"
+          }
           const t = opt.getAttribute('data-tingkat') || '';
           opt.hidden = (tingkatVal !== '' && t !== tingkatVal);
         });
 
-        // jika kelas yang dipilih tidak cocok, reset ke semua
         const selectedOpt = filterKelas.querySelector('option:checked');
         if (selectedOpt && selectedOpt.hidden) {
           filterKelas.value = '0';
@@ -1458,7 +1589,7 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
 
           const data = await res.json().catch(() => null);
           if (!data) {
-            showModalAlert(modalAlertId, 'danger', 'Respon server tidak valid.');
+            showModalWarn(modalAlertId, 'Respon server tidak valid.');
             disableBtn(btn, false);
             return;
           }
@@ -1466,10 +1597,10 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
           if (data.ok) {
             onSuccess && onSuccess(data);
           } else {
-            showModalAlert(modalAlertId, data.type || 'danger', data.msg || 'Terjadi kesalahan.');
+            showModalWarn(modalAlertId, data.msg || 'Terjadi kesalahan.');
           }
         } catch (err) {
-          showModalAlert(modalAlertId, 'danger', 'Gagal terhubung ke server.');
+          showModalWarn(modalAlertId, 'Gagal terhubung ke server.');
           console.error(err);
         } finally {
           disableBtn(btn, false);
@@ -1490,7 +1621,7 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
             }
             formTambah.reset();
             doSearch(currentQuery, 1, currentPerPage, currentTingkat, currentKelas, true);
-            showTopAlert(data.type || 'success', data.msg || 'Berhasil.');
+            showTop('success', data.msg || 'Berhasil menambah data.');
           });
         });
       }
@@ -1508,7 +1639,7 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
               bootstrap.Modal.getOrCreateInstance(modalEditEl).hide();
             }
             doSearch(currentQuery, 1, currentPerPage, currentTingkat, currentKelas, true);
-            showTopAlert(data.type || 'success', data.msg || 'Berhasil.');
+            showTop('success', data.msg || 'Berhasil mengedit data.');
           });
         });
       }
@@ -1529,7 +1660,7 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
             toggleClearButtonSiswaImport();
 
             doSearch(currentQuery, 1, currentPerPage, currentTingkat, currentKelas, true);
-            showTopAlert(data.type || 'success', data.msg || 'Import selesai.');
+            showTop('success', data.msg || 'Import selesai.');
           });
         });
       }
@@ -1538,7 +1669,7 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
       const exportBtn = document.getElementById('exportBtn');
       if (exportBtn) {
         exportBtn.addEventListener('click', () => {
-          showTopAlert('warning', 'Fitur export belum dihubungkan ke file export siswa.');
+          showTop('danger', 'Fitur export belum dihubungkan ke file export siswa.');
         });
       }
 
@@ -1551,7 +1682,6 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
 
       if (input) input.value = currentQuery;
 
-      // set nilai awal filter dari URL
       if (filterTingkat) filterTingkat.value = currentTingkat;
       if (filterKelas) filterKelas.value = String(currentKelas || 0);
       filterKelasOptionsByTingkat(currentTingkat);

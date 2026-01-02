@@ -13,12 +13,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $nama     = trim($_POST['nama_siswa'] ?? '');
-$nisn     = trim($_POST['no_induk_siswa'] ?? '');
+$nis     = trim($_POST['no_induk_siswa'] ?? '');
 $absen    = trim($_POST['no_absen_siswa'] ?? '');
 $id_kelas = (int)($_POST['id_kelas'] ?? 0);
 
 // (catatan wali kelas sudah tidak dipakai di UI; aman diabaikan)
-if ($nama === '' || $nisn === '' || $absen === '' || $id_kelas <= 0) {
+if ($nama === '' || $nis === '' || $absen === '' || $id_kelas <= 0) {
   echo json_encode(['ok' => false, 'type' => 'warning', 'msg' => 'Lengkapi data siswa terlebih dahulu.']);
   exit;
 }
@@ -26,9 +26,9 @@ if ($nama === '' || $nisn === '' || $absen === '' || $id_kelas <= 0) {
 mysqli_begin_transaction($koneksi);
 
 try {
-  // ✅ CEK DUPLIKAT NISN (wajib unik)
+  // ✅ CEK DUPLIKAT NIS (wajib unik)
   $stmtDup = mysqli_prepare($koneksi, "SELECT id_siswa FROM siswa WHERE no_induk_siswa = ? LIMIT 1");
-  mysqli_stmt_bind_param($stmtDup, 's', $nisn);
+  mysqli_stmt_bind_param($stmtDup, 's', $nis);
   mysqli_stmt_execute($stmtDup);
   $resDup = mysqli_stmt_get_result($stmtDup);
   $dupRow = mysqli_fetch_assoc($resDup);
@@ -39,7 +39,7 @@ try {
     echo json_encode([
       'ok' => false,
       'type' => 'warning',
-      'msg' => 'NISN sudah terdaftar. Data ditolak.'
+      'msg' => 'NIS sudah terpakai.'
     ]);
     exit;
   }
@@ -48,7 +48,7 @@ try {
     INSERT INTO siswa (nama_siswa, no_induk_siswa, no_absen_siswa, id_kelas)
     VALUES (?, ?, ?, ?)
   ");
-  mysqli_stmt_bind_param($stmt, 'sssi', $nama, $nisn, $absen, $id_kelas);
+  mysqli_stmt_bind_param($stmt, 'sssi', $nama, $nis, $absen, $id_kelas);
   mysqli_stmt_execute($stmt);
   mysqli_stmt_close($stmt);
 

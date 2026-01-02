@@ -14,12 +14,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $id       = (int)($_POST['id_siswa'] ?? 0);
 $nama     = trim($_POST['nama_siswa'] ?? '');
-$nisn     = trim($_POST['no_induk_siswa'] ?? '');
+$nis     = trim($_POST['no_induk_siswa'] ?? '');
 $absen    = trim($_POST['no_absen_siswa'] ?? '');
 $id_kelas = (int)($_POST['id_kelas'] ?? 0);
 
 // (catatan wali kelas sudah tidak dipakai di UI; aman diabaikan)
-if ($id <= 0 || $nama === '' || $nisn === '' || $absen === '' || $id_kelas <= 0) {
+if ($id <= 0 || $nama === '' || $nis === '' || $absen === '' || $id_kelas <= 0) {
   echo json_encode(['ok' => false, 'type' => 'warning', 'msg' => 'Data belum lengkap atau ID tidak valid.']);
   exit;
 }
@@ -27,7 +27,7 @@ if ($id <= 0 || $nama === '' || $nisn === '' || $absen === '' || $id_kelas <= 0)
 mysqli_begin_transaction($koneksi);
 
 try {
-  // ✅ CEK DUPLIKAT NISN, kecuali milik diri sendiri
+  // ✅ CEK DUPLIKAT NIS, kecuali milik diri sendiri
   $stmtDup = mysqli_prepare($koneksi, "
     SELECT id_siswa
     FROM siswa
@@ -35,7 +35,7 @@ try {
       AND id_siswa <> ?
     LIMIT 1
   ");
-  mysqli_stmt_bind_param($stmtDup, 'si', $nisn, $id);
+  mysqli_stmt_bind_param($stmtDup, 'si', $nis, $id);
   mysqli_stmt_execute($stmtDup);
   $resDup = mysqli_stmt_get_result($stmtDup);
   $dupRow = mysqli_fetch_assoc($resDup);
@@ -46,7 +46,7 @@ try {
     echo json_encode([
       'ok' => false,
       'type' => 'warning',
-      'msg' => 'NISN sudah digunakan oleh siswa lain. Perubahan ditolak.'
+      'msg' => 'NIS sudah terpakai.'
     ]);
     exit;
   }
@@ -59,7 +59,7 @@ try {
       id_kelas = ?
     WHERE id_siswa = ?
   ");
-  mysqli_stmt_bind_param($stmt, 'sssii', $nama, $nisn, $absen, $id_kelas, $id);
+  mysqli_stmt_bind_param($stmt, 'sssii', $nama, $nis, $absen, $id_kelas, $id);
   mysqli_stmt_execute($stmt);
   mysqli_stmt_close($stmt);
 

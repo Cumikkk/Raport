@@ -81,7 +81,7 @@ try {
     echo json_encode([
       'ok' => false,
       'type' => 'warning',
-      'msg' => 'File Excel tidak sesuai. Pastikan kolom sampai E (No, NISN, Nama, Kelas, Absen).'
+      'msg' => 'File Excel tidak sesuai. Pastikan kolom sampai E (No, NIS, Nama, Kelas, Absen).'
     ]);
     exit;
   }
@@ -103,50 +103,50 @@ try {
   $duplicates_file = 0;
   $errors = [];
 
-  // prepared: cek nisn ada
+  // prepared: cek nis ada
   $stmtFind = mysqli_prepare($koneksi, "SELECT id_siswa FROM siswa WHERE no_induk_siswa = ? LIMIT 1");
   $stmtIns  = mysqli_prepare($koneksi, "INSERT INTO siswa (nama_siswa, no_induk_siswa, no_absen_siswa, id_kelas) VALUES (?, ?, ?, ?)");
 
   // untuk deteksi duplikat di dalam file
-  $seenNisn = [];
+  $seenNis = [];
 
   // Data mulai row 2 (row 1 header)
   for ($r = 2; $r <= $highestRow; $r++) {
     // Susunan excel user:
     // A: No (abaikan)
-    // B: NISN
+    // B: NIS
     // C: Nama Siswa
     // D: Kelas (nama_kelas)
     // E: Absen
-    $nisnRaw  = $sheet->getCell("B{$r}")->getFormattedValue();
+    $nisRaw  = $sheet->getCell("B{$r}")->getFormattedValue();
     $namaRaw  = $sheet->getCell("C{$r}")->getFormattedValue();
     $kelasRaw = $sheet->getCell("D{$r}")->getFormattedValue();
     $absenRaw = $sheet->getCell("E{$r}")->getFormattedValue();
 
-    $nisn  = norm($nisnRaw);
+    $nis  = norm($nisRaw);
     $nama  = norm($namaRaw);
     $kelas = norm($kelasRaw);
     $absen = norm($absenRaw);
 
-    if ($nisn === '' && $nama === '' && $kelas === '' && $absen === '') {
+    if ($nis === '' && $nama === '' && $kelas === '' && $absen === '') {
       $skipped_empty++;
       continue;
     }
 
-    if ($nisn === '' || $nama === '' || $kelas === '' || $absen === '') {
+    if ($nis === '' || $nama === '' || $kelas === '' || $absen === '') {
       $skipped_invalid++;
-      $errors[] = "Baris {$r}: data belum lengkap (NISN/Nama/Kelas/Absen wajib).";
+      $errors[] = "Baris {$r}: data belum lengkap (NIS/Nama/Kelas/Absen wajib).";
       continue;
     }
 
     // duplikat di file
-    $keyN = mb_strtolower($nisn, 'UTF-8');
-    if (isset($seenNisn[$keyN])) {
+    $keyN = mb_strtolower($nis, 'UTF-8');
+    if (isset($seenNis[$keyN])) {
       $duplicates_file++;
-      $errors[] = "Baris {$r}: NISN duplikat di file ({$nisn}).";
+      $errors[] = "Baris {$r}: NIS duplikat di file ({$nis}).";
       continue;
     }
-    $seenNisn[$keyN] = true;
+    $seenNis[$keyN] = true;
 
     // kelas harus ada di master
     $kelasKey = mb_strtolower($kelas, 'UTF-8');
@@ -158,19 +158,19 @@ try {
     }
 
     // ✅ duplikat di DB -> SKIP / TOLAK (tidak update)
-    mysqli_stmt_bind_param($stmtFind, 's', $nisn);
+    mysqli_stmt_bind_param($stmtFind, 's', $nis);
     mysqli_stmt_execute($stmtFind);
     $resFind = mysqli_stmt_get_result($stmtFind);
     $found = mysqli_fetch_assoc($resFind);
 
     if (!empty($found)) {
       $duplicates_db++;
-      $errors[] = "Baris {$r}: NISN {$nisn} sudah ada di database. Baris di-skip.";
+      $errors[] = "Baris {$r}: NIS {$nis} sudah ada di database. Baris di-skip.";
       continue;
     }
 
     // insert
-    mysqli_stmt_bind_param($stmtIns, 'sssi', $nama, $nisn, $absen, $id_kelas);
+    mysqli_stmt_bind_param($stmtIns, 'sssi', $nama, $nis, $absen, $id_kelas);
     mysqli_stmt_execute($stmtIns);
     $inserted++;
   }
@@ -180,7 +180,7 @@ try {
 
   mysqli_commit($koneksi);
 
-  $msg = "Import selesai. Tambah: {$inserted}, Duplikat DB: {$duplicates_db}, Duplikat File: {$duplicates_file}, Skip Kosong: {$skipped_empty}, Skip Invalid: {$skipped_invalid}.";
+  $msg = "Import selesai. Data masuk: {$inserted}, Data duplikat dalam sistem: {$duplicates_db}, Data duplikat dalam file excel: {$duplicates_file}, Baris kosong dilewati: {$skipped_empty}, Data tidak valid: {$skipped_invalid}.";
   if (!empty($errors)) $msg .= " Ada " . count($errors) . " catatan.";
 
   echo json_encode([

@@ -303,7 +303,6 @@ if ($totalRows === 0) {
     max-height: 220px;
     overflow: hidden;
     position: relative;
-
     opacity: 0;
     transform: translateY(-10px);
     transition: opacity .35s ease, transform .35s ease,
@@ -399,7 +398,6 @@ if ($totalRows === 0) {
     justify-content: center;
     gap: 12px;
     flex-wrap: wrap;
-
     padding: 10px 12px;
     border: 1px solid rgba(0, 0, 0, .12);
     border-radius: 12px;
@@ -867,6 +865,20 @@ if ($totalRows === 0) {
         .replaceAll("'", "&#039;");
     }
 
+    // ✅ SIMPAN ALERT DI URL (agar refresh muncul lagi)
+    // - Tidak reload
+    // - Tetap pertahankan parameter lain (q/per/page)
+    function persistTopAlertToUrl(type, message) {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('status', String(type || 'success'));
+        url.searchParams.set('msg', String(message || ''));
+        window.history.replaceState({}, '', url.toString());
+      } catch (e) {
+        // ignore
+      }
+    }
+
     function showTopAlert(type, message) {
       const area = document.getElementById('alertAreaTop');
       if (!area) return;
@@ -884,6 +896,9 @@ if ($totalRows === 0) {
       area.prepend(div);
       wireAlert(div);
 
+      // ✅ ini yang bikin refresh ikut muncul lagi
+      persistTopAlertToUrl(type, message);
+
       try {
         window.scrollTo({
           top: 0,
@@ -898,12 +913,11 @@ if ($totalRows === 0) {
     function pulseAlert(el) {
       if (!el) return;
       el.classList.remove('dk-pulse');
-      void el.offsetWidth; // force reflow biar animasi ke-trigger ulang
+      void el.offsetWidth; // force reflow
       el.classList.add('dk-pulse');
     }
 
-    // ✅ Modal alert: SELALU warning kuning + icon warning
-    // ✅ kalau spam submit: update teks + reset timer + animasi muncul lagi
+    // ✅ Modal alert: warning kuning + spam anim
     function showModalWarning(containerId, message) {
       const box = document.getElementById(containerId);
       if (!box) return;
@@ -926,7 +940,6 @@ if ($totalRows === 0) {
         existing.classList.remove('dk-hide');
         existing.classList.add('dk-show');
 
-        // ✅ trigger animasi “muncul” lagi
         pulseAlert(existing);
 
         const timer = setTimeout(() => animateAlertOut(existing), ALERT_DURATION);
@@ -945,7 +958,6 @@ if ($totalRows === 0) {
         return;
       }
 
-      // belum ada: buat sekali
       const div = document.createElement('div');
       div.className = 'dk-alert dk-alert-warning';
       div.setAttribute('data-auto-hide', String(ALERT_DURATION));
