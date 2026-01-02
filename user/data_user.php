@@ -600,7 +600,7 @@ if ($totalRows === 0) {
 
                           <button type="button"
                             class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-delete-single"
-                            data-href="hapus_data_user.php?id=<?= (int)$row['id_user'] ?>"
+                            data-href="proses_hapus_data_user.php?id=<?= (int)$row['id_user'] ?>"
                             data-label="<?= htmlspecialchars($row['username'], ENT_QUOTES, 'UTF-8') ?>">
                             <i class="bi bi-trash"></i> Hapus
                           </button>
@@ -1189,7 +1189,7 @@ if ($totalRows === 0) {
 
       const form = document.createElement('form');
       form.method = 'post';
-      form.action = 'hapus_data_user.php';
+      form.action = 'proses_hapus_data_user.php';
 
       const csrfInput = document.createElement('input');
       csrfInput.type = 'hidden';
