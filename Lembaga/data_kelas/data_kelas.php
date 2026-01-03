@@ -14,6 +14,18 @@ if (empty($_SESSION['csrf'])) {
 }
 $csrf = $_SESSION['csrf'];
 
+// ==========================
+// ALERT PACK (SESSION PAYLOAD) - bisa 2 pesan (success & error)
+// Dipakai untuk pesan panjang (hapus single/bulk)
+// ==========================
+$sessionAlertMulti = null;
+if (isset($_SESSION['dk_alert_kelas']) && is_array($_SESSION['dk_alert_kelas'])) {
+  $sessionAlertMulti = [
+    'success' => (string)($_SESSION['dk_alert_kelas']['success'] ?? ''),
+    'error'   => (string)($_SESSION['dk_alert_kelas']['error'] ?? ''),
+  ];
+}
+
 $search  = isset($_GET['q']) ? trim($_GET['q']) : '';
 $tingkat = isset($_GET['tingkat']) ? trim($_GET['tingkat']) : '';
 $allowedTingkat = ['', 'X', 'XI', 'XII'];
@@ -43,9 +55,6 @@ $result = mysqli_stmt_get_result($stmt);
 $guruList = [];
 $resGuru = mysqli_query($koneksi, "SELECT id_guru, nama_guru FROM guru ORDER BY nama_guru ASC");
 while ($g = mysqli_fetch_assoc($resGuru)) $guruList[] = $g;
-
-$msg = $_GET['msg'] ?? '';
-$err = $_GET['err'] ?? '';
 ?>
 
 <body>
@@ -85,9 +94,6 @@ $err = $_GET['err'] ?? '';
       gap: 12px;
     }
 
-    /* samakan dengan data_guru */
-
-    /* samakan dengan data_guru (lebih pendek) */
     .search-wrap {
       max-width: 300px;
       width: 100%;
@@ -124,7 +130,6 @@ $err = $_GET['err'] ?? '';
       box-shadow: 0 0 0 3px rgba(10, 77, 179, .15);
     }
 
-    /* filter disamakan barisnya dengan data_guru (rapi + lebih pendek) */
     .search-perpage-row {
       gap: 12px;
     }
@@ -134,7 +139,6 @@ $err = $_GET['err'] ?? '';
       min-width: 140px;
     }
 
-    /* lebih pendek dari sebelumnya */
     .filter-select {
       border: 1px solid var(--ring);
       border-radius: 10px;
@@ -145,7 +149,6 @@ $err = $_GET['err'] ?? '';
       text-align: center;
     }
 
-    /* caret (v terbalik) seperti select data/hal di data guru */
     .filter-select {
       appearance: none;
       -webkit-appearance: none;
@@ -155,7 +158,6 @@ $err = $_GET['err'] ?? '';
       background-position: right 10px center;
       background-size: 12px;
       padding-right: 32px;
-      /* ruang untuk icon */
     }
 
     .filter-select option {
@@ -266,22 +268,24 @@ $err = $_GET['err'] ?? '';
       color: #333 !important;
     }
 
+    /* ALERT PACK */
     .dk-alert {
       padding: 12px 14px;
       border-radius: 12px;
-      margin-bottom: 20px;
+      margin-bottom: 12px;
       font-size: 14px;
       max-height: 220px;
       overflow: hidden;
       position: relative;
       opacity: 0;
       transform: translateY(-10px);
-      transition: opacity .35s ease, transform .35s ease, max-height .35s ease, margin .35s ease, padding .35s ease;
+      transition: opacity .35s ease, transform .35s ease,
+        max-height .35s ease, margin .35s ease, padding .35s ease;
     }
 
     .dk-alert.dk-show {
       opacity: 1;
-      transform: translateY(0);
+      transform: translateY(0)
     }
 
     .dk-alert.dk-hide {
@@ -320,18 +324,40 @@ $err = $_GET['err'] ?? '';
       opacity: .6;
       font-size: 18px;
       line-height: 1;
+      user-select: none;
     }
 
     .dk-alert .close-btn:hover {
       opacity: 1;
     }
 
-    #alertAreaTop {
-      position: relative;
+    @keyframes dkPulseIn {
+      0% {
+        transform: translateY(-10px);
+        opacity: 0
+      }
+
+      70% {
+        transform: translateY(2px);
+        opacity: 1
+      }
+
+      100% {
+        transform: translateY(0);
+        opacity: 1
+      }
+    }
+
+    .dk-alert.dk-pulse {
+      animation: dkPulseIn .28s ease;
     }
 
     .modal-alert-area {
       margin-bottom: 12px;
+    }
+
+    #alertAreaTop {
+      position: relative;
     }
 
     @media (max-width:520px) {
@@ -384,7 +410,6 @@ $err = $_GET['err'] ?? '';
         align-items: stretch !important;
       }
 
-      /* samakan pola mobile data_guru */
       .search-wrap {
         max-width: 100%;
       }
@@ -395,21 +420,17 @@ $err = $_GET['err'] ?? '';
     <div class="row g-3">
       <div class="col-12">
 
-        <div id="alertAreaTop">
-          <?php if ($msg !== ''): ?>
-            <div class="dk-alert dk-alert-success" data-auto-hide="4000">
-              <span class="close-btn">&times;</span>
-              ✅ <?= htmlspecialchars($msg, ENT_QUOTES, 'UTF-8'); ?>
-            </div>
-          <?php endif; ?>
+        <!-- TOP ALERT AREA -->
+        <div id="alertAreaTop"></div>
 
-          <?php if ($err !== ''): ?>
-            <div class="dk-alert dk-alert-danger" data-auto-hide="4000">
-              <span class="close-btn">&times;</span>
-              ❌ <?= htmlspecialchars($err, ENT_QUOTES, 'UTF-8'); ?>
-            </div>
-          <?php endif; ?>
-        </div>
+        <!-- Session alert payload (hanya dibaca kalau ?alert=1) -->
+        <?php if ($sessionAlertMulti && isset($_GET['alert']) && $_GET['alert'] === '1'): ?>
+          <div id="dkSessionAlertMulti"
+            data-success="<?= htmlspecialchars($sessionAlertMulti['success'], ENT_QUOTES, 'UTF-8'); ?>"
+            data-error="<?= htmlspecialchars($sessionAlertMulti['error'], ENT_QUOTES, 'UTF-8'); ?>"
+            style="display:none;"></div>
+          <?php unset($_SESSION['dk_alert_kelas']); ?>
+        <?php endif; ?>
 
         <div class="card shadow-sm">
           <div class="top-bar p-3 p-md-4">
@@ -429,7 +450,7 @@ $err = $_GET['err'] ?? '';
 
                   <div class="filter-wrap">
                     <select id="tingkatFilter" class="form-select filter-select" aria-label="Filter Tingkat">
-                      <option value="">Semua Tingkat </option>
+                      <option value="">Semua Tingkat</option>
                       <option value="X" <?= $tingkat === 'X'  ? 'selected' : '' ?>>Tingkat X</option>
                       <option value="XI" <?= $tingkat === 'XI' ? 'selected' : '' ?>>Tingkat XI</option>
                       <option value="XII" <?= $tingkat === 'XII' ? 'selected' : '' ?>>Tingkat XII</option>
@@ -500,17 +521,17 @@ $err = $_GET['err'] ?? '';
                           <input type="checkbox" class="row-check" value="<?= (int)$row['id_kelas'] ?>">
                         </td>
                         <td data-label="No"><?= $no++; ?></td>
-                        <td data-label="Nama Kelas"><?= htmlspecialchars($row['nama_kelas']) ?></td>
+                        <td data-label="Nama Kelas"><?= htmlspecialchars((string)$row['nama_kelas']) ?></td>
                         <td data-label="Jumlah Siswa" class="text-center"><?= (int)$row['jumlah_siswa'] ?></td>
-                        <td data-label="Wali Kelas"><?= htmlspecialchars($row['wali_kelas'] ?? '-') ?></td>
-                        <td data-label="Tingkat" class="text-center"><?= htmlspecialchars($row['tingkat_kelas']) ?></td>
+                        <td data-label="Wali Kelas"><?= htmlspecialchars((string)($row['wali_kelas'] ?? '-') ?: '-') ?></td>
+                        <td data-label="Tingkat" class="text-center"><?= htmlspecialchars((string)$row['tingkat_kelas']) ?></td>
                         <td data-label="Aksi">
                           <div class="d-flex gap-2 justify-content-center flex-wrap">
                             <button type="button"
                               class="btn btn-warning btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-edit-kelas"
                               data-id="<?= (int)$row['id_kelas'] ?>"
-                              data-nama="<?= htmlspecialchars($row['nama_kelas'], ENT_QUOTES, 'UTF-8') ?>"
-                              data-tingkat="<?= htmlspecialchars($row['tingkat_kelas'], ENT_QUOTES, 'UTF-8') ?>"
+                              data-nama="<?= htmlspecialchars((string)$row['nama_kelas'], ENT_QUOTES, 'UTF-8') ?>"
+                              data-tingkat="<?= htmlspecialchars((string)$row['tingkat_kelas'], ENT_QUOTES, 'UTF-8') ?>"
                               data-idguru="<?= (int)($row['id_guru'] ?? 0) ?>">
                               <i class="bi bi-pencil-square"></i> Edit
                             </button>
@@ -518,7 +539,7 @@ $err = $_GET['err'] ?? '';
                             <button type="button"
                               class="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 px-2 py-1 btn-delete-single"
                               data-id="<?= (int)$row['id_kelas'] ?>"
-                              data-label="<?= htmlspecialchars($row['nama_kelas'], ENT_QUOTES, 'UTF-8') ?>">
+                              data-label="<?= htmlspecialchars((string)$row['nama_kelas'], ENT_QUOTES, 'UTF-8') ?>">
                               <i class="bi bi-trash"></i> Hapus
                             </button>
                           </div>
@@ -579,7 +600,7 @@ $err = $_GET['err'] ?? '';
               <select id="add_id_guru" name="id_guru" class="form-select" required>
                 <option value="" disabled selected>Pilih Wali Kelas</option>
                 <?php foreach ($guruList as $g): ?>
-                  <option value="<?= (int)$g['id_guru'] ?>"><?= htmlspecialchars($g['nama_guru']) ?></option>
+                  <option value="<?= (int)$g['id_guru'] ?>"><?= htmlspecialchars((string)$g['nama_guru']) ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -632,7 +653,7 @@ $err = $_GET['err'] ?? '';
               <select id="edit_id_guru" name="id_guru" class="form-select" required>
                 <option value="" disabled>Pilih Wali Kelas</option>
                 <?php foreach ($guruList as $g): ?>
-                  <option value="<?= (int)$g['id_guru'] ?>"><?= htmlspecialchars($g['nama_guru']) ?></option>
+                  <option value="<?= (int)$g['id_guru'] ?>"><?= htmlspecialchars((string)$g['nama_guru']) ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -680,7 +701,7 @@ $err = $_GET['err'] ?? '';
                   </ol>
                   <span class="text-muted">
                     Struktur kolom template:
-                    <strong>A: No.</strong>, <strong>B: Nama Kelas</strong>, <strong>C: Tingkat</strong>, <strong>D: Wali Kelas</strong>.
+                    <strong>A: Nomor</strong>, <strong>B: Nama Kelas</strong>, <strong>C: Tingkat</strong>, <strong>D: Wali Kelas</strong>.
                   </span>
                 </div>
               </div>
@@ -760,6 +781,226 @@ $err = $_GET['err'] ?? '';
     }
   </script>
 
+  <!-- ALERT PACK JS (samakan dengan data_guru) -->
+  <script>
+    (function() {
+      const ALERT_DURATION = 4000;
+
+      function escapeHtml(str) {
+        return String(str ?? '')
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", "&#039;");
+      }
+
+      function animateIn(el) {
+        if (!el) return;
+        requestAnimationFrame(() => el.classList.add('dk-show'));
+      }
+
+      function animateOut(el) {
+        if (!el) return;
+        el.classList.add('dk-hide');
+        setTimeout(() => {
+          if (el && el.parentNode) el.parentNode.removeChild(el);
+        }, 450);
+      }
+
+      function wireAlert(el) {
+        if (!el) return;
+        animateIn(el);
+
+        const ms = parseInt(el.getAttribute('data-auto-hide') || String(ALERT_DURATION), 10);
+        const timer = setTimeout(() => animateOut(el), ms);
+        el.dataset.timerId = String(timer);
+
+        const close = el.querySelector('.close-btn');
+        if (close && !close.dataset.bound) {
+          close.dataset.bound = '1';
+          close.addEventListener('click', (e) => {
+            e.preventDefault();
+            const t = el.dataset.timerId ? parseInt(el.dataset.timerId, 10) : 0;
+            if (t) clearTimeout(t);
+            animateOut(el);
+          });
+        }
+      }
+
+      function pulse(el) {
+        if (!el) return;
+        el.classList.remove('dk-pulse');
+        void el.offsetWidth;
+        el.classList.add('dk-pulse');
+      }
+
+      // persist 2 pesan: success di (status,msg) dan error di (err)
+      window.dkPersistAlertsToUrl = function(successMsg, errorMsg) {
+        try {
+          const url = new URL(window.location.href);
+          const sp = url.searchParams;
+
+          if (successMsg) {
+            sp.set('status', 'success');
+            sp.set('msg', String(successMsg));
+          } else {
+            sp.delete('status');
+            sp.delete('msg');
+          }
+
+          if (errorMsg) {
+            sp.set('err', String(errorMsg));
+          } else {
+            sp.delete('err');
+          }
+
+          sp.delete('alert');
+          url.search = sp.toString();
+          window.history.replaceState({}, '', url.toString());
+        } catch (e) {}
+      };
+
+      // ✅ Saat persist status/msg (aksi tambah/edit/import), otomatis bersihkan `err`
+      window.dkPersistAlertToUrl = function(status, message) {
+        try {
+          const url = new URL(window.location.href);
+          const sp = url.searchParams;
+
+          sp.set('status', String(status || 'success'));
+          sp.set('msg', String(message || ''));
+
+          sp.delete('err');
+          sp.delete('alert');
+
+          url.search = sp.toString();
+          window.history.replaceState({}, '', url.toString());
+        } catch (e) {}
+      };
+
+      window.dkShowTopAlert = function(type, message) {
+        const area = document.getElementById('alertAreaTop');
+        if (!area) return;
+
+        const ok = (String(type || '').toLowerCase() === 'success');
+        const cls = ok ? 'dk-alert-success' : 'dk-alert-danger';
+        const icon = ok ?
+          '<i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>' :
+          '<i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>';
+
+        const div = document.createElement('div');
+        div.className = `dk-alert ${cls}`;
+        div.setAttribute('data-auto-hide', String(ALERT_DURATION));
+        div.innerHTML = `<span class="close-btn">&times;</span>${icon}${escapeHtml(message)}`;
+
+        area.prepend(div);
+        wireAlert(div);
+
+        try {
+          window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+          });
+        } catch (e) {
+          window.scrollTo(0, 0);
+        }
+      };
+
+      // Modal: selalu warning kuning + icon warning (anti numpuk, bisa spam)
+      window.dkShowModalWarning = function(containerId, message) {
+        const box = document.getElementById(containerId);
+        if (!box) return;
+
+        const icon = '<i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>';
+        const existing = box.querySelector('.dk-alert');
+
+        if (existing) {
+          const oldTimer = existing.dataset.timerId ? parseInt(existing.dataset.timerId, 10) : 0;
+          if (oldTimer) clearTimeout(oldTimer);
+
+          const msgSpan = existing.querySelector('.dk-msg');
+          if (msgSpan) {
+            msgSpan.textContent = String(message ?? '');
+          } else {
+            existing.innerHTML = `<span class="close-btn">&times;</span>${icon}<span class="dk-msg"></span>`;
+            existing.querySelector('.dk-msg').textContent = String(message ?? '');
+          }
+
+          existing.classList.remove('dk-hide');
+          existing.classList.add('dk-show');
+          pulse(existing);
+
+          const timer = setTimeout(() => animateOut(existing), ALERT_DURATION);
+          existing.dataset.timerId = String(timer);
+
+          const close = existing.querySelector('.close-btn');
+          if (close && !close.dataset.bound) {
+            close.dataset.bound = '1';
+            close.addEventListener('click', (e) => {
+              e.preventDefault();
+              const t = existing.dataset.timerId ? parseInt(existing.dataset.timerId, 10) : 0;
+              if (t) clearTimeout(t);
+              animateOut(existing);
+            });
+          }
+          return;
+        }
+
+        const div = document.createElement('div');
+        div.className = 'dk-alert dk-alert-warning';
+        div.setAttribute('data-auto-hide', String(ALERT_DURATION));
+        div.innerHTML = `<span class="close-btn">&times;</span>${icon}<span class="dk-msg">${escapeHtml(message)}</span>`;
+        box.appendChild(div);
+        wireAlert(div);
+        pulse(div);
+      };
+
+      // ✅ AUTO URL (JANGAN jalan kalau ada token alert=1, biar tidak dobel)
+      (function autoFromUrl() {
+        try {
+          const url = new URL(window.location.href);
+          const sp = url.searchParams;
+
+          if (sp.get('alert') === '1') return;
+
+          const st = (sp.get('status') || '').toLowerCase();
+          const msg = sp.get('msg') || '';
+          const err = sp.get('err') || '';
+
+          if (st && msg) {
+            if (st === 'success') window.dkShowTopAlert('success', msg);
+            else window.dkShowTopAlert('danger', msg);
+          }
+          if (err) {
+            window.dkShowTopAlert('danger', err);
+          }
+        } catch (e) {}
+      })();
+
+      // ✅ AUTO SESSION TOKEN (?alert=1) -> tampilkan, lalu simpan ke URL tanpa dobel
+      (function autoFromSessionToken() {
+        try {
+          const url = new URL(window.location.href);
+          const sp = url.searchParams;
+
+          if (sp.get('alert') !== '1') return;
+
+          const el = document.getElementById('dkSessionAlertMulti');
+          if (!el) return;
+
+          const successMsg = (el.getAttribute('data-success') || '').trim();
+          const errorMsg = (el.getAttribute('data-error') || '').trim();
+
+          if (successMsg) window.dkShowTopAlert('success', successMsg);
+          if (errorMsg) window.dkShowTopAlert('danger', errorMsg);
+
+          window.dkPersistAlertsToUrl(successMsg, errorMsg);
+        } catch (e) {}
+      })();
+
+    })();
+  </script>
+
   <script>
     (function() {
       const input = document.getElementById('searchInput');
@@ -787,83 +1028,6 @@ $err = $_GET['err'] ?? '';
 
       let pendingDeleteHandler = null;
 
-      const ALERT_DURATION = 4000;
-
-      function animateAlertIn(el) {
-        if (!el) return;
-        requestAnimationFrame(() => el.classList.add('dk-show'));
-      }
-
-      function animateAlertOut(el) {
-        if (!el) return;
-        el.classList.add('dk-hide');
-        setTimeout(() => {
-          if (el && el.parentNode) el.parentNode.removeChild(el);
-        }, 450);
-      }
-
-      function wireAlert(el) {
-        if (!el) return;
-        animateAlertIn(el);
-        const ms = parseInt(el.getAttribute('data-auto-hide') || String(ALERT_DURATION), 10);
-        const timer = setTimeout(() => animateAlertOut(el), ms);
-        const close = el.querySelector('.close-btn');
-        if (close) {
-          close.addEventListener('click', (e) => {
-            e.preventDefault();
-            clearTimeout(timer);
-            animateAlertOut(el);
-          });
-        }
-      }
-
-      function escapeHtml(str) {
-        return String(str ?? '')
-          .replaceAll('&', '&amp;')
-          .replaceAll('<', '&lt;')
-          .replaceAll('>', '&gt;')
-          .replaceAll('"', '&quot;')
-          .replaceAll("'", "&#039;");
-      }
-
-      function showTopAlert(type, message) {
-        const area = document.getElementById('alertAreaTop');
-        if (!area) return;
-
-        const cls = type === 'success' ? 'dk-alert-success' : type === 'warning' ? 'dk-alert-warning' : 'dk-alert-danger';
-        const icon = type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '❌';
-
-        const div = document.createElement('div');
-        div.className = `dk-alert ${cls}`;
-        div.setAttribute('data-auto-hide', String(ALERT_DURATION));
-        div.innerHTML = `<span class="close-btn">&times;</span> ${icon} ${escapeHtml(message)}`;
-
-        area.prepend(div);
-        wireAlert(div);
-        window.scrollTo({
-          top: 0,
-          behavior: 'smooth'
-        });
-      }
-
-      function showModalAlert(containerId, type, message) {
-        const box = document.getElementById(containerId);
-        if (!box) return;
-
-        box.innerHTML = '';
-        const cls = type === 'success' ? 'dk-alert-success' : type === 'warning' ? 'dk-alert-warning' : 'dk-alert-danger';
-        const icon = type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '❌';
-
-        const div = document.createElement('div');
-        div.className = `dk-alert ${cls}`;
-        div.setAttribute('data-auto-hide', String(ALERT_DURATION));
-        div.innerHTML = `<span class="close-btn">&times;</span> ${icon} ${escapeHtml(message)}`;
-
-        box.appendChild(div);
-        wireAlert(div);
-      }
-      document.querySelectorAll('#alertAreaTop .dk-alert').forEach(wireAlert);
-
       function scrollToTable() {
         if (!tableWrap) return;
         tableWrap.scrollIntoView({
@@ -883,7 +1047,8 @@ $err = $_GET['err'] ?? '';
         confirmBtn.onclick = function() {
           if (pendingDeleteHandler) pendingDeleteHandler();
           if (typeof bootstrap !== 'undefined') {
-            bootstrap.Modal.getOrCreateInstance(confirmModalEl).hide();
+            const m = bootstrap.Modal.getOrCreateInstance(confirmModalEl);
+            m.hide();
           }
         };
 
@@ -1100,12 +1265,13 @@ $err = $_GET['err'] ?? '';
         }
       }
 
-      async function postFormAjax(form, btn, modalAlertId, onSuccess, onError) {
+      async function postFormAjax(form, btn, modalAlertId, onSuccess) {
         if (!form) return;
         if (!form.checkValidity()) {
           form.reportValidity();
           return;
         }
+
         disableBtn(btn, true);
 
         try {
@@ -1120,35 +1286,23 @@ $err = $_GET['err'] ?? '';
 
           const data = await res.json().catch(() => null);
           if (!data) {
-            const m = 'Respon server tidak valid.';
-            onError ? onError({
-              ok: false,
-              type: 'danger',
-              msg: m
-            }) : showModalAlert(modalAlertId, 'danger', m);
-            disableBtn(btn, false);
+            window.dkShowModalWarning(modalAlertId, 'Respon server tidak valid.');
             return;
           }
 
           if (data.ok) {
             onSuccess && onSuccess(data);
           } else {
-            onError ? onError(data) : showModalAlert(modalAlertId, data.type || 'danger', data.msg || 'Terjadi kesalahan.');
+            window.dkShowModalWarning(modalAlertId, data.msg || 'Terjadi kesalahan.');
           }
         } catch (err) {
-          const m = 'Gagal terhubung ke server.';
-          onError ? onError({
-            ok: false,
-            type: 'danger',
-            msg: m
-          }) : showModalAlert(modalAlertId, 'danger', m);
+          window.dkShowModalWarning(modalAlertId, 'Gagal terhubung ke server.');
           console.error(err);
         } finally {
           disableBtn(btn, false);
         }
       }
 
-      // fokus pencarian saat halaman dibuka
       window.addEventListener('load', () => {
         if (input) {
           input.focus({
@@ -1187,22 +1341,17 @@ $err = $_GET['err'] ?? '';
       if (formTambah) {
         formTambah.addEventListener('submit', (e) => {
           e.preventDefault();
-          postFormAjax(
-            formTambah,
-            btnTambah,
-            'modalAlertTambah',
-            (data) => {
-              if (typeof bootstrap !== 'undefined' && modalTambahEl) {
-                bootstrap.Modal.getOrCreateInstance(modalTambahEl).hide();
-              }
-              formTambah.reset();
-              doSearch(currentQuery, currentTingkat, true);
-              showTopAlert(data.type || 'success', data.msg || 'Berhasil.');
-            },
-            (data) => {
-              showModalAlert('modalAlertTambah', data.type || 'warning', data.msg || 'Terjadi kesalahan.');
+          postFormAjax(formTambah, btnTambah, 'modalAlertTambah', (data) => {
+            if (typeof bootstrap !== 'undefined' && modalTambahEl) {
+              bootstrap.Modal.getOrCreateInstance(modalTambahEl).hide();
             }
-          );
+            formTambah.reset();
+            doSearch(currentQuery, currentTingkat, true);
+
+            const msg = data.msg || 'Data kelas berhasil disimpan.';
+            window.dkShowTopAlert('success', msg);
+            window.dkPersistAlertToUrl('success', msg);
+          });
         });
       }
 
@@ -1214,25 +1363,20 @@ $err = $_GET['err'] ?? '';
         formEdit.addEventListener('submit', (e) => {
           e.preventDefault();
           const submitBtn = formEdit.querySelector('button[type="submit"]');
-          postFormAjax(
-            formEdit,
-            submitBtn,
-            'modalAlertEdit',
-            (data) => {
-              if (typeof bootstrap !== 'undefined' && modalEditEl) {
-                bootstrap.Modal.getOrCreateInstance(modalEditEl).hide();
-              }
-              doSearch(currentQuery, currentTingkat, true);
-              showTopAlert(data.type || 'success', data.msg || 'Berhasil.');
-            },
-            (data) => {
-              showModalAlert('modalAlertEdit', data.type || 'warning', data.msg || 'Terjadi kesalahan.');
+          postFormAjax(formEdit, submitBtn, 'modalAlertEdit', (data) => {
+            if (typeof bootstrap !== 'undefined' && modalEditEl) {
+              bootstrap.Modal.getOrCreateInstance(modalEditEl).hide();
             }
-          );
+            doSearch(currentQuery, currentTingkat, true);
+
+            const msg = data.msg || 'Data kelas berhasil diperbarui.';
+            window.dkShowTopAlert('success', msg);
+            window.dkPersistAlertToUrl('success', msg);
+          });
         });
       }
 
-      // import -> alert di luar modal
+      // import -> alert di luar modal (hijau)
       const formImport = document.getElementById('formImportKelas');
       const btnImport = document.getElementById('btnSubmitImportKelas');
       const modalImportEl = document.getElementById('modalImportKelas');
@@ -1240,23 +1384,19 @@ $err = $_GET['err'] ?? '';
       if (formImport) {
         formImport.addEventListener('submit', (e) => {
           e.preventDefault();
-          postFormAjax(
-            formImport,
-            btnImport,
-            'modalAlertImport',
-            (data) => {
-              if (typeof bootstrap !== 'undefined' && modalImportEl) {
-                bootstrap.Modal.getOrCreateInstance(modalImportEl).hide();
-              }
-              formImport.reset();
-              clearFileKelasImport();
-              doSearch(currentQuery, currentTingkat, true);
-              showTopAlert(data.type || 'success', data.msg || 'Import selesai.');
-            },
-            (data) => {
-              showTopAlert(data.type || 'warning', data.msg || 'Import bermasalah.');
+          postFormAjax(formImport, btnImport, 'modalAlertImport', (data) => {
+            if (typeof bootstrap !== 'undefined' && modalImportEl) {
+              bootstrap.Modal.getOrCreateInstance(modalImportEl).hide();
             }
-          );
+            formImport.reset();
+            toggleClearButtonKelasImport();
+
+            doSearch(currentQuery, currentTingkat, true);
+
+            const msg = data.msg || 'Import selesai.';
+            window.dkShowTopAlert('success', msg);
+            window.dkPersistAlertToUrl('success', msg);
+          });
         });
       }
 

@@ -951,8 +951,7 @@ if ($totalRows === 0) {
         } catch (e) {}
       };
 
-      // ✅ PERBAIKAN UTAMA:
-      // Saat persist status/msg (aksi tambah/edit/import), otomatis bersihkan `err`
+      // ✅ Saat persist status/msg (aksi tambah/edit/import), otomatis bersihkan `err`
       // agar alert "gagal hapus karena relasi" tidak ikut muncul setelah aksi lain.
       window.dkPersistAlertToUrl = function(status, message) {
         try {
@@ -1544,11 +1543,10 @@ if ($totalRows === 0) {
 
             doSearch(currentQuery, 1, currentPerPage, true);
 
-            const topType = (String(data.type || '').toLowerCase() === 'success') ? 'success' : 'danger';
-            const persistStatus = (topType === 'success') ? 'success' : 'error';
-
-            window.dkShowTopAlert(topType, data.msg || 'Import selesai.');
-            window.dkPersistAlertToUrl(persistStatus, data.msg || 'Import selesai.');
+            // ✅ Import: cukup 1 alert saja, warna hijau + icon centang
+            const msg = data.msg || 'Import selesai.';
+            window.dkShowTopAlert('success', msg);
+            window.dkPersistAlertToUrl('success', msg);
           });
         });
       }

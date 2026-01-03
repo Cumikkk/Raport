@@ -28,7 +28,7 @@ $tmpPath    = $file['tmp_name'] ?? '';
 $ext        = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 
 if (!in_array($ext, $allowedExt, true)) {
-  echo json_encode(['ok' => false, 'type' => 'warning', 'msg' => 'Format file tidak didukung. Upload .xls / .xlsx.']);
+  echo json_encode(['ok' => false, 'type' => 'warning', 'msg' => 'Format file tidak didukung. Upload: .xlsx atau .xls.']);
   exit;
 }
 

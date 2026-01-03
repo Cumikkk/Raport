@@ -27,8 +27,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 if (!hash_equals($_SESSION['csrf'] ?? '', $_POST['csrf'] ?? '')) {
-  if (is_ajax()) json_out(false, 'Sesi tidak valid (CSRF). Silakan refresh halaman.', 'danger', 403);
-  header('Location: data_kelas.php?err=' . urlencode('Sesi tidak valid (CSRF).'));
+  $m = 'Sesi tidak valid (CSRF). Silakan refresh halaman.';
+  if (is_ajax()) json_out(false, $m, 'danger', 403);
+  header('Location: data_kelas.php?status=danger&msg=' . urlencode($m));
   exit;
 }
 
@@ -38,8 +39,9 @@ $id_guru    = (int)($_POST['id_guru'] ?? 0);
 
 $allowed = ['X', 'XI', 'XII'];
 if ($nama_kelas === '' || !in_array($tingkat, $allowed, true) || $id_guru <= 0) {
-  if (is_ajax()) json_out(false, 'Data tidak valid. Pastikan Nama Kelas, Tingkat, dan Wali Kelas terisi.', 'warning', 422);
-  header('Location: data_kelas.php?err=' . urlencode('Data tidak valid.'));
+  $m = 'Data tidak valid. Pastikan Nama Kelas, Tingkat, dan Wali Kelas terisi.';
+  if (is_ajax()) json_out(false, $m, 'warning', 422);
+  header('Location: data_kelas.php?status=danger&msg=' . urlencode($m));
   exit;
 }
 
@@ -54,8 +56,9 @@ try {
   mysqli_stmt_close($stmtDup);
 
   if (!empty($dup['id_kelas'])) {
-    if (is_ajax()) json_out(false, 'Nama kelas sudah digunakan. Silakan pakai nama lain.', 'warning', 409);
-    header('Location: data_kelas.php?err=' . urlencode('Nama kelas sudah digunakan.'));
+    $m = 'Nama kelas sudah terpakai.';
+    if (is_ajax()) json_out(false, $m, 'warning', 409);
+    header('Location: data_kelas.php?status=danger&msg=' . urlencode($m));
     exit;
   }
 
@@ -65,11 +68,13 @@ try {
   mysqli_stmt_execute($stmt);
   mysqli_stmt_close($stmt);
 
-  if (is_ajax()) json_out(true, 'Data kelas berhasil disimpan.', 'success');
-  header('Location: data_kelas.php?msg=' . urlencode('Data kelas berhasil disimpan.'));
+  $okMsg = 'Data kelas berhasil ditambahkan.';
+  if (is_ajax()) json_out(true, $okMsg, 'success');
+  header('Location: data_kelas.php?status=success&msg=' . urlencode($okMsg));
   exit;
 } catch (Throwable $e) {
-  if (is_ajax()) json_out(false, 'Terjadi kesalahan saat menyimpan data.', 'danger', 500);
-  header('Location: data_kelas.php?err=' . urlencode('Terjadi kesalahan saat menyimpan data.'));
+  $m = 'Gagal menambahkan data kelas.';
+  if (is_ajax()) json_out(false, $m, 'danger', 500);
+  header('Location: data_kelas.php?status=danger&msg=' . urlencode($m));
   exit;
 }

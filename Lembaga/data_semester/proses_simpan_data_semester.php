@@ -25,6 +25,12 @@ if ($tahun_ajaran === '' || $semester_aktif === '') {
   exit;
 }
 
+// validasi semester harus 1 atau 2
+if ($semester_aktif !== '1' && $semester_aktif !== '2') {
+  header('Location: data_semester.php?msg=error');
+  exit;
+}
+
 try {
   // ==========================
   // CEK DATA SEMESTER TERAKHIR

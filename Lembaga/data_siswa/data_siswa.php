@@ -913,7 +913,7 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
                   </ol>
                   <span class="text-muted">
                     Struktur kolom template:
-                    <strong>A: Nomor</strong>, <strong>B: Nama Siswa</strong>, <strong>C: NIS</strong>, <strong>D: Absen</strong>, <strong>E: Kelas</strong>.
+                    <strong>A: Nomor</strong>, <strong>B: NIS</strong>, <strong>C: Nama Siswa</strong>, <strong>D: Kelas</strong>, <strong>E: Absen</strong>.
                   </span>
                 </div>
               </div>
@@ -1670,7 +1670,7 @@ while ($k = mysqli_fetch_assoc($kelasQuery)) {
       const exportBtn = document.getElementById('exportBtn');
       if (exportBtn) {
         exportBtn.addEventListener('click', () => {
-          showTop('danger', 'Fitur export belum dihubungkan ke file export siswa.');
+          showTop('danger', 'Fitur export belum dibuat.');
         });
       }
 

@@ -27,22 +27,25 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 if (!hash_equals($_SESSION['csrf'] ?? '', $_POST['csrf'] ?? '')) {
-  if (is_ajax()) json_out(false, 'Sesi tidak valid (CSRF). Silakan refresh halaman.', 'danger', [], 403);
-  header('Location: data_kelas.php?err=' . urlencode('Sesi tidak valid (CSRF).'));
+  $m = 'Sesi tidak valid (CSRF). Silakan refresh halaman.';
+  if (is_ajax()) json_out(false, $m, 'danger', [], 403);
+  header('Location: data_kelas.php?status=danger&msg=' . urlencode($m));
   exit;
 }
 
 if (!isset($_FILES['excel_file']) || $_FILES['excel_file']['error'] !== UPLOAD_ERR_OK) {
-  if (is_ajax()) json_out(false, 'File Excel belum dipilih atau gagal diupload.', 'warning', [], 422);
-  header('Location: data_kelas.php?err=' . urlencode('File Excel belum dipilih atau gagal diupload.'));
+  $m = 'File Excel belum dipilih atau gagal diupload.';
+  if (is_ajax()) json_out(false, $m, 'warning', [], 422);
+  header('Location: data_kelas.php?status=danger&msg=' . urlencode($m));
   exit;
 }
 
 $tmp = $_FILES['excel_file']['tmp_name'];
 $ext = strtolower(pathinfo($_FILES['excel_file']['name'], PATHINFO_EXTENSION));
 if (!in_array($ext, ['xlsx', 'xls'], true)) {
-  if (is_ajax()) json_out(false, 'Format file harus .xlsx atau .xls', 'warning', [], 422);
-  header('Location: data_kelas.php?err=' . urlencode('Format file harus .xlsx atau .xls'));
+  $m = 'Format file tidak didukung. Upload: harus .xlsx atau .xls.';
+  if (is_ajax()) json_out(false, $m, 'warning', [], 422);
+  header('Location: data_kelas.php?status=danger&msg=' . urlencode($m));
   exit;
 }
 
@@ -56,7 +59,7 @@ if (file_exists($autoload1)) {
 } else {
   $m = 'Library PhpSpreadsheet tidak ditemukan. Pastikan sudah install via Composer (phpoffice/phpspreadsheet).';
   if (is_ajax()) json_out(false, $m, 'danger', [], 500);
-  header('Location: data_kelas.php?err=' . urlencode($m));
+  header('Location: data_kelas.php?status=danger&msg=' . urlencode($m));
   exit;
 }
 
@@ -64,12 +67,13 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 
 $allowedTingkat = ['X', 'XI', 'XII'];
 
+// sesuai format alert yang diminta
 $inserted = 0;
-$skipped  = 0;
-$dupName  = 0;
-$waliMissing = 0;
-$waliNotFound = 0;
-$notes    = [];
+$duplicates_db_npk = 0;    // duplikat di sistem (nama kelas sudah ada)
+$duplicates_file_npk = 0;  // duplikat di file excel (nama kelas duplikat)
+$skipped_empty = 0;        // baris kosong
+$skipped_invalid = 0;      // data tidak valid
+$errors = [];
 
 try {
   $spreadsheet = IOFactory::load($tmp);
@@ -80,14 +84,14 @@ try {
   $guruMap = [];
   $resG = mysqli_query($koneksi, "SELECT id_guru, nama_guru FROM guru");
   while ($g = mysqli_fetch_assoc($resG)) {
-    $guruMap[mb_strtolower(trim($g['nama_guru'] ?? ''), 'UTF-8')] = (int)$g['id_guru'];
+    $guruMap[mb_strtolower(trim((string)($g['nama_guru'] ?? '')), 'UTF-8')] = (int)$g['id_guru'];
   }
 
   // map nama kelas existing
   $kelasExist = [];
   $resK = mysqli_query($koneksi, "SELECT id_kelas, nama_kelas FROM kelas");
   while ($k = mysqli_fetch_assoc($resK)) {
-    $kelasExist[mb_strtolower(trim($k['nama_kelas'] ?? ''), 'UTF-8')] = (int)$k['id_kelas'];
+    $kelasExist[mb_strtolower(trim((string)($k['nama_kelas'] ?? '')), 'UTF-8')] = (int)$k['id_kelas'];
   }
 
   // duplikat dalam file
@@ -101,46 +105,50 @@ try {
     $tingkat   = strtoupper(trim((string)$sheet->getCell('C' . $row)->getValue()));
     $waliNama  = trim((string)$sheet->getCell('D' . $row)->getValue());
 
-    if ($namaKelas === '' && $tingkat === '' && $waliNama === '') continue;
-
-    if ($namaKelas === '' || !in_array($tingkat, $allowedTingkat, true)) {
-      $skipped++;
-      if (count($notes) < 10) $notes[] = "Baris {$row}: Nama Kelas kosong atau Tingkat tidak valid.";
+    // baris kosong
+    if ($namaKelas === '' && $tingkat === '' && $waliNama === '') {
+      $skipped_empty++;
       continue;
     }
 
-    if ($waliNama === '') {
-      $skipped++;
-      $waliMissing++;
-      if (count($notes) < 10) $notes[] = "Baris {$row}: Wali Kelas wajib diisi.";
+    // validasi dasar
+    if ($namaKelas === '' || !in_array($tingkat, $allowedTingkat, true) || $waliNama === '') {
+      $skipped_invalid++;
+      if (count($errors) < 50) {
+        $errors[] = "Baris {$row}: Data tidak valid (Nama Kelas/Tingkat/Wali Kelas wajib diisi dan Tingkat harus X/XI/XII).";
+      }
       continue;
     }
 
+    // wali harus ada di sistem
     $waliKey = mb_strtolower($waliNama, 'UTF-8');
     if (!isset($guruMap[$waliKey])) {
-      $skipped++;
-      $waliNotFound++;
-      if (count($notes) < 10) $notes[] = "Baris {$row}: Wali Kelas \"{$waliNama}\" tidak ditemukan di Data Guru.";
+      $skipped_invalid++;
+      if (count($errors) < 50) {
+        $errors[] = "Baris {$row}: Wali Kelas \"{$waliNama}\" tidak ditemukan di Data Guru.";
+      }
       continue;
     }
     $idGuru = (int)$guruMap[$waliKey];
 
     $kelasKey = mb_strtolower($namaKelas, 'UTF-8');
 
-    // duplikat dalam file
+    // duplikat di file
     if (isset($seenInFile[$kelasKey])) {
-      $skipped++;
-      $dupName++;
-      if (count($notes) < 10) $notes[] = "Baris {$row}: Nama Kelas \"{$namaKelas}\" duplikat di file (ditolak).";
+      $duplicates_file_npk++;
+      if (count($errors) < 50) {
+        $errors[] = "Baris {$row}: Nama Kelas \"{$namaKelas}\" duplikat di file excel.";
+      }
       continue;
     }
     $seenInFile[$kelasKey] = true;
 
-    // aturan: kalau nama kelas sudah digunakan di DB -> ditolak
+    // duplikat di sistem
     if (isset($kelasExist[$kelasKey])) {
-      $skipped++;
-      $dupName++;
-      if (count($notes) < 10) $notes[] = "Baris {$row}: Nama Kelas \"{$namaKelas}\" sudah digunakan (ditolak).";
+      $duplicates_db_npk++;
+      if (count($errors) < 50) {
+        $errors[] = "Baris {$row}: Nama Kelas \"{$namaKelas}\" sudah ada di sistem.";
+      }
       continue;
     }
 
@@ -153,26 +161,26 @@ try {
 
   mysqli_stmt_close($stmtIns);
 
-  $ringkas = "Import selesai. Ditambah: {$inserted}. Dilewati: {$skipped}.";
-  if ($dupName > 0) $ringkas .= " Ditolak duplikat nama: {$dupName}.";
-  if ($waliMissing > 0) $ringkas .= " Wali kosong: {$waliMissing}.";
-  if ($waliNotFound > 0) $ringkas .= " Wali tidak ditemukan: {$waliNotFound}.";
-
-  $type = ($dupName > 0 || $waliMissing > 0 || $waliNotFound > 0) ? 'warning' : 'success';
+  // ✅ format msg sesuai yang diminta
+  $msg = "Import selesai. Data masuk: {$inserted}, Data duplikat dalam sistem: {$duplicates_db_npk}, Data duplikat dalam file excel: {$duplicates_file_npk}, Baris kosong dilewati: {$skipped_empty}, Data tidak valid: {$skipped_invalid}.";
+  if (!empty($errors)) $msg .= " Ada " . count($errors) . " catatan.";
 
   if (is_ajax()) {
-    json_out(true, $ringkas, $type, ['notes' => $notes, 'inserted' => $inserted, 'skipped' => $skipped]);
+    json_out(true, $msg, 'success', [
+      'errors' => $errors,
+      'inserted' => $inserted,
+      'duplicates_db' => $duplicates_db_npk,
+      'duplicates_file' => $duplicates_file_npk,
+      'skipped_empty' => $skipped_empty,
+      'skipped_invalid' => $skipped_invalid
+    ]);
   }
 
-  if ($type === 'success') {
-    header('Location: data_kelas.php?msg=' . urlencode($ringkas));
-  } else {
-    header('Location: data_kelas.php?err=' . urlencode($ringkas));
-  }
+  header('Location: data_kelas.php?status=success&msg=' . urlencode($msg));
   exit;
 } catch (Throwable $e) {
   $m = 'Gagal memproses file Excel. Pastikan format sesuai template.';
   if (is_ajax()) json_out(false, $m, 'danger', [], 500);
-  header('Location: data_kelas.php?err=' . urlencode($m));
+  header('Location: data_kelas.php?status=danger&msg=' . urlencode($m));
   exit;
 }

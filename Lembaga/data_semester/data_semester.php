@@ -1,6 +1,10 @@
 <?php
 // pages/semester/data_semester.php
 
+require_once '../../koneksi.php';
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+mysqli_set_charset($koneksi, 'utf8mb4');
+
 // ====== CEK PARAMETER ALERT (SETELAH SIMPAN) ======
 $alertMsg  = '';
 $alertType = ''; // success | danger
@@ -19,6 +23,24 @@ if (isset($_GET['msg'])) {
   }
 }
 
+// ====== AMBIL DATA SEMESTER TERAKHIR (UNTUK AUTO-SELECT) ======
+$savedTahunAjaran   = '';
+$savedSemesterAktif = ''; // '1' atau '2'
+
+try {
+  $sql = "SELECT nama_semester, tahun_ajaran FROM semester ORDER BY id_semester DESC LIMIT 1";
+  $stmt = mysqli_prepare($koneksi, $sql);
+  mysqli_stmt_execute($stmt);
+  $res = mysqli_stmt_get_result($stmt);
+  if ($row = mysqli_fetch_assoc($res)) {
+    $savedSemesterAktif = trim((string)($row['nama_semester'] ?? ''));
+    $savedTahunAjaran   = trim((string)($row['tahun_ajaran'] ?? ''));
+  }
+  mysqli_stmt_close($stmt);
+} catch (Throwable $e) {
+  // biarkan kosong jika gagal
+}
+
 include '../../includes/header.php';
 ?>
 
@@ -27,7 +49,7 @@ include '../../includes/header.php';
   <?php include '../../includes/navbar.php'; ?>
 
   <style>
-    /* ===== Alert style ===== */
+    /* ===== Alert style (tetap) ===== */
     .dk-alert {
       padding: 12px 14px;
       border-radius: 12px;
@@ -84,17 +106,35 @@ include '../../includes/header.php';
       opacity: 1;
     }
 
+    /* ✅ Letak tetap seperti semula, tapi tidak bikin konten "loncat" saat alert hilang */
     #alertAreaTop {
       position: relative;
+      height: 0;
+      /* default: tidak makan ruang */
+    }
+
+    /* kalau ada alert: kasih ruang secukupnya, biar posisi card tidak kebawah jauh */
+    #alertAreaTop.has-alert {
+      height: 56px;
+      /* cukup untuk 1 bar alert normal */
+    }
+
+    /* alert di-absolute supaya height container tetap stabil (tidak dorong/naik-turun) */
+    #alertAreaTop .dk-alert {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      margin-bottom: 0;
     }
   </style>
 
   <div class="dk-page" style="margin-top: 50px;">
     <div class="dk-main">
 
-      <!-- ✅ ALERT DI LUAR BOX/CARD -->
-      <div class="container py-3">
-        <div id="alertAreaTop">
+      <!-- ✅ ALERT DI LUAR BOX/CARD (letak seperti sebelumnya) -->
+      <div class="container py-2">
+        <div id="alertAreaTop" class="<?= ($alertMsg !== '' && $alertType !== '') ? 'has-alert' : ''; ?>">
           <?php if ($alertMsg !== '' && $alertType !== ''): ?>
             <?php
             $storeType = ($alertType === 'success') ? 'success' : 'danger';
@@ -138,6 +178,9 @@ include '../../includes/header.php';
               <script>
                 const select = document.getElementById('tahunAjaran');
 
+                // ✅ nilai tersimpan dari DB (jika ada)
+                const SAVED_TAHUN = <?= json_encode($savedTahunAjaran, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+
                 const today = new Date();
                 const tahunSekarang = today.getFullYear();
                 const bulanSekarang = today.getMonth() + 1;
@@ -155,20 +198,36 @@ include '../../includes/header.php';
                 const tahunAjaranSekarang = `${tahunAwal}/${tahunAkhir}`;
                 const tahunAjaranBerikutnya = `${tahunAwal + 1}/${tahunAkhir + 1}`;
 
+                // opsi default (tetap seperti sebelumnya)
                 const option1 = new Option(tahunAjaranSekarang, tahunAjaranSekarang);
                 const option2 = new Option(tahunAjaranBerikutnya, tahunAjaranBerikutnya);
-
                 select.add(option1);
                 select.add(option2);
+
+                // ✅ kalau sudah pernah simpan => auto selected, tidak perlu pilih ulang
+                if (SAVED_TAHUN && typeof SAVED_TAHUN === 'string') {
+                  let found = false;
+                  for (const opt of select.options) {
+                    if (opt.value === SAVED_TAHUN) {
+                      found = true;
+                      break;
+                    }
+                  }
+                  if (!found) {
+                    const optSaved = new Option(SAVED_TAHUN, SAVED_TAHUN);
+                    select.add(optSaved);
+                  }
+                  select.value = SAVED_TAHUN;
+                }
               </script>
             </div>
 
             <div class="mb-3">
               <label class="form-label fw-semibold">Semester Aktif</label>
               <select class="form-select" name="semester_aktif" required>
-                <option value="" selected disabled>--Pilih--</option>
-                <option value="1">Ganjil</option>
-                <option value="2">Genap</option>
+                <option value="" disabled <?= ($savedSemesterAktif === '' ? 'selected' : ''); ?>>--Pilih--</option>
+                <option value="1" <?= ($savedSemesterAktif === '1' ? 'selected' : ''); ?>>Ganjil</option>
+                <option value="2" <?= ($savedSemesterAktif === '2' ? 'selected' : ''); ?>>Genap</option>
               </select>
             </div>
 
@@ -200,7 +259,7 @@ include '../../includes/header.php';
       function getNavType() {
         try {
           const nav = performance.getEntriesByType('navigation');
-          if (nav && nav[0] && nav[0].type) return nav[0].type; // 'navigate' | 'reload' | 'back_forward'
+          if (nav && nav[0] && nav[0].type) return nav[0].type;
         } catch (e) {}
         return 'navigate';
       }
@@ -263,7 +322,6 @@ include '../../includes/header.php';
         }
       }
 
-      // hapus param msg dari URL tanpa reload
       function cleanStatusUrlParams() {
         try {
           const url = new URL(window.location.href);
@@ -275,10 +333,12 @@ include '../../includes/header.php';
         } catch (e) {}
       }
 
-      // show 1 alert saja + simpan sebagai "terakhir"
       window.dkShowTopAlert = function(type, message, persist = true) {
         const area = document.getElementById('alertAreaTop');
         if (!area) return;
+
+        // kunci ruang supaya tidak loncat saat alert tampil/hilang
+        area.classList.add('has-alert');
 
         clearAllTopAlerts(area);
 
@@ -300,15 +360,15 @@ include '../../includes/header.php';
 
       const navType = getNavType();
 
-      // RULE UTAMA:
-      // - Jika bukan reload (navigate/back_forward) => hapus storage, supaya pindah halaman tidak bisa mengulang alert
       if (navType !== 'reload') {
         clearLastAlert();
       }
 
-      // 1) kalau ada alert dari PHP: simpan sebagai last alert, bersihkan URL param, selesai
       const phpAlerts = document.querySelectorAll('#alertAreaTop .dk-alert');
       if (phpAlerts.length > 0) {
+        const area = document.getElementById('alertAreaTop');
+        if (area) area.classList.add('has-alert');
+
         phpAlerts.forEach(wireAlert);
 
         const first = phpAlerts[0];
@@ -320,7 +380,6 @@ include '../../includes/header.php';
         return;
       }
 
-      // 2) tidak ada alert PHP => restore HANYA saat reload
       if (navType === 'reload') {
         try {
           const raw = sessionStorage.getItem(DK_ALERT_STORE_KEY);
